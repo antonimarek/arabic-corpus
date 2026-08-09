@@ -24,7 +24,7 @@ export default async function SearchHomePage({ searchParams }: SearchHomeProps) 
     arabic: string;
     translation: string | null;
   }[] = [];
-  let recentMisses: { query: string; created_at: string }[] = [];
+  let recentMisses: { id: string; query: string }[] = [];
 
   if (query) {
     try {
@@ -48,7 +48,7 @@ export default async function SearchHomePage({ searchParams }: SearchHomeProps) 
           .limit(5),
         supabase
           .from("search_misses")
-          .select("query, created_at")
+          .select("id, query")
           .order("created_at", { ascending: false })
           .limit(8),
       ]);
@@ -182,7 +182,7 @@ export default async function SearchHomePage({ searchParams }: SearchHomeProps) 
               </h2>
               <ul className="flex flex-col gap-1.5">
                 {recentMisses.map((miss) => (
-                  <li key={`${miss.query}-${miss.created_at}`}>
+                  <li key={miss.id}>
                     <Link
                       href={`/?q=${encodeURIComponent(miss.query)}`}
                       className="text-sm text-[var(--ink)] hover:underline"

@@ -1,0 +1,124 @@
+"use client";
+
+import Link from "next/link";
+import { usePathname } from "next/navigation";
+import { useEffect, useRef, useState } from "react";
+
+import { signOut } from "@/app/login/actions";
+
+const NAV = [
+  { href: "/", label: "Search" },
+  { href: "/texts", label: "Texts" },
+  { href: "/vocabulary", label: "Vocabulary" },
+  { href: "/structures", label: "Structures" },
+] as const;
+
+const ADD_ITEMS = [
+  { href: "/texts/new", label: "Text" },
+  { href: "/vocabulary/new", label: "Vocabulary" },
+  { href: "/structures/new", label: "Structure" },
+  { href: "/examples/new", label: "Example" },
+] as const;
+
+export function AppShell({ children }: { children: React.ReactNode }) {
+  const pathname = usePathname();
+  const [addOpen, setAddOpen] = useState(false);
+  const addRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    function onPointerDown(event: PointerEvent) {
+      if (!addRef.current?.contains(event.target as Node)) {
+        setAddOpen(false);
+      }
+    }
+    document.addEventListener("pointerdown", onPointerDown);
+    return () => document.removeEventListener("pointerdown", onPointerDown);
+  }, []);
+
+  return (
+    <div className="mx-auto flex min-h-full w-full max-w-3xl flex-col px-4 pb-24 pt-4 sm:px-6 sm:pb-10 sm:pt-8">
+      <header className="mb-8 flex items-start justify-between gap-4">
+        <div className="min-w-0">
+          <Link href="/" className="block">
+            <span
+              className="font-arabic text-xl leading-none text-[var(--ink)]"
+              lang="ar"
+              dir="rtl"
+            >
+              عربي
+            </span>
+            <span className="mt-1 block text-xs tracking-wide text-[var(--ink-muted)]">
+              Levantine corpus
+            </span>
+          </Link>
+        </div>
+        <div className="flex items-center gap-2">
+          <div className="relative" ref={addRef}>
+            <button
+              type="button"
+              onClick={() => setAddOpen((open) => !open)}
+              className="rounded-md border border-[var(--line)] bg-[var(--surface)] px-3 py-1.5 text-sm text-[var(--ink)]"
+              aria-expanded={addOpen}
+              aria-haspopup="menu"
+            >
+              Add
+            </button>
+            {addOpen ? (
+              <div
+                role="menu"
+                className="absolute right-0 z-20 mt-2 min-w-40 rounded-md border border-[var(--line)] bg-[var(--surface)] py-1"
+              >
+                {ADD_ITEMS.map((item) => (
+                  <Link
+                    key={item.href}
+                    href={item.href}
+                    role="menuitem"
+                    className="block px-3 py-2 text-sm text-[var(--ink)] hover:bg-[var(--surface-hover)]"
+                    onClick={() => setAddOpen(false)}
+                  >
+                    {item.label}
+                  </Link>
+                ))}
+              </div>
+            ) : null}
+          </div>
+          <form action={signOut}>
+            <button
+              type="submit"
+              className="rounded-md px-2 py-1.5 text-sm text-[var(--ink-muted)] hover:text-[var(--ink)]"
+            >
+              Sign out
+            </button>
+          </form>
+        </div>
+      </header>
+
+      <nav
+        className="mb-8 flex gap-1 overflow-x-auto border-b border-[var(--line)] pb-px"
+        aria-label="Main"
+      >
+        {NAV.map((item) => {
+          const active =
+            item.href === "/"
+              ? pathname === "/"
+              : pathname === item.href || pathname.startsWith(`${item.href}/`);
+          return (
+            <Link
+              key={item.href}
+              href={item.href}
+              className={`shrink-0 border-b-2 px-3 py-2 text-sm transition-colors ${
+                active
+                  ? "border-[var(--accent)] text-[var(--ink)]"
+                  : "border-transparent text-[var(--ink-muted)] hover:text-[var(--ink)]"
+              }`}
+            >
+              {item.label}
+            </Link>
+          );
+        })}
+      </nav>
+
+      <div className="flex-1">{children}</div>
+    </div>
+  );
+}

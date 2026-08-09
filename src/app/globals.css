@@ -1,0 +1,35 @@
+@import "tailwindcss";
+
+:root {
+  --background: #f6f5f2;
+  --surface: #fffcf8;
+  --surface-hover: #f0eee9;
+  --ink: #1c1b19;
+  --ink-muted: #6b6760;
+  --line: #ddd8cf;
+  --accent: #2f4f4a;
+  --danger: #8b3a2f;
+  --font-ui: var(--font-source-sans);
+  --font-arabic: var(--font-noto-naskh);
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--ink);
+  --font-sans: var(--font-ui);
+}
+
+body {
+  background: var(--background);
+  color: var(--ink);
+  font-family: var(--font-ui), system-ui, sans-serif;
+}
+
+.font-arabic {
+  font-family: var(--font-arabic), "Noto Naskh Arabic", serif;
+  font-feature-settings: "locl" 1;
+}
+
+::selection {
+  background: color-mix(in srgb, var(--accent) 22%, white);
+}

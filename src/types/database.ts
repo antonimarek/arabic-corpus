@@ -1,0 +1,366 @@
+export type Json =
+  | string
+  | number
+  | boolean
+  | null
+  | { [key: string]: Json | undefined }
+  | Json[];
+
+export type Database = {
+  public: {
+    Tables: {
+      texts: {
+        Row: {
+          id: string;
+          owner_id: string;
+          title: string;
+          arabic: string;
+          translation: string | null;
+          source: string | null;
+          occurred_on: string | null;
+          notes: string | null;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          owner_id: string;
+          title: string;
+          arabic: string;
+          translation?: string | null;
+          source?: string | null;
+          occurred_on?: string | null;
+          notes?: string | null;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: {
+          id?: string;
+          owner_id?: string;
+          title?: string;
+          arabic?: string;
+          translation?: string | null;
+          source?: string | null;
+          occurred_on?: string | null;
+          notes?: string | null;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Relationships: [];
+      };
+      examples: {
+        Row: {
+          id: string;
+          owner_id: string;
+          text_id: string | null;
+          arabic: string;
+          translation: string | null;
+          transliteration: string | null;
+          notes: string | null;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          owner_id: string;
+          text_id?: string | null;
+          arabic: string;
+          translation?: string | null;
+          transliteration?: string | null;
+          notes?: string | null;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: {
+          id?: string;
+          owner_id?: string;
+          text_id?: string | null;
+          arabic?: string;
+          translation?: string | null;
+          transliteration?: string | null;
+          notes?: string | null;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "examples_text_id_fkey";
+            columns: ["text_id"];
+            isOneToOne: false;
+            referencedRelation: "texts";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      vocabulary: {
+        Row: {
+          id: string;
+          owner_id: string;
+          arabic: string;
+          transliteration: string | null;
+          part_of_speech: string | null;
+          notes: string | null;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          owner_id: string;
+          arabic: string;
+          transliteration?: string | null;
+          part_of_speech?: string | null;
+          notes?: string | null;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: {
+          id?: string;
+          owner_id?: string;
+          arabic?: string;
+          transliteration?: string | null;
+          part_of_speech?: string | null;
+          notes?: string | null;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Relationships: [];
+      };
+      vocabulary_senses: {
+        Row: {
+          id: string;
+          vocabulary_id: string;
+          owner_id: string;
+          gloss: string;
+          lang: string;
+          notes: string | null;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          vocabulary_id: string;
+          owner_id: string;
+          gloss: string;
+          lang?: string;
+          notes?: string | null;
+          created_at?: string;
+        };
+        Update: {
+          id?: string;
+          vocabulary_id?: string;
+          owner_id?: string;
+          gloss?: string;
+          lang?: string;
+          notes?: string | null;
+          created_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "vocabulary_senses_vocabulary_id_fkey";
+            columns: ["vocabulary_id"];
+            isOneToOne: false;
+            referencedRelation: "vocabulary";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      structures: {
+        Row: {
+          id: string;
+          owner_id: string;
+          name: string;
+          arabic_form: string | null;
+          transliteration: string | null;
+          meaning: string | null;
+          explanation: string | null;
+          notes: string | null;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          owner_id: string;
+          name: string;
+          arabic_form?: string | null;
+          transliteration?: string | null;
+          meaning?: string | null;
+          explanation?: string | null;
+          notes?: string | null;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: {
+          id?: string;
+          owner_id?: string;
+          name?: string;
+          arabic_form?: string | null;
+          transliteration?: string | null;
+          meaning?: string | null;
+          explanation?: string | null;
+          notes?: string | null;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Relationships: [];
+      };
+      tags: {
+        Row: {
+          id: string;
+          owner_id: string;
+          name: string;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          owner_id: string;
+          name: string;
+          created_at?: string;
+        };
+        Update: {
+          id?: string;
+          owner_id?: string;
+          name?: string;
+          created_at?: string;
+        };
+        Relationships: [];
+      };
+      text_tags: {
+        Row: { text_id: string; tag_id: string };
+        Insert: { text_id: string; tag_id: string };
+        Update: { text_id?: string; tag_id?: string };
+        Relationships: [
+          {
+            foreignKeyName: "text_tags_text_id_fkey";
+            columns: ["text_id"];
+            isOneToOne: false;
+            referencedRelation: "texts";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "text_tags_tag_id_fkey";
+            columns: ["tag_id"];
+            isOneToOne: false;
+            referencedRelation: "tags";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      example_tags: {
+        Row: { example_id: string; tag_id: string };
+        Insert: { example_id: string; tag_id: string };
+        Update: { example_id?: string; tag_id?: string };
+        Relationships: [
+          {
+            foreignKeyName: "example_tags_example_id_fkey";
+            columns: ["example_id"];
+            isOneToOne: false;
+            referencedRelation: "examples";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "example_tags_tag_id_fkey";
+            columns: ["tag_id"];
+            isOneToOne: false;
+            referencedRelation: "tags";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      vocabulary_tags: {
+        Row: { vocabulary_id: string; tag_id: string };
+        Insert: { vocabulary_id: string; tag_id: string };
+        Update: { vocabulary_id?: string; tag_id?: string };
+        Relationships: [
+          {
+            foreignKeyName: "vocabulary_tags_vocabulary_id_fkey";
+            columns: ["vocabulary_id"];
+            isOneToOne: false;
+            referencedRelation: "vocabulary";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "vocabulary_tags_tag_id_fkey";
+            columns: ["tag_id"];
+            isOneToOne: false;
+            referencedRelation: "tags";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      structure_tags: {
+        Row: { structure_id: string; tag_id: string };
+        Insert: { structure_id: string; tag_id: string };
+        Update: { structure_id?: string; tag_id?: string };
+        Relationships: [
+          {
+            foreignKeyName: "structure_tags_structure_id_fkey";
+            columns: ["structure_id"];
+            isOneToOne: false;
+            referencedRelation: "structures";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "structure_tags_tag_id_fkey";
+            columns: ["tag_id"];
+            isOneToOne: false;
+            referencedRelation: "tags";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      example_vocabulary: {
+        Row: { example_id: string; vocabulary_id: string };
+        Insert: { example_id: string; vocabulary_id: string };
+        Update: { example_id?: string; vocabulary_id?: string };
+        Relationships: [
+          {
+            foreignKeyName: "example_vocabulary_example_id_fkey";
+            columns: ["example_id"];
+            isOneToOne: false;
+            referencedRelation: "examples";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "example_vocabulary_vocabulary_id_fkey";
+            columns: ["vocabulary_id"];
+            isOneToOne: false;
+            referencedRelation: "vocabulary";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      example_structures: {
+        Row: { example_id: string; structure_id: string };
+        Insert: { example_id: string; structure_id: string };
+        Update: { example_id?: string; structure_id?: string };
+        Relationships: [
+          {
+            foreignKeyName: "example_structures_example_id_fkey";
+            columns: ["example_id"];
+            isOneToOne: false;
+            referencedRelation: "examples";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "example_structures_structure_id_fkey";
+            columns: ["structure_id"];
+            isOneToOne: false;
+            referencedRelation: "structures";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+    };
+    Views: Record<string, never>;
+    Functions: Record<string, never>;
+    Enums: Record<string, never>;
+    CompositeTypes: Record<string, never>;
+  };
+};
+
+export type Text = Database["public"]["Tables"]["texts"]["Row"];
+export type Example = Database["public"]["Tables"]["examples"]["Row"];
+export type Vocabulary = Database["public"]["Tables"]["vocabulary"]["Row"];
+export type VocabularySense =
+  Database["public"]["Tables"]["vocabulary_senses"]["Row"];
+export type Structure = Database["public"]["Tables"]["structures"]["Row"];
+export type Tag = Database["public"]["Tables"]["tags"]["Row"];

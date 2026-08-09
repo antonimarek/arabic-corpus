@@ -7,6 +7,7 @@ import {
   updateText,
   type TextFormState,
 } from "@/app/(app)/texts/actions";
+import { FormSubmit } from "@/components/form-submit";
 import { TagField } from "@/components/tag-field";
 import type { Text } from "@/types/database";
 
@@ -102,13 +103,10 @@ export function TextForm(props: TextFormProps) {
         </p>
       ) : null}
 
-      <button
-        type="submit"
-        disabled={pending}
-        className="self-start rounded-md bg-[var(--accent)] px-4 py-2.5 text-sm font-medium text-white disabled:opacity-60"
-      >
-        {pending ? "Saving…" : props.mode === "create" ? "Save text" : "Save changes"}
-      </button>
+      <FormSubmit
+        pending={pending}
+        label={props.mode === "create" ? "Save text" : "Save changes"}
+      />
     </form>
   );
 }

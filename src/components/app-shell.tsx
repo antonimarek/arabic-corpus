@@ -57,7 +57,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             <button
               type="button"
               onClick={() => setAddOpen((open) => !open)}
-              className="rounded-md border border-[var(--line)] bg-[var(--surface)] px-3 py-1.5 text-sm text-[var(--ink)]"
+              className="min-h-11 rounded-md border border-[var(--line)] bg-[var(--surface)] px-4 py-2 text-sm text-[var(--ink)]"
               aria-expanded={addOpen}
               aria-haspopup="menu"
             >
@@ -66,14 +66,14 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             {addOpen ? (
               <div
                 role="menu"
-                className="absolute right-0 z-20 mt-2 min-w-40 rounded-md border border-[var(--line)] bg-[var(--surface)] py-1"
+                className="absolute right-0 z-20 mt-2 min-w-44 rounded-md border border-[var(--line)] bg-[var(--surface)] py-1"
               >
                 {ADD_ITEMS.map((item) => (
                   <Link
                     key={item.href}
                     href={item.href}
                     role="menuitem"
-                    className="block px-3 py-2 text-sm text-[var(--ink)] hover:bg-[var(--surface-hover)]"
+                    className="block px-3 py-3 text-sm text-[var(--ink)] hover:bg-[var(--surface-hover)]"
                     onClick={() => setAddOpen(false)}
                   >
                     {item.label}
@@ -106,7 +106,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             <Link
               key={item.href}
               href={item.href}
-              className={`shrink-0 border-b-2 px-3 py-2 text-sm transition-colors ${
+              className={`shrink-0 border-b-2 px-3 py-3 text-sm transition-colors ${
                 active
                   ? "border-[var(--accent)] text-[var(--ink)]"
                   : "border-transparent text-[var(--ink-muted)] hover:text-[var(--ink)]"

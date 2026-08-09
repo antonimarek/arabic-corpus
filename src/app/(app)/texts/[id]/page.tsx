@@ -2,6 +2,9 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 
 import { deleteText } from "@/app/(app)/texts/actions";
+import { ArabicReader } from "@/components/arabic-reader";
+import { ExampleList } from "@/components/example-list";
+import type { ArabicLink } from "@/lib/highlight-arabic";
 import { createClient } from "@/lib/supabase/server";
 import { notNull } from "@/lib/tags";
 
@@ -14,7 +17,18 @@ export default async function TextDetailPage({ params }: TextPageProps) {
   const supabase = await createClient();
   const { data: text, error } = await supabase
     .from("texts")
-    .select("*, text_tags(tags(name)), examples(id, arabic, translation)")
+    .select(
+      `*,
+      text_tags(tags(name)),
+      examples(
+        id,
+        arabic,
+        translation,
+        transliteration,
+        example_vocabulary(vocabulary(id, arabic)),
+        example_structures(structures(id, name, arabic_form))
+      )`,
+    )
     .eq("id", id)
     .maybeSingle();
 
@@ -33,6 +47,28 @@ export default async function TextDetailPage({ params }: TextPageProps) {
   const tags =
     text.text_tags?.map((row) => row.tags?.name).filter(notNull) ?? [];
   const examples = text.examples ?? [];
+
+  const linkMap = new Map<string, ArabicLink>();
+  for (const example of examples) {
+    for (const row of example.example_vocabulary ?? []) {
+      const vocab = row.vocabulary;
+      if (!vocab?.arabic) continue;
+      linkMap.set(`v:${vocab.id}`, {
+        phrase: vocab.arabic,
+        href: `/vocabulary/${vocab.id}`,
+        kind: "vocabulary",
+      });
+    }
+    for (const row of example.example_structures ?? []) {
+      const structure = row.structures;
+      if (!structure?.arabic_form) continue;
+      linkMap.set(`s:${structure.id}`, {
+        phrase: structure.arabic_form,
+        href: `/structures/${structure.id}`,
+        kind: "structure",
+      });
+    }
+  }
 
   return (
     <article className="flex flex-col gap-8">
@@ -61,22 +97,12 @@ export default async function TextDetailPage({ params }: TextPageProps) {
         </p>
       </header>
 
-      <div
-        className="font-arabic whitespace-pre-wrap text-2xl leading-[1.9] text-[var(--ink)]"
-        lang="ar"
-        dir="rtl"
-      >
-        {text.arabic}
-      </div>
-
-      {text.translation ? (
-        <div className="border-t border-[var(--line)] pt-6">
-          <h2 className="mb-3 text-sm text-[var(--ink-muted)]">Translation</h2>
-          <p className="whitespace-pre-wrap text-[15px] leading-relaxed text-[var(--ink)]">
-            {text.translation}
-          </p>
-        </div>
-      ) : null}
+      <ArabicReader
+        arabic={text.arabic}
+        translation={text.translation}
+        links={[...linkMap.values()]}
+        size="text"
+      />
 
       {text.notes ? (
         <div className="border-t border-[var(--line)] pt-6">
@@ -99,35 +125,19 @@ export default async function TextDetailPage({ params }: TextPageProps) {
             Add example
           </Link>
         </div>
-        {examples.length === 0 ? (
-          <p className="text-[15px] text-[var(--ink-muted)]">
-            No examples linked to this text yet.
-          </p>
-        ) : (
-          <ul className="flex flex-col divide-y divide-[var(--line)]">
-            {examples.map((example) => (
-              <li key={example.id}>
-                <Link
-                  href={`/examples/${example.id}`}
-                  className="flex flex-col gap-1 py-3 hover:opacity-80"
-                >
-                  <span
-                    className="font-arabic text-lg leading-relaxed text-[var(--ink)]"
-                    lang="ar"
-                    dir="rtl"
-                  >
-                    {example.arabic}
-                  </span>
-                  {example.translation ? (
-                    <span className="text-sm text-[var(--ink-muted)]">
-                      {example.translation}
-                    </span>
-                  ) : null}
-                </Link>
-              </li>
-            ))}
-          </ul>
-        )}
+        <ExampleList
+          examples={examples.map((example) => ({
+            id: example.id,
+            arabic: example.arabic,
+            translation: example.translation,
+            transliteration: example.transliteration,
+            vocabHints:
+              example.example_vocabulary
+                ?.map((row) => row.vocabulary?.arabic)
+                .filter(notNull) ?? [],
+          }))}
+          emptyMessage="No examples linked to this text yet."
+        />
       </section>
     </article>
   );

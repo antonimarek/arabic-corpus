@@ -7,6 +7,7 @@ import {
   updateVocabulary,
   type VocabularyFormState,
 } from "@/app/(app)/vocabulary/actions";
+import { FormSubmit } from "@/components/form-submit";
 import { TagField } from "@/components/tag-field";
 import type { Vocabulary, VocabularySense } from "@/types/database";
 
@@ -152,17 +153,12 @@ export function VocabularyForm(props: VocabularyFormProps) {
         </p>
       ) : null}
 
-      <button
-        type="submit"
-        disabled={pending}
-        className="self-start rounded-md bg-[var(--accent)] px-4 py-2.5 text-sm font-medium text-white disabled:opacity-60"
-      >
-        {pending
-          ? "Saving…"
-          : props.mode === "create"
-            ? "Save vocabulary"
-            : "Save changes"}
-      </button>
+      <FormSubmit
+        pending={pending}
+        label={
+          props.mode === "create" ? "Save vocabulary" : "Save changes"
+        }
+      />
     </form>
   );
 }

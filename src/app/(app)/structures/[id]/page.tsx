@@ -2,6 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 
 import { deleteStructure } from "@/app/(app)/structures/actions";
+import { ExampleList } from "@/components/example-list";
 import { createClient } from "@/lib/supabase/server";
 import { notNull } from "@/lib/tags";
 
@@ -17,7 +18,18 @@ export default async function StructureDetailPage({
   const { data: structure, error } = await supabase
     .from("structures")
     .select(
-      "*, structure_tags(tags(name)), example_structures(examples(id, arabic, translation))",
+      `*,
+      structure_tags(tags(name)),
+      example_structures(
+        examples(
+          id,
+          arabic,
+          translation,
+          transliteration,
+          texts(title),
+          example_vocabulary(vocabulary(id, arabic, transliteration))
+        )
+      )`,
     )
     .eq("id", id)
     .maybeSingle();
@@ -41,6 +53,19 @@ export default async function StructureDetailPage({
     structure.example_structures
       ?.map((row) => row.examples)
       .filter(notNull) ?? [];
+
+  const relatedVocab = new Map<
+    string,
+    { id: string; arabic: string; transliteration: string | null }
+  >();
+  for (const example of examples) {
+    for (const row of example.example_vocabulary ?? []) {
+      const vocab = row.vocabulary;
+      if (!vocab) continue;
+      relatedVocab.set(vocab.id, vocab);
+    }
+  }
+  const related = [...relatedVocab.values()];
 
   return (
     <article className="flex flex-col gap-8">
@@ -68,7 +93,7 @@ export default async function StructureDetailPage({
         </div>
         {structure.arabic_form ? (
           <p
-            className="font-arabic text-2xl leading-relaxed text-[var(--ink)]"
+            className="font-arabic text-[1.75rem] leading-relaxed text-[var(--ink)]"
             lang="ar"
             dir="rtl"
           >
@@ -76,7 +101,11 @@ export default async function StructureDetailPage({
           </p>
         ) : null}
         <p className="text-sm text-[var(--ink-muted)]">
-          {[structure.transliteration, structure.meaning]
+          {[
+            structure.transliteration,
+            structure.meaning,
+            `${examples.length} example${examples.length === 1 ? "" : "s"}`,
+          ]
             .filter(Boolean)
             .join(" · ")}
         </p>
@@ -103,6 +132,37 @@ export default async function StructureDetailPage({
         </section>
       ) : null}
 
+      {related.length > 0 ? (
+        <section className="border-t border-[var(--line)] pt-6">
+          <h2 className="mb-3 text-sm text-[var(--ink-muted)]">
+            Related vocabulary ({related.length})
+          </h2>
+          <ul className="flex flex-wrap gap-x-4 gap-y-3">
+            {related.map((row) => (
+              <li key={row.id}>
+                <Link
+                  href={`/vocabulary/${row.id}`}
+                  className="flex flex-col gap-0.5"
+                >
+                  <span
+                    className="font-arabic text-lg text-[var(--accent)] hover:underline"
+                    lang="ar"
+                    dir="rtl"
+                  >
+                    {row.arabic}
+                  </span>
+                  {row.transliteration ? (
+                    <span className="text-xs text-[var(--ink-muted)]">
+                      {row.transliteration}
+                    </span>
+                  ) : null}
+                </Link>
+              </li>
+            ))}
+          </ul>
+        </section>
+      ) : null}
+
       <section className="border-t border-[var(--line)] pt-6">
         <div className="mb-3 flex items-baseline justify-between gap-4">
           <h2 className="text-sm text-[var(--ink-muted)]">
@@ -115,35 +175,19 @@ export default async function StructureDetailPage({
             Add example
           </Link>
         </div>
-        {examples.length === 0 ? (
-          <p className="text-[15px] text-[var(--ink-muted)]">
-            No linked examples yet.
-          </p>
-        ) : (
-          <ul className="flex flex-col divide-y divide-[var(--line)]">
-            {examples.map((example) => (
-                <li key={example.id}>
-                  <Link
-                    href={`/examples/${example.id}`}
-                    className="flex flex-col gap-1 py-3 hover:opacity-80"
-                  >
-                    <span
-                      className="font-arabic text-lg leading-relaxed text-[var(--ink)]"
-                      lang="ar"
-                      dir="rtl"
-                    >
-                      {example.arabic}
-                    </span>
-                    {example.translation ? (
-                      <span className="text-sm text-[var(--ink-muted)]">
-                        {example.translation}
-                      </span>
-                    ) : null}
-                  </Link>
-                </li>
-              ))}
-          </ul>
-        )}
+        <ExampleList
+          examples={examples.map((example) => ({
+            id: example.id,
+            arabic: example.arabic,
+            translation: example.translation,
+            transliteration: example.transliteration,
+            sourceTitle: example.texts?.title ?? null,
+            vocabHints:
+              example.example_vocabulary
+                ?.map((row) => row.vocabulary?.arabic)
+                .filter(notNull) ?? [],
+          }))}
+        />
       </section>
     </article>
   );

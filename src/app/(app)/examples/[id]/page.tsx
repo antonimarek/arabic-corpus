@@ -2,6 +2,8 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 
 import { deleteExample } from "@/app/(app)/examples/actions";
+import { ArabicReader } from "@/components/arabic-reader";
+import type { ArabicLink } from "@/lib/highlight-arabic";
 import { createClient } from "@/lib/supabase/server";
 import { notNull } from "@/lib/tags";
 
@@ -17,7 +19,7 @@ export default async function ExampleDetailPage({
   const { data: example, error } = await supabase
     .from("examples")
     .select(
-      "*, texts(id, title), example_tags(tags(name)), example_vocabulary(vocabulary(id, arabic)), example_structures(structures(id, name))",
+      "*, texts(id, title), example_tags(tags(name)), example_vocabulary(vocabulary(id, arabic)), example_structures(structures(id, name, arabic_form))",
     )
     .eq("id", id)
     .maybeSingle();
@@ -46,6 +48,21 @@ export default async function ExampleDetailPage({
       .filter(notNull) ?? [];
   const text = example.texts;
 
+  const links: ArabicLink[] = [
+    ...vocabulary.map((row) => ({
+      phrase: row.arabic,
+      href: `/vocabulary/${row.id}`,
+      kind: "vocabulary" as const,
+    })),
+    ...structures
+      .filter((row) => row.arabic_form)
+      .map((row) => ({
+        phrase: row.arabic_form as string,
+        href: `/structures/${row.id}`,
+        kind: "structure" as const,
+      })),
+  ];
+
   return (
     <article className="flex flex-col gap-8">
       <header className="flex flex-col gap-3">
@@ -73,28 +90,13 @@ export default async function ExampleDetailPage({
         ) : null}
       </header>
 
-      <div
-        className="font-arabic whitespace-pre-wrap text-2xl leading-[1.9] text-[var(--ink)]"
-        lang="ar"
-        dir="rtl"
-      >
-        {example.arabic}
-      </div>
-
-      {example.transliteration ? (
-        <p className="text-[15px] text-[var(--ink-muted)]">
-          {example.transliteration}
-        </p>
-      ) : null}
-
-      {example.translation ? (
-        <section className="border-t border-[var(--line)] pt-6">
-          <h2 className="mb-3 text-sm text-[var(--ink-muted)]">Translation</h2>
-          <p className="whitespace-pre-wrap text-[15px] leading-relaxed text-[var(--ink)]">
-            {example.translation}
-          </p>
-        </section>
-      ) : null}
+      <ArabicReader
+        arabic={example.arabic}
+        translation={example.translation}
+        transliteration={example.transliteration}
+        links={links}
+        size="example"
+      />
 
       {text ? (
         <section className="border-t border-[var(--line)] pt-6">
@@ -139,6 +141,15 @@ export default async function ExampleDetailPage({
                   className="text-[15px] text-[var(--accent)] hover:underline"
                 >
                   {row.name}
+                  {row.arabic_form ? (
+                    <span
+                      className="font-arabic ms-2 text-[var(--ink-muted)]"
+                      lang="ar"
+                      dir="rtl"
+                    >
+                      {row.arabic_form}
+                    </span>
+                  ) : null}
                 </Link>
               </li>
             ))}

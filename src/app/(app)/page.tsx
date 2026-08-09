@@ -1,8 +1,8 @@
 import Link from "next/link";
 
-import { TypePill } from "@/components/type-pill";
+import { SearchResults } from "@/components/search-results";
 import { createClient } from "@/lib/supabase/server";
-import { hrefForHit, searchCorpus } from "@/lib/search";
+import { searchCorpus } from "@/lib/search";
 
 type SearchHomeProps = {
   searchParams: Promise<{ q?: string }>;
@@ -11,18 +11,39 @@ type SearchHomeProps = {
 export default async function SearchHomePage({ searchParams }: SearchHomeProps) {
   const { q = "" } = await searchParams;
   const query = q.trim();
+  const supabase = await createClient();
 
   let hits: Awaited<ReturnType<typeof searchCorpus>> = [];
   let errorMessage: string | null = null;
+  let recentTexts: { id: string; title: string; arabic: string }[] = [];
+  let recentExamples: {
+    id: string;
+    arabic: string;
+    translation: string | null;
+  }[] = [];
 
   if (query) {
-    const supabase = await createClient();
     try {
       hits = await searchCorpus(supabase, query);
     } catch (error) {
       errorMessage =
         error instanceof Error ? error.message : "Search failed.";
     }
+  } else {
+    const [{ data: texts }, { data: examples }] = await Promise.all([
+      supabase
+        .from("texts")
+        .select("id, title, arabic")
+        .order("created_at", { ascending: false })
+        .limit(5),
+      supabase
+        .from("examples")
+        .select("id, arabic, translation")
+        .order("created_at", { ascending: false })
+        .limit(5),
+    ]);
+    recentTexts = texts ?? [];
+    recentExamples = examples ?? [];
   }
 
   return (
@@ -37,12 +58,14 @@ export default async function SearchHomePage({ searchParams }: SearchHomeProps) 
           type="search"
           defaultValue={query}
           autoFocus
+          enterKeyHint="search"
+          autoCapitalize="off"
+          autoCorrect="off"
           placeholder="مبارح · shu 3am · how do I say…"
           className="w-full rounded-md border border-[var(--line)] bg-[var(--surface)] px-4 py-3.5 text-base outline-none focus:border-[var(--accent)]"
         />
         <p className="text-sm text-[var(--ink-muted)]">
-          Exact / substring search across texts, examples, vocabulary, and
-          structures.
+          Exact / substring search. Type pills show where the hit came from.
         </p>
       </form>
 
@@ -53,59 +76,109 @@ export default async function SearchHomePage({ searchParams }: SearchHomeProps) 
       ) : null}
 
       {!query ? (
-        <div className="flex flex-col gap-2">
-          <h2 className="text-sm font-medium text-[var(--ink-muted)]">
-            Try next
-          </h2>
-          <p className="text-[15px] text-[var(--ink)]">
-            Use Add to capture a text, word, structure, or example. Then search
-            here.
-          </p>
+        <div className="flex flex-col gap-8">
+          <div className="flex flex-col gap-3">
+            <h2 className="text-sm font-medium text-[var(--ink-muted)]">
+              Capture
+            </h2>
+            <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+              {[
+                { href: "/texts/new", label: "Text" },
+                { href: "/vocabulary/new", label: "Vocab" },
+                { href: "/structures/new", label: "Structure" },
+                { href: "/examples/new", label: "Example" },
+              ].map((item) => (
+                <Link
+                  key={item.href}
+                  href={item.href}
+                  className="rounded-md border border-[var(--line)] bg-[var(--surface)] px-3 py-3.5 text-center text-sm text-[var(--ink)] hover:bg-[var(--surface-hover)]"
+                >
+                  {item.label}
+                </Link>
+              ))}
+            </div>
+          </div>
+
+          {recentTexts.length > 0 ? (
+            <div className="flex flex-col gap-2">
+              <h2 className="text-sm font-medium text-[var(--ink-muted)]">
+                Recent texts
+              </h2>
+              <ul className="flex flex-col divide-y divide-[var(--line)]">
+                {recentTexts.map((text) => (
+                  <li key={text.id}>
+                    <Link
+                      href={`/texts/${text.id}`}
+                      className="flex flex-col gap-1 py-3 hover:opacity-80"
+                    >
+                      <span className="text-[15px] font-medium text-[var(--ink)]">
+                        {text.title}
+                      </span>
+                      <span
+                        className="font-arabic line-clamp-1 text-base text-[var(--ink-muted)]"
+                        lang="ar"
+                        dir="rtl"
+                      >
+                        {text.arabic}
+                      </span>
+                    </Link>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          ) : null}
+
+          {recentExamples.length > 0 ? (
+            <div className="flex flex-col gap-2">
+              <h2 className="text-sm font-medium text-[var(--ink-muted)]">
+                Recent examples
+              </h2>
+              <ul className="flex flex-col divide-y divide-[var(--line)]">
+                {recentExamples.map((example) => (
+                  <li key={example.id}>
+                    <Link
+                      href={`/examples/${example.id}`}
+                      className="flex flex-col gap-1 py-3 hover:opacity-80"
+                    >
+                      <span
+                        className="font-arabic text-lg leading-relaxed text-[var(--ink)]"
+                        lang="ar"
+                        dir="rtl"
+                      >
+                        {example.arabic}
+                      </span>
+                      {example.translation ? (
+                        <span className="text-sm text-[var(--ink-muted)]">
+                          {example.translation}
+                        </span>
+                      ) : null}
+                    </Link>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          ) : null}
+
+          {recentTexts.length === 0 && recentExamples.length === 0 ? (
+            <p className="text-[15px] text-[var(--ink)]">
+              Corpus empty. Capture a text or example to start.
+            </p>
+          ) : null}
         </div>
       ) : hits.length === 0 ? (
-        <p className="text-[15px] text-[var(--ink-muted)]">
-          No matches for “{query}”.
-        </p>
+        <div className="flex flex-col gap-3">
+          <p className="text-[15px] text-[var(--ink-muted)]">
+            No matches for “{query}”.
+          </p>
+          <Link
+            href={`/examples/new`}
+            className="text-sm text-[var(--accent)] hover:underline"
+          >
+            Add as new example
+          </Link>
+        </div>
       ) : (
-        <ul className="flex flex-col divide-y divide-[var(--line)]">
-          {hits.map((hit) => (
-            <li key={`${hit.type}:${hit.id}`}>
-              <Link
-                href={hrefForHit(hit)}
-                className="flex flex-col gap-2 py-4 hover:opacity-80"
-              >
-                <div className="flex items-center gap-2">
-                  <TypePill type={hit.type} />
-                  <span className="text-[15px] font-medium text-[var(--ink)]">
-                    {hit.type === "example" || hit.type === "vocabulary" ? (
-                      <span className="font-arabic" lang="ar" dir="rtl">
-                        {hit.title}
-                      </span>
-                    ) : (
-                      hit.title
-                    )}
-                  </span>
-                </div>
-                {hit.arabic &&
-                hit.type !== "example" &&
-                hit.type !== "vocabulary" ? (
-                  <span
-                    className="font-arabic line-clamp-2 text-lg leading-relaxed text-[var(--ink)]"
-                    lang="ar"
-                    dir="rtl"
-                  >
-                    {hit.arabic}
-                  </span>
-                ) : null}
-                {hit.subtitle ? (
-                  <span className="line-clamp-2 text-sm text-[var(--ink-muted)]">
-                    {hit.subtitle}
-                  </span>
-                ) : null}
-              </Link>
-            </li>
-          ))}
-        </ul>
+        <SearchResults hits={hits} />
       )}
     </section>
   );

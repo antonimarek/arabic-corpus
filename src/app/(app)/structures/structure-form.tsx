@@ -7,6 +7,7 @@ import {
   updateStructure,
   type StructureFormState,
 } from "@/app/(app)/structures/actions";
+import { FormSubmit } from "@/components/form-submit";
 import { MultiCheckPicker } from "@/components/multi-check-picker";
 import { TagField } from "@/components/tag-field";
 import type { Structure } from "@/types/database";
@@ -120,17 +121,12 @@ export function StructureForm(props: StructureFormProps) {
         </p>
       ) : null}
 
-      <button
-        type="submit"
-        disabled={pending}
-        className="self-start rounded-md bg-[var(--accent)] px-4 py-2.5 text-sm font-medium text-white disabled:opacity-60"
-      >
-        {pending
-          ? "Saving…"
-          : props.mode === "create"
-            ? "Save structure"
-            : "Save changes"}
-      </button>
+      <FormSubmit
+        pending={pending}
+        label={
+          props.mode === "create" ? "Save structure" : "Save changes"
+        }
+      />
     </form>
   );
 }

@@ -40,3 +40,15 @@ export function isEmailAllowed(email: string | null | undefined): boolean {
 export function getSiteUrl(): string {
   return process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000";
 }
+
+export function getEmbeddingApiKey(): string | null {
+  return (
+    process.env.OPENAI_API_KEY ??
+    process.env.EMBEDDING_API_KEY ??
+    null
+  );
+}
+
+export function getEmbeddingModel(): string {
+  return process.env.EMBEDDING_MODEL ?? "text-embedding-3-small";
+}

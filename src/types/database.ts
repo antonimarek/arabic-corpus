@@ -19,6 +19,9 @@ export type Database = {
           source: string | null;
           occurred_on: string | null;
           notes: string | null;
+          search_arabic?: string | null;
+          search_latin?: string | null;
+          embedding?: string | null;
           created_at: string;
           updated_at: string;
         };
@@ -31,6 +34,7 @@ export type Database = {
           source?: string | null;
           occurred_on?: string | null;
           notes?: string | null;
+          embedding?: string | null;
           created_at?: string;
           updated_at?: string;
         };
@@ -43,6 +47,7 @@ export type Database = {
           source?: string | null;
           occurred_on?: string | null;
           notes?: string | null;
+          embedding?: string | null;
           created_at?: string;
           updated_at?: string;
         };
@@ -57,6 +62,9 @@ export type Database = {
           translation: string | null;
           transliteration: string | null;
           notes: string | null;
+          search_arabic?: string | null;
+          search_latin?: string | null;
+          embedding?: string | null;
           created_at: string;
           updated_at: string;
         };
@@ -68,6 +76,7 @@ export type Database = {
           translation?: string | null;
           transliteration?: string | null;
           notes?: string | null;
+          embedding?: string | null;
           created_at?: string;
           updated_at?: string;
         };
@@ -79,6 +88,7 @@ export type Database = {
           translation?: string | null;
           transliteration?: string | null;
           notes?: string | null;
+          embedding?: string | null;
           created_at?: string;
           updated_at?: string;
         };
@@ -100,6 +110,9 @@ export type Database = {
           transliteration: string | null;
           part_of_speech: string | null;
           notes: string | null;
+          search_arabic?: string | null;
+          search_latin?: string | null;
+          embedding?: string | null;
           created_at: string;
           updated_at: string;
         };
@@ -110,6 +123,7 @@ export type Database = {
           transliteration?: string | null;
           part_of_speech?: string | null;
           notes?: string | null;
+          embedding?: string | null;
           created_at?: string;
           updated_at?: string;
         };
@@ -120,6 +134,7 @@ export type Database = {
           transliteration?: string | null;
           part_of_speech?: string | null;
           notes?: string | null;
+          embedding?: string | null;
           created_at?: string;
           updated_at?: string;
         };
@@ -173,6 +188,9 @@ export type Database = {
           meaning: string | null;
           explanation: string | null;
           notes: string | null;
+          search_arabic?: string | null;
+          search_latin?: string | null;
+          embedding?: string | null;
           created_at: string;
           updated_at: string;
         };
@@ -185,6 +203,7 @@ export type Database = {
           meaning?: string | null;
           explanation?: string | null;
           notes?: string | null;
+          embedding?: string | null;
           created_at?: string;
           updated_at?: string;
         };
@@ -197,6 +216,7 @@ export type Database = {
           meaning?: string | null;
           explanation?: string | null;
           notes?: string | null;
+          embedding?: string | null;
           created_at?: string;
           updated_at?: string;
         };
@@ -349,9 +369,77 @@ export type Database = {
           },
         ];
       };
+      search_misses: {
+        Row: {
+          id: string;
+          owner_id: string;
+          query: string;
+          layers_tried: string[];
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          owner_id: string;
+          query: string;
+          layers_tried?: string[];
+          created_at?: string;
+        };
+        Update: {
+          id?: string;
+          owner_id?: string;
+          query?: string;
+          layers_tried?: string[];
+          created_at?: string;
+        };
+        Relationships: [];
+      };
     };
     Views: Record<string, never>;
-    Functions: Record<string, never>;
+    Functions: {
+      search_corpus: {
+        Args: {
+          search_query: string;
+          result_limit?: number;
+          fuzzy_threshold?: number;
+        };
+        Returns: {
+          entity_type: string;
+          entity_id: string;
+          title: string;
+          arabic: string | null;
+          subtitle: string | null;
+          score: number;
+          match_label: string | null;
+          match_layer: string | null;
+          context: string[] | null;
+        }[];
+      };
+      search_corpus_semantic: {
+        Args: {
+          query_embedding: string;
+          result_limit?: number;
+          match_threshold?: number;
+        };
+        Returns: {
+          entity_type: string;
+          entity_id: string;
+          title: string;
+          arabic: string | null;
+          subtitle: string | null;
+          score: number;
+          match_label: string | null;
+          match_layer: string | null;
+          context: string[] | null;
+        }[];
+      };
+      log_search_miss: {
+        Args: {
+          miss_query: string;
+          layers?: string[];
+        };
+        Returns: undefined;
+      };
+    };
     Enums: Record<string, never>;
     CompositeTypes: Record<string, never>;
   };

@@ -1,8 +1,10 @@
 import Link from "next/link";
 
+import { ReindexEmbeddingsButton } from "@/components/reindex-embeddings-button";
 import { SearchResults } from "@/components/search-results";
+import { isEmbeddingConfigured } from "@/lib/embeddings";
 import { createClient } from "@/lib/supabase/server";
-import { searchCorpus } from "@/lib/search";
+import { searchCorpus, type SearchResult } from "@/lib/search";
 
 type SearchHomeProps = {
   searchParams: Promise<{ q?: string }>;
@@ -12,8 +14,9 @@ export default async function SearchHomePage({ searchParams }: SearchHomeProps) 
   const { q = "" } = await searchParams;
   const query = q.trim();
   const supabase = await createClient();
+  const semanticReady = isEmbeddingConfigured();
 
-  let hits: Awaited<ReturnType<typeof searchCorpus>> = [];
+  let result: SearchResult | null = null;
   let errorMessage: string | null = null;
   let recentTexts: { id: string; title: string; arabic: string }[] = [];
   let recentExamples: {
@@ -21,30 +24,40 @@ export default async function SearchHomePage({ searchParams }: SearchHomeProps) 
     arabic: string;
     translation: string | null;
   }[] = [];
+  let recentMisses: { query: string; created_at: string }[] = [];
 
   if (query) {
     try {
-      hits = await searchCorpus(supabase, query);
+      result = await searchCorpus(supabase, query);
     } catch (error) {
       errorMessage =
         error instanceof Error ? error.message : "Search failed.";
     }
   } else {
-    const [{ data: texts }, { data: examples }] = await Promise.all([
-      supabase
-        .from("texts")
-        .select("id, title, arabic")
-        .order("created_at", { ascending: false })
-        .limit(5),
-      supabase
-        .from("examples")
-        .select("id, arabic, translation")
-        .order("created_at", { ascending: false })
-        .limit(5),
-    ]);
+    const [{ data: texts }, { data: examples }, { data: misses }] =
+      await Promise.all([
+        supabase
+          .from("texts")
+          .select("id, title, arabic")
+          .order("created_at", { ascending: false })
+          .limit(5),
+        supabase
+          .from("examples")
+          .select("id, arabic, translation")
+          .order("created_at", { ascending: false })
+          .limit(5),
+        supabase
+          .from("search_misses")
+          .select("query, created_at")
+          .order("created_at", { ascending: false })
+          .limit(8),
+      ]);
     recentTexts = texts ?? [];
     recentExamples = examples ?? [];
+    recentMisses = misses ?? [];
   }
+
+  const hits = result?.hits ?? [];
 
   return (
     <section className="flex flex-col gap-8">
@@ -65,7 +78,10 @@ export default async function SearchHomePage({ searchParams }: SearchHomeProps) 
           className="w-full rounded-md border border-[var(--line)] bg-[var(--surface)] px-4 py-3.5 text-base outline-none focus:border-[var(--accent)]"
         />
         <p className="text-sm text-[var(--ink-muted)]">
-          Exact / substring search. Type pills show where the hit came from.
+          Exact + fuzzy (trigram).{" "}
+          {semanticReady
+            ? "Semantic layer on when embeddings exist."
+            : "Semantic optional — set OPENAI_API_KEY to enable."}
         </p>
       </form>
 
@@ -159,6 +175,38 @@ export default async function SearchHomePage({ searchParams }: SearchHomeProps) 
             </div>
           ) : null}
 
+          {recentMisses.length > 0 ? (
+            <div className="flex flex-col gap-2">
+              <h2 className="text-sm font-medium text-[var(--ink-muted)]">
+                Recent search misses
+              </h2>
+              <ul className="flex flex-col gap-1.5">
+                {recentMisses.map((miss) => (
+                  <li key={`${miss.query}-${miss.created_at}`}>
+                    <Link
+                      href={`/?q=${encodeURIComponent(miss.query)}`}
+                      className="text-sm text-[var(--ink)] hover:underline"
+                    >
+                      {miss.query}
+                    </Link>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          ) : null}
+
+          {semanticReady ? (
+            <div className="border-t border-[var(--line)] pt-6">
+              <h2 className="mb-2 text-sm font-medium text-[var(--ink-muted)]">
+                Semantic index
+              </h2>
+              <p className="mb-3 text-sm text-[var(--ink-muted)]">
+                Rebuild embeddings after adding lots of material.
+              </p>
+              <ReindexEmbeddingsButton />
+            </div>
+          ) : null}
+
           {recentTexts.length === 0 && recentExamples.length === 0 ? (
             <p className="text-[15px] text-[var(--ink)]">
               Corpus empty. Capture a text or example to start.
@@ -168,17 +216,31 @@ export default async function SearchHomePage({ searchParams }: SearchHomeProps) 
       ) : hits.length === 0 ? (
         <div className="flex flex-col gap-3">
           <p className="text-[15px] text-[var(--ink-muted)]">
-            No matches for “{query}”.
+            No exact or fuzzy matches for “{query}”.
+            {result?.missLogged ? " Logged as a miss." : null}
           </p>
+          {result?.layersTried?.length ? (
+            <p className="text-xs text-[var(--ink-muted)]">
+              Layers tried: {result.layersTried.join(" · ")}
+            </p>
+          ) : null}
           <Link
-            href={`/examples/new`}
+            href="/examples/new"
             className="text-sm text-[var(--accent)] hover:underline"
           >
             Add as new example
           </Link>
         </div>
       ) : (
-        <SearchResults hits={hits} />
+        <div className="flex flex-col gap-3">
+          {result?.layersTried?.length ? (
+            <p className="text-xs text-[var(--ink-muted)]">
+              Layers: {result.layersTried.join(" · ")} · {hits.length} hit
+              {hits.length === 1 ? "" : "s"}
+            </p>
+          ) : null}
+          <SearchResults hits={hits} />
+        </div>
       )}
     </section>
   );

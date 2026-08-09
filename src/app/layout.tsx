@@ -1,6 +1,8 @@
 import type { Metadata } from "next";
 import { Noto_Naskh_Arabic, Source_Sans_3 } from "next/font/google";
 
+import { getSiteUrl } from "@/lib/env";
+
 import "./globals.css";
 
 const sourceSans = Source_Sans_3({
@@ -18,9 +20,7 @@ const notoNaskh = Noto_Naskh_Arabic({
 export const metadata: Metadata = {
   title: "Levantine corpus",
   description: "Levantine Arabic corpus for study and retrieval",
-  metadataBase: new URL(
-    process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000",
-  ),
+  metadataBase: new URL(getSiteUrl()),
 };
 
 export default function RootLayout({ children }: LayoutProps<"/">) {

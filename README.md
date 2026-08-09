@@ -16,9 +16,12 @@ Web app for storing and searching Levantine Arabic texts, examples, vocabulary, 
    - `ALLOWED_EMAILS` (your email)
    - `NEXT_PUBLIC_SITE_URL` (`http://localhost:3000` for local use)
 2. Create a Supabase project. Apply `supabase/migrations/20260809100000_init.sql` in the SQL editor, or use the Supabase CLI after `npx supabase link`.
-3. In Supabase Auth URL settings, add redirect URLs:
-   - `http://localhost:3000/auth/callback`
-   - your production URL, for example `https://YOUR_DOMAIN/auth/callback`
+3. In Supabase Auth → [URL Configuration](https://supabase.com/dashboard/project/_/auth/url-configuration):
+   - Set **Site URL** to the production origin (for example `https://YOUR_DOMAIN`). Do not leave Site URL on `http://localhost:3000` if you use production magic links — unmatched `emailRedirectTo` falls back to Site URL.
+   - Add **Redirect URLs**:
+     - `http://localhost:3000/auth/callback`
+     - `https://YOUR_DOMAIN/auth/callback`
+     - optional previews: `https://*-YOUR_TEAM.vercel.app/auth/callback`
 4. Install and run:
 
 ```bash

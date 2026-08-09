@@ -38,7 +38,32 @@ export function isEmailAllowed(email: string | null | undefined): boolean {
 }
 
 export function getSiteUrl(): string {
-  return process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000";
+  const explicit = process.env.NEXT_PUBLIC_SITE_URL?.replace(/\/$/, "");
+  // Ignore localhost when running on Vercel (common misconfig from .env.example).
+  if (explicit && !(process.env.VERCEL && isLocalhostUrl(explicit))) {
+    return explicit;
+  }
+
+  const vercelProduction = process.env.VERCEL_PROJECT_PRODUCTION_URL;
+  if (vercelProduction) {
+    return `https://${vercelProduction.replace(/\/$/, "")}`;
+  }
+
+  const vercelUrl = process.env.VERCEL_URL;
+  if (vercelUrl) {
+    return `https://${vercelUrl.replace(/\/$/, "")}`;
+  }
+
+  return explicit ?? "http://localhost:3000";
+}
+
+function isLocalhostUrl(url: string): boolean {
+  try {
+    const host = new URL(url).hostname;
+    return host === "localhost" || host === "127.0.0.1";
+  } catch {
+    return false;
+  }
 }
 
 export function getEmbeddingApiKey(): string | null {

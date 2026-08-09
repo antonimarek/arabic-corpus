@@ -1,4 +1,4 @@
--- Personal Levantine Arabic corpus — core schema
+-- Levantine Arabic corpus — core schema
 -- Original Arabic is stored exactly. No silent normalization.
 
 create extension if not exists "pgcrypto";
@@ -173,7 +173,7 @@ create trigger structures_set_updated_at
   for each row execute function public.set_updated_at();
 
 -- ---------------------------------------------------------------------------
--- RLS — single-owner personal app
+-- RLS — authenticated owner only
 -- ---------------------------------------------------------------------------
 alter table public.texts enable row level security;
 alter table public.examples enable row level security;

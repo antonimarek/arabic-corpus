@@ -23,7 +23,7 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
           Levantine corpus
         </h1>
         <p className="text-[15px] text-[var(--ink-muted)]">
-          Private personal study notes. Sign in with your allowlisted email.
+          Sign in with your allowlisted email to open the corpus.
         </p>
       </header>
       {errorMessage ? (

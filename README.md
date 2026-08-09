@@ -1,12 +1,12 @@
 # Levantine Arabic corpus
 
-Personal web app for storing and searching Levantine Arabic texts, examples, vocabulary, and structures. The database is the source of truth. An LLM layer is optional and not required.
+Web app for storing and searching Levantine Arabic texts, examples, vocabulary, and structures. The database is the source of truth. An LLM layer is optional and not required.
 
 ## Stack
 
 - Next.js (App Router) + TypeScript + Tailwind CSS
 - Supabase Auth (magic link) + Postgres + RLS
-- Vercel for hosting (target domain: `YOUR_DOMAIN`)
+- Vercel for hosting
 
 ## Local setup
 
@@ -16,9 +16,9 @@ Personal web app for storing and searching Levantine Arabic texts, examples, voc
    - `ALLOWED_EMAILS` (your email)
    - `NEXT_PUBLIC_SITE_URL` (`http://localhost:3000` for local use)
 2. Create a Supabase project. Apply `supabase/migrations/20260809100000_init.sql` in the SQL editor, or use the Supabase CLI after `npx supabase link`.
-3. In Supabase Auth URL settings, add redirect URL:
+3. In Supabase Auth URL settings, add redirect URLs:
    - `http://localhost:3000/auth/callback`
-   - later: `https://YOUR_DOMAIN/auth/callback`
+   - your production URL, for example `https://YOUR_DOMAIN/auth/callback`
 4. Install and run:
 
 ```bash
@@ -27,6 +27,10 @@ npm run dev
 ```
 
 Open `http://localhost:3000`, request a magic link with an allowlisted email, then create a text.
+
+## Environment
+
+Do not commit `.env.local` or any file with real keys, project URLs, or emails. Use `.env.example` as the template only.
 
 ## Phase 1 status
 

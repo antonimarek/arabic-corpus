@@ -1,4 +1,4 @@
--- Personal Levantine Arabic corpus (local CLI defaults)
+-- Levantine Arabic corpus (local CLI defaults)
 -- Link a remote project with: npx supabase link --project-ref <ref>
 
 project_id = "arabic-corpus"

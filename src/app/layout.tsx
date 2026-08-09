@@ -17,7 +17,7 @@ const notoNaskh = Noto_Naskh_Arabic({
 
 export const metadata: Metadata = {
   title: "Levantine corpus",
-  description: "Personal Levantine Arabic corpus for study and retrieval",
+  description: "Levantine Arabic corpus for study and retrieval",
   metadataBase: new URL(
     process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000",
   ),

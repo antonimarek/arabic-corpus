@@ -1,0 +1,9 @@
+{
+  "arabic": "Front",
+  "translation": "Back",
+  "tags": "Tags",
+  "deck": "Deck",
+  "noteId": "Guid",
+  "entityHint": "example",
+  "splitGlossesOn": "\n"
+}

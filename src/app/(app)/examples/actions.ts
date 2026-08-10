@@ -11,6 +11,16 @@ export type ExampleFormState = {
   error?: string;
 };
 
+function parseSourceLine(formData: FormData): number | null {
+  const raw = String(formData.get("source_line") ?? "").trim();
+  if (!raw) return null;
+  const n = Number(raw);
+  if (!Number.isInteger(n) || n < 1) {
+    return null;
+  }
+  return n;
+}
+
 async function syncExampleJoins(
   supabase: Awaited<ReturnType<typeof requireUserId>>["supabase"],
   exampleId: string,
@@ -70,6 +80,12 @@ export async function createExample(
   }
 
   const { supabase, userId } = await requireUserId();
+  const textId = emptyToNull(formData.get("text_id"));
+  const sourceLine = parseSourceLine(formData);
+  if (sourceLine != null && !textId) {
+    return { error: "Source line requires a source text." };
+  }
+
   const { data, error } = await supabase
     .from("examples")
     .insert({
@@ -78,7 +94,8 @@ export async function createExample(
       translation: emptyToNull(formData.get("translation")),
       transliteration: emptyToNull(formData.get("transliteration")),
       notes: emptyToNull(formData.get("notes")),
-      text_id: emptyToNull(formData.get("text_id")),
+      text_id: textId,
+      source_line: sourceLine,
     })
     .select("id")
     .single();
@@ -110,6 +127,10 @@ export async function createExample(
   revalidatePath("/");
   revalidatePath("/vocabulary");
   revalidatePath("/structures");
+  if (textId) {
+    revalidatePath(`/texts/${textId}`);
+    revalidatePath("/texts");
+  }
   redirect(`/examples/${data.id}`);
 }
 
@@ -124,6 +145,12 @@ export async function updateExample(
   }
 
   const { supabase, userId } = await requireUserId();
+  const textId = emptyToNull(formData.get("text_id"));
+  const sourceLine = parseSourceLine(formData);
+  if (sourceLine != null && !textId) {
+    return { error: "Source line requires a source text." };
+  }
+
   const { error } = await supabase
     .from("examples")
     .update({
@@ -131,7 +158,8 @@ export async function updateExample(
       translation: emptyToNull(formData.get("translation")),
       transliteration: emptyToNull(formData.get("transliteration")),
       notes: emptyToNull(formData.get("notes")),
-      text_id: emptyToNull(formData.get("text_id")),
+      text_id: textId,
+      source_line: sourceLine,
     })
     .eq("id", id);
 
@@ -163,6 +191,10 @@ export async function updateExample(
   revalidatePath("/");
   revalidatePath("/vocabulary");
   revalidatePath("/structures");
+  if (textId) {
+    revalidatePath(`/texts/${textId}`);
+    revalidatePath("/texts");
+  }
   redirect(`/examples/${id}`);
 }
 

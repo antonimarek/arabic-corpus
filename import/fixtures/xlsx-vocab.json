@@ -1,0 +1,36 @@
+{
+  "stagingId": "vocab:xlsx:fixture:42",
+  "entityHint": "vocabulary",
+  "original": {
+    "arabic": "مبارح",
+    "fields": {
+      "Arabic": "مبارح",
+      "Translation": "yesterday / wczoraj",
+      "Notes": "colloquial"
+    }
+  },
+  "normalized": {
+    "arabic": "مبارح",
+    "arabicSearch": "مبارح"
+  },
+  "glosses": [
+    { "text": "yesterday / wczoraj", "raw": "yesterday / wczoraj" }
+  ],
+  "tags": [],
+  "sources": [
+    {
+      "type": "xlsx",
+      "file": "examples.xlsx",
+      "sheet": "Vocab",
+      "row": 42,
+      "importRunId": "run_fixture_xlsx"
+    }
+  ],
+  "extraction": {
+    "method": "deterministic",
+    "needsReview": true,
+    "parserVersion": "1"
+  },
+  "fingerprint": "fixture-xlsx-fingerprint",
+  "match": { "status": "NEW" }
+}

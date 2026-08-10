@@ -27,6 +27,8 @@ type ExampleFormProps =
       vocabularyOptions: Option[];
       structureOptions: Option[];
       defaultTextId?: string;
+      defaultSourceLine?: string;
+      defaultArabic?: string;
       defaultVocabularyIds?: string[];
       defaultStructureIds?: string[];
     }
@@ -55,6 +57,16 @@ export function ExampleForm(props: ExampleFormProps) {
       ? (example?.text_id ?? "")
       : (props.defaultTextId ?? "");
 
+  const defaultSourceLine =
+    props.mode === "edit"
+      ? (example?.source_line != null ? String(example.source_line) : "")
+      : (props.defaultSourceLine ?? "");
+
+  const defaultArabic =
+    props.mode === "edit"
+      ? (example?.arabic ?? "")
+      : (props.defaultArabic ?? "");
+
   const selectedVocabularyIds =
     props.mode === "edit"
       ? props.selectedVocabularyIds
@@ -75,7 +87,7 @@ export function ExampleForm(props: ExampleFormProps) {
           rows={3}
           dir="rtl"
           lang="ar"
-          defaultValue={example?.arabic ?? ""}
+          defaultValue={defaultArabic}
           className="font-arabic rounded-md border border-[var(--line)] bg-[var(--surface)] px-3 py-3 text-xl leading-relaxed outline-none focus:border-[var(--accent)]"
         />
       </label>
@@ -113,6 +125,19 @@ export function ExampleForm(props: ExampleFormProps) {
             </option>
           ))}
         </select>
+      </label>
+
+      <label className="flex flex-col gap-2">
+        <span className="text-sm text-[var(--ink-muted)]">Source line</span>
+        <input
+          name="source_line"
+          type="number"
+          min={1}
+          step={1}
+          defaultValue={defaultSourceLine}
+          placeholder="Optional line number in source text"
+          className="rounded-md border border-[var(--line)] bg-[var(--surface)] px-3 py-2.5 text-[15px] outline-none focus:border-[var(--accent)]"
+        />
       </label>
 
       <MultiCheckPicker

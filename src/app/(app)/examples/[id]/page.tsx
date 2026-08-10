@@ -6,6 +6,7 @@ import { ArabicReader } from "@/components/arabic-reader";
 import type { ArabicLink } from "@/lib/highlight-arabic";
 import { createClient } from "@/lib/supabase/server";
 import { notNull } from "@/lib/tags";
+import { lineHref } from "@/lib/text-lines";
 
 type ExampleDetailProps = {
   params: Promise<{ id: string }>;
@@ -107,6 +108,17 @@ export default async function ExampleDetailPage({
           >
             {text.title}
           </Link>
+          {example.source_line != null ? (
+            <p className="mt-2 text-sm text-[var(--ink-muted)]">
+              Line{" "}
+              <Link
+                href={lineHref(text.id, example.source_line)}
+                className="text-[var(--accent)] hover:underline"
+              >
+                {example.source_line}
+              </Link>
+            </p>
+          ) : null}
         </section>
       ) : null}
 

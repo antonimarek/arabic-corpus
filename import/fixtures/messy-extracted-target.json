@@ -1,0 +1,106 @@
+{
+  "candidates": [
+    {
+      "stagingId": "vocab:fixture:مبارح",
+      "entityHint": "vocabulary",
+      "original": {
+        "arabic": "مبارح",
+        "fields": { "meaning": "yesterday" }
+      },
+      "glosses": [{ "text": "yesterday" }],
+      "tags": [],
+      "sources": [
+        {
+          "type": "lesson_notes",
+          "file": "lesson-42.md",
+          "line": 3,
+          "importRunId": "run_fixture_messy"
+        }
+      ],
+      "extraction": {
+        "method": "llm",
+        "needsReview": true,
+        "parserVersion": "1",
+        "model": "future-provider-id"
+      },
+      "match": { "status": "NEW" }
+    },
+    {
+      "stagingId": "struct:fixture:كنت_عم",
+      "entityHint": "structure",
+      "original": {
+        "arabic": "كنت عم + verb",
+        "fields": { "meaning": "used for ongoing action in the past" }
+      },
+      "glosses": [{ "text": "used for ongoing action in the past" }],
+      "tags": [],
+      "sources": [
+        {
+          "type": "lesson_notes",
+          "file": "lesson-42.md",
+          "line": 5,
+          "importRunId": "run_fixture_messy"
+        }
+      ],
+      "extraction": {
+        "method": "llm",
+        "needsReview": true,
+        "parserVersion": "1",
+        "model": "future-provider-id"
+      },
+      "match": { "status": "NEW" }
+    },
+    {
+      "stagingId": "ex:fixture:شو_كنت",
+      "entityHint": "example",
+      "original": {
+        "arabic": "شو كنت عم تعمل؟",
+        "fields": { "translation": "What were you doing?" }
+      },
+      "glosses": [{ "text": "What were you doing?", "lang": "en" }],
+      "tags": [],
+      "sources": [
+        {
+          "type": "lesson_notes",
+          "file": "lesson-42.md",
+          "line": 8,
+          "importRunId": "run_fixture_messy"
+        }
+      ],
+      "extraction": {
+        "method": "llm",
+        "needsReview": true,
+        "parserVersion": "1",
+        "model": "future-provider-id"
+      },
+      "match": { "status": "NEW" }
+    }
+  ],
+  "rawParent": {
+    "stagingId": "bundle:md:fixture:chunk0",
+    "entityHint": "unknown",
+    "original": {
+      "fields": {
+        "rawText": "اليوم حكينا عن السفر.\n\nمبارح = yesterday\n\nكنت عم + verb\nused for ongoing action in the past\n\nشو كنت عم تعمل؟\nWhat were you doing?"
+      }
+    },
+    "glosses": [],
+    "tags": [],
+    "sources": [
+      {
+        "type": "lesson_notes",
+        "file": "lesson-42.md",
+        "line": 1,
+        "importRunId": "run_fixture_messy"
+      }
+    ],
+    "extraction": {
+      "method": "llm",
+      "needsReview": true,
+      "parserVersion": "1",
+      "model": "future-provider-id"
+    },
+    "match": { "status": "NEW" },
+    "children": []
+  }
+}

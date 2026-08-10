@@ -6,6 +6,7 @@ type ExampleRow = {
   translation?: string | null;
   transliteration?: string | null;
   sourceTitle?: string | null;
+  sourceHref?: string | null;
   vocabHints?: string[];
 };
 
@@ -25,10 +26,10 @@ export function ExampleList({
   return (
     <ul className="flex flex-col divide-y divide-[var(--line)]">
       {examples.map((example) => (
-        <li key={example.id}>
+        <li key={example.id} className="py-3.5">
           <Link
             href={`/examples/${example.id}`}
-            className="flex flex-col gap-1.5 py-3.5 hover:opacity-80"
+            className="flex flex-col gap-1.5 hover:opacity-80"
           >
             <span
               className="font-arabic text-lg leading-relaxed text-[var(--ink)]"
@@ -46,19 +47,26 @@ export function ExampleList({
                 {example.transliteration}
               </span>
             ) : null}
-            {(example.sourceTitle || (example.vocabHints?.length ?? 0) > 0) && (
+            {(example.vocabHints?.length ?? 0) > 0 ? (
               <span className="text-xs text-[var(--ink-muted)]">
-                {[
-                  example.sourceTitle ? `from ${example.sourceTitle}` : null,
-                  example.vocabHints && example.vocabHints.length > 0
-                    ? example.vocabHints.slice(0, 3).join(" · ")
-                    : null,
-                ]
-                  .filter(Boolean)
-                  .join(" · ")}
+                {example.vocabHints!.slice(0, 3).join(" · ")}
               </span>
-            )}
+            ) : null}
           </Link>
+          {example.sourceTitle ? (
+            example.sourceHref ? (
+              <Link
+                href={example.sourceHref}
+                className="mt-1 inline-block text-xs text-[var(--accent)] hover:underline"
+              >
+                {example.sourceTitle}
+              </Link>
+            ) : (
+              <span className="mt-1 block text-xs text-[var(--ink-muted)]">
+                from {example.sourceTitle}
+              </span>
+            )
+          ) : null}
         </li>
       ))}
     </ul>

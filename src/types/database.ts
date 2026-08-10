@@ -58,6 +58,7 @@ export type Database = {
           id: string;
           owner_id: string;
           text_id: string | null;
+          source_line: number | null;
           arabic: string;
           translation: string | null;
           transliteration: string | null;
@@ -72,6 +73,7 @@ export type Database = {
           id?: string;
           owner_id: string;
           text_id?: string | null;
+          source_line?: number | null;
           arabic: string;
           translation?: string | null;
           transliteration?: string | null;
@@ -84,6 +86,7 @@ export type Database = {
           id?: string;
           owner_id?: string;
           text_id?: string | null;
+          source_line?: number | null;
           arabic?: string;
           translation?: string | null;
           transliteration?: string | null;

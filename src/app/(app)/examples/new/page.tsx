@@ -6,6 +6,8 @@ type NewExampleProps = {
     vocabulary?: string;
     structure?: string;
     text?: string;
+    line?: string;
+    arabic?: string;
   }>;
 };
 
@@ -52,6 +54,8 @@ export default async function NewExamplePage({ searchParams }: NewExampleProps) 
           })) ?? []
         }
         defaultTextId={params.text}
+        defaultSourceLine={params.line}
+        defaultArabic={params.arabic}
         defaultVocabularyIds={params.vocabulary ? [params.vocabulary] : []}
         defaultStructureIds={params.structure ? [params.structure] : []}
       />

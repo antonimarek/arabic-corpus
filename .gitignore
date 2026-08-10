@@ -43,3 +43,14 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+/raw/
+/import/normalized/
+/import/staging/
+/import/reports/
+/import/processed/
+!/import/normalized/.gitkeep
+!/import/staging/.gitkeep
+!/import/reports/.gitkeep
+!/import/processed/.gitkeep
+!/import/processed/runs/.gitkeep

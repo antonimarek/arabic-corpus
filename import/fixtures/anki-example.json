@@ -1,0 +1,39 @@
+{
+  "stagingId": "ex:anki:fixture:1842",
+  "entityHint": "example",
+  "original": {
+    "arabic": "شو عم تعمل؟",
+    "fields": {
+      "Front": "شو عم تعمل؟",
+      "Back": "What are you doing?\nWhat are you up to?",
+      "Tags": "verbs present",
+      "Deck": "Levantine"
+    }
+  },
+  "normalized": {
+    "arabic": "شو عم تعمل؟",
+    "arabicSearch": "شو عم تعمل؟"
+  },
+  "glosses": [
+    { "text": "What are you doing?", "lang": "en" },
+    { "text": "What are you up to?", "lang": "en" }
+  ],
+  "tags": ["verbs", "present"],
+  "sources": [
+    {
+      "type": "anki",
+      "file": "anki-export.csv",
+      "deck": "Levantine",
+      "row": 1842,
+      "noteId": "1512345678901",
+      "importRunId": "run_fixture_anki"
+    }
+  ],
+  "extraction": {
+    "method": "deterministic",
+    "needsReview": false,
+    "parserVersion": "1"
+  },
+  "fingerprint": "fixture-anki-fingerprint",
+  "match": { "status": "NEW" }
+}

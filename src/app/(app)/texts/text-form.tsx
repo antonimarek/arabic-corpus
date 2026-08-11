@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState } from "react";
+import { useActionState, useRef, useState } from "react";
 
 import {
   createText,
@@ -9,6 +9,10 @@ import {
 } from "@/app/(app)/texts/actions";
 import { FormSubmit } from "@/components/form-submit";
 import { TagField } from "@/components/tag-field";
+import {
+  breakTextIntoSentenceLines,
+  shouldOfferSentenceSplit,
+} from "@/lib/text-lines";
 import type { Text } from "@/types/database";
 
 const initialState: TextFormState = {};
@@ -25,6 +29,22 @@ export function TextForm(props: TextFormProps) {
 
   const [state, formAction, pending] = useActionState(action, initialState);
   const text = props.mode === "edit" ? props.text : null;
+  const arabicRef = useRef<HTMLTextAreaElement>(null);
+  const [canSplit, setCanSplit] = useState(() =>
+    shouldOfferSentenceSplit(text?.arabic ?? ""),
+  );
+
+  const refreshSplitOffer = () => {
+    setCanSplit(shouldOfferSentenceSplit(arabicRef.current?.value ?? ""));
+  };
+
+  const splitIntoLines = () => {
+    const el = arabicRef.current;
+    if (!el) return;
+    el.value = breakTextIntoSentenceLines(el.value);
+    refreshSplitOffer();
+    el.focus();
+  };
 
   return (
     <form action={formAction} className="flex flex-col gap-5">
@@ -38,19 +58,44 @@ export function TextForm(props: TextFormProps) {
         />
       </label>
 
-      <label className="flex flex-col gap-2">
-        <span className="text-sm text-[var(--ink-muted)]">Arabic</span>
+      <div className="flex flex-col gap-2">
+        <div className="flex items-baseline justify-between gap-3">
+          <label
+            htmlFor="text-arabic"
+            className="text-sm text-[var(--ink-muted)]"
+          >
+            Arabic
+          </label>
+          {canSplit ? (
+            <button
+              type="button"
+              onClick={splitIntoLines}
+              className="text-sm text-[var(--accent)] hover:underline"
+            >
+              Split into sentence lines
+            </button>
+          ) : null}
+        </div>
         <textarea
+          id="text-arabic"
+          ref={arabicRef}
           name="arabic"
           required
           rows={10}
           dir="rtl"
           lang="ar"
           defaultValue={text?.arabic ?? ""}
+          onInput={refreshSplitOffer}
           className="font-arabic rounded-md border border-[var(--line)] bg-[var(--surface)] px-3 py-3 text-xl leading-relaxed outline-none focus:border-[var(--accent)]"
           placeholder="الصق النص هنا…"
         />
-      </label>
+        {canSplit ? (
+          <p className="text-xs text-[var(--ink-muted)]">
+            Breaks on . ؟ ! and similar marks. Review, then save. Line numbers
+            for examples update only after save.
+          </p>
+        ) : null}
+      </div>
 
       <label className="flex flex-col gap-2">
         <span className="text-sm text-[var(--ink-muted)]">

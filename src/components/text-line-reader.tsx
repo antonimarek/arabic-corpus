@@ -14,9 +14,11 @@ import {
   type ArabicLink,
 } from "@/lib/highlight-arabic";
 import {
+  LINE_FILTER_MIN_LINES,
   lineAnchorId,
   lineHref,
   parseLineHash,
+  shouldOfferSentenceSplit,
   splitTextLines,
 } from "@/lib/text-lines";
 
@@ -44,6 +46,15 @@ export function TextLineReader({
   defaultShowTranslation = true,
 }: TextLineReaderProps) {
   const lines = useMemo(() => splitTextLines(arabic), [arabic]);
+  const nonEmptyLineCount = useMemo(
+    () => lines.filter((line) => line.trim().length > 0).length,
+    [lines],
+  );
+  const showLineFilter = nonEmptyLineCount >= LINE_FILTER_MIN_LINES;
+  const offerSentenceSplit = useMemo(
+    () => shouldOfferSentenceSplit(arabic),
+    [arabic],
+  );
   const hasTranslation = Boolean(translation?.trim());
   const [showTranslation, setShowTranslation] = useState(
     hasTranslation && defaultShowTranslation,
@@ -108,19 +119,36 @@ export function TextLineReader({
 
   return (
     <div className="flex flex-col gap-5">
-      <label className="flex flex-col gap-1.5">
-        <span className="text-xs text-[var(--ink-muted)]">Search within text</span>
-        <input
-          type="search"
-          value={query}
-          onChange={(e) => setQuery(e.target.value)}
-          placeholder="Filter lines…"
-          className="rounded-md border border-[var(--line)] bg-[var(--surface)] px-3 py-2 text-sm outline-none focus:border-[var(--accent)]"
-        />
-      </label>
+      {offerSentenceSplit ? (
+        <p className="text-sm text-[var(--ink-muted)]">
+          Looks like prose in few lines.{" "}
+          <Link
+            href={`/texts/${textId}/edit`}
+            className="text-[var(--accent)] hover:underline"
+          >
+            Split into sentence lines
+          </Link>{" "}
+          on the edit form, then save.
+        </p>
+      ) : null}
+
+      {showLineFilter ? (
+        <label className="flex flex-col gap-1.5">
+          <span className="text-xs text-[var(--ink-muted)]">
+            Search within text
+          </span>
+          <input
+            type="search"
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            placeholder="Filter lines…"
+            className="rounded-md border border-[var(--line)] bg-[var(--surface)] px-3 py-2 text-sm outline-none focus:border-[var(--accent)]"
+          />
+        </label>
+      ) : null}
 
       <div
-        className="font-arabic text-[1.65rem] leading-[2] tracking-wide text-[var(--ink)] sm:text-[1.85rem] sm:leading-[2.05]"
+        className="font-arabic text-[1.25rem] leading-[1.9] text-[var(--ink)] sm:text-[1.35rem] sm:leading-[1.95]"
         lang="ar"
         dir="rtl"
       >

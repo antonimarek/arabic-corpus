@@ -10,7 +10,7 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
     params.error === "not_allowed"
       ? "This email is not allowed to access this app."
       : params.error === "auth"
-        ? "Sign-in failed. Request a new magic link."
+        ? "Sign-in failed. Try again."
         : null;
 
   return (
@@ -23,7 +23,7 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
           Levantine corpus
         </h1>
         <p className="text-[15px] text-[var(--ink-muted)]">
-          Sign in with your allowlisted email to open the corpus.
+          Sign in with your allowlisted email and password.
         </p>
       </header>
       {errorMessage ? (

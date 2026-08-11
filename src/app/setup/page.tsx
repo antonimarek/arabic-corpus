@@ -6,7 +6,8 @@ export default function SetupPage() {
         Copy <code className="text-[var(--ink)]">.env.example</code> to{" "}
         <code className="text-[var(--ink)]">.env.local</code>, set your Supabase
         URL and key, set <code className="text-[var(--ink)]">ALLOWED_EMAILS</code>
-        , then restart the dev server. Apply{" "}
+        , then restart the dev server. Create your user in Supabase Auth (email +
+        password), disable public signup, and apply{" "}
         <code className="text-[var(--ink)]">supabase/migrations</code> to your
         project.
       </p>

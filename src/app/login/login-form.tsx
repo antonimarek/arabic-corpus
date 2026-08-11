@@ -2,24 +2,15 @@
 
 import { useActionState } from "react";
 
-import { requestMagicLink, type LoginState } from "@/app/login/actions";
+import { signInWithPassword, type LoginState } from "@/app/login/actions";
 
 const initialState: LoginState = {};
 
 export function LoginForm() {
   const [state, formAction, pending] = useActionState(
-    requestMagicLink,
+    signInWithPassword,
     initialState,
   );
-
-  if (state.sent) {
-    return (
-      <p className="text-[15px] leading-relaxed text-[var(--ink-muted)]">
-        Check your email for the magic link. Open it on this device to finish
-        sign-in.
-      </p>
-    );
-  }
 
   return (
     <form action={formAction} className="flex flex-col gap-4">
@@ -34,6 +25,16 @@ export function LoginForm() {
           placeholder="you@example.com"
         />
       </label>
+      <label className="flex flex-col gap-2">
+        <span className="text-sm text-[var(--ink-muted)]">Password</span>
+        <input
+          type="password"
+          name="password"
+          required
+          autoComplete="current-password"
+          className="rounded-md border border-[var(--line)] bg-[var(--surface)] px-3 py-2.5 text-[15px] outline-none focus:border-[var(--accent)]"
+        />
+      </label>
       {state.error ? (
         <p className="text-sm text-[var(--danger)]" role="alert">
           {state.error}
@@ -44,7 +45,7 @@ export function LoginForm() {
         disabled={pending}
         className="rounded-md bg-[var(--accent)] px-4 py-2.5 text-sm font-medium text-white disabled:opacity-60"
       >
-        {pending ? "Sending…" : "Send magic link"}
+        {pending ? "Signing in…" : "Sign in"}
       </button>
     </form>
   );

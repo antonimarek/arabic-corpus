@@ -2,24 +2,28 @@
 
 import { redirect } from "next/navigation";
 
-import { getSiteUrl, isEmailAllowed } from "@/lib/env";
+import { isEmailAllowed } from "@/lib/env";
 import { createClient } from "@/lib/supabase/server";
 
 export type LoginState = {
   error?: string;
-  sent?: boolean;
 };
 
-export async function requestMagicLink(
+export async function signInWithPassword(
   _prev: LoginState,
   formData: FormData,
 ): Promise<LoginState> {
   const email = String(formData.get("email") ?? "")
     .trim()
     .toLowerCase();
+  const password = String(formData.get("password") ?? "");
 
   if (!email) {
     return { error: "Enter your email." };
+  }
+
+  if (!password) {
+    return { error: "Enter your password." };
   }
 
   if (!isEmailAllowed(email)) {
@@ -27,19 +31,25 @@ export async function requestMagicLink(
   }
 
   const supabase = await createClient();
-  const { error } = await supabase.auth.signInWithOtp({
+  const { error } = await supabase.auth.signInWithPassword({
     email,
-    options: {
-      emailRedirectTo: `${getSiteUrl()}/auth/callback`,
-      shouldCreateUser: true,
-    },
+    password,
   });
 
   if (error) {
     return { error: error.message };
   }
 
-  return { sent: true };
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  if (!isEmailAllowed(user?.email)) {
+    await supabase.auth.signOut();
+    return { error: "This email is not allowed to access this app." };
+  }
+
+  redirect("/");
 }
 
 export async function signOut() {

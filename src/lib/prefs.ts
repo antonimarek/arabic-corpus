@@ -1,4 +1,5 @@
 export const SHOW_TRANSLATION_KEY = "corpus:show-translation";
+export const REVIEW_MODE_KEY = "corpus:review-mode";
 export const LAST_TEXT_KEY = "corpus:last-text";
 
 export type LastText = {
@@ -7,6 +8,7 @@ export type LastText = {
 };
 
 const showTranslationListeners = new Set<() => void>();
+const reviewModeListeners = new Set<() => void>();
 const lastTextListeners = new Set<() => void>();
 
 let lastTextCache: { raw: string | null; value: LastText | null } = {
@@ -46,6 +48,33 @@ export function getShowTranslationServerSnapshot(): boolean {
 export function writeShowTranslation(show: boolean): void {
   window.localStorage.setItem(SHOW_TRANSLATION_KEY, show ? "1" : "0");
   notify(showTranslationListeners);
+}
+
+export function subscribeReviewMode(onStoreChange: () => void) {
+  reviewModeListeners.add(onStoreChange);
+  if (typeof window !== "undefined") {
+    window.addEventListener("storage", onStoreChange);
+  }
+  return () => {
+    reviewModeListeners.delete(onStoreChange);
+    if (typeof window !== "undefined") {
+      window.removeEventListener("storage", onStoreChange);
+    }
+  };
+}
+
+export function getReviewModeSnapshot(): boolean {
+  if (typeof window === "undefined") return false;
+  return window.localStorage.getItem(REVIEW_MODE_KEY) === "1";
+}
+
+export function getReviewModeServerSnapshot(): boolean {
+  return false;
+}
+
+export function writeReviewMode(review: boolean): void {
+  window.localStorage.setItem(REVIEW_MODE_KEY, review ? "1" : "0");
+  notify(reviewModeListeners);
 }
 
 export function subscribeLastText(onStoreChange: () => void) {

@@ -3,7 +3,12 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 
-import { updateTextRecord, writeText } from "@/lib/corpus/write";
+import {
+  deleteTextVocabulary,
+  updateTextRecord,
+  writeText,
+  writeTextVocabulary,
+} from "@/lib/corpus/write";
 import { emptyToNull, parseTagNames } from "@/lib/form";
 import { requireUserId } from "@/lib/require-user";
 
@@ -87,4 +92,24 @@ export async function deleteText(id: string) {
   revalidatePath("/texts");
   revalidatePath("/");
   redirect("/texts");
+}
+
+export async function addTextFocus(textId: string, vocabularyId: string) {
+  const { supabase } = await requireUserId();
+  const result = await writeTextVocabulary(supabase, textId, vocabularyId);
+  if ("error" in result) {
+    throw new Error(result.error);
+  }
+  revalidatePath(`/texts/${textId}`);
+  revalidatePath("/texts");
+}
+
+export async function removeTextFocus(textId: string, vocabularyId: string) {
+  const { supabase } = await requireUserId();
+  const result = await deleteTextVocabulary(supabase, textId, vocabularyId);
+  if (result.error) {
+    throw new Error(result.error);
+  }
+  revalidatePath(`/texts/${textId}`);
+  revalidatePath("/texts");
 }

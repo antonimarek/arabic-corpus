@@ -1,4 +1,5 @@
-import type { ArabicLink } from "@/lib/highlight-arabic";
+import type { ArabicLink, ArabicLinkKind } from "@/lib/highlight-arabic";
+import { phraseMatchKey } from "@/lib/match-arabic";
 
 export type SenseGloss = {
   gloss: string;
@@ -20,12 +21,20 @@ export function vocabularyLink(vocab: {
   id: string;
   arabic: string;
   vocabulary_senses?: SenseGloss[] | null;
+  vocabulary_forms?: { arabic: string }[] | null;
+  kind?: ArabicLinkKind;
 }): ArabicLink {
+  const matchKeys = [
+    phraseMatchKey(vocab.arabic),
+    ...(vocab.vocabulary_forms ?? []).map((form) => phraseMatchKey(form.arabic)),
+  ].filter((key): key is string => Boolean(key));
+
   return {
     phrase: vocab.arabic,
     href: `/vocabulary/${vocab.id}`,
-    kind: "vocabulary",
+    kind: vocab.kind ?? "vocabulary",
     gloss: firstGloss(vocab.vocabulary_senses),
+    matchKeys: [...new Set(matchKeys)],
   };
 }
 

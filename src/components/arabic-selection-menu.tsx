@@ -15,7 +15,11 @@ import { lookupPhrase, type PhraseHit } from "@/app/(app)/lookup/actions";
 import type { ArabicLink } from "@/lib/highlight-arabic";
 
 type NoticeApi = {
-  onPhraseActivate: (link: ArabicLink, rect: DOMRect) => void;
+  onPhraseActivate: (
+    link: ArabicLink,
+    rect: DOMRect,
+    surface: string,
+  ) => void;
 };
 
 type MenuState =
@@ -30,6 +34,7 @@ type MenuState =
   | {
       mode: "phrase";
       text: string;
+      stored: string;
       top: number;
       left: number;
       link: ArabicLink;
@@ -68,15 +73,19 @@ export function ArabicSelectionMenu({
 
   const close = useCallback(() => setMenu(null), []);
 
-  const onPhraseActivate = useCallback((link: ArabicLink, rect: DOMRect) => {
-    setMenu({
-      mode: "phrase",
-      text: link.phrase,
-      top: rect.bottom + 8,
-      left: rect.left + rect.width / 2,
-      link,
-    });
-  }, []);
+  const onPhraseActivate = useCallback(
+    (link: ArabicLink, rect: DOMRect, surface: string) => {
+      setMenu({
+        mode: "phrase",
+        text: surface,
+        stored: link.phrase,
+        top: rect.bottom + 8,
+        left: rect.left + rect.width / 2,
+        link,
+      });
+    },
+    [],
+  );
 
   useEffect(() => {
     function onPointerDown(event: PointerEvent) {
@@ -190,8 +199,17 @@ export function ArabicSelectionMenu({
                 lang="ar"
                 dir="rtl"
               >
-                {menu.link.phrase}
+                {menu.text}
               </p>
+              {menu.stored !== menu.text ? (
+                <p
+                  className="font-arabic px-3 pb-1 text-sm text-[var(--ink-muted)]"
+                  lang="ar"
+                  dir="rtl"
+                >
+                  {menu.stored}
+                </p>
+              ) : null}
               {menu.link.gloss ? (
                 <p className="px-3 pb-2 text-[13px] leading-relaxed text-[var(--ink-muted)]">
                   {menu.link.gloss}
@@ -261,6 +279,15 @@ export function ArabicSelectionMenu({
                   onClick={close}
                 >
                   Add vocabulary
+                </Link>
+              ) : null}
+              {vocabHits.length === 0 ? (
+                <Link
+                  href={`/vocabulary/add-form?arabic=${encoded}`}
+                  className="block px-3 py-2.5 hover:bg-[var(--surface-hover)]"
+                  onClick={close}
+                >
+                  Add form to existing
                 </Link>
               ) : null}
               <Link

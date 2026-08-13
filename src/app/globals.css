@@ -48,6 +48,15 @@ body {
   text-decoration-style: dotted;
 }
 
+.linked-known {
+  cursor: pointer;
+  color: inherit;
+  text-decoration: underline;
+  text-decoration-thickness: 1px;
+  text-underline-offset: 0.28em;
+  text-decoration-color: color-mix(in srgb, var(--ink-muted) 45%, transparent);
+}
+
 ::selection {
   background: color-mix(in srgb, var(--accent) 22%, white);
 }

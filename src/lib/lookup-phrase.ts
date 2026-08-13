@@ -2,6 +2,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 
 import { firstGloss } from "@/lib/arabic-links";
 import { normalizeArabic } from "@/lib/import/normalize";
+import { peelClitic, phraseMatchKey } from "@/lib/match-arabic";
 import type { Database } from "@/types/database";
 
 export type PhraseHit = {
@@ -29,29 +30,68 @@ export function hitsShareSearchKey(
   return queryKey != null && queryKey === storedKey;
 }
 
-export async function lookupPhraseHits(
-  supabase: SupabaseClient<Database>,
-  phrase: string,
-): Promise<PhraseHit[]> {
-  const key = phraseSearchKey(phrase);
-  if (!key) return [];
+type VocabRow = {
+  id: string;
+  arabic: string;
+  vocabulary_senses: { gloss: string; created_at?: string }[] | null;
+};
 
-  const [{ data: vocabRows }, { data: structureRows }] = await Promise.all([
+async function vocabHitsForKey(
+  supabase: SupabaseClient<Database>,
+  key: string,
+): Promise<VocabRow[]> {
+  const [{ data: vocabRows }, { data: formRows }] = await Promise.all([
     supabase
       .from("vocabulary")
       .select("id, arabic, vocabulary_senses(gloss, created_at)")
       .eq("search_arabic", key)
       .limit(5),
     supabase
-      .from("structures")
-      .select("id, name, arabic_form, meaning")
+      .from("vocabulary_forms")
+      .select("vocabulary_id, vocabulary(id, arabic, vocabulary_senses(gloss, created_at))")
       .eq("search_arabic", key)
       .limit(5),
   ]);
 
+  const byId = new Map<string, VocabRow>();
+  for (const row of vocabRows ?? []) {
+    byId.set(row.id, row);
+  }
+  for (const row of formRows ?? []) {
+    const vocab = row.vocabulary;
+    if (!vocab) continue;
+    byId.set(vocab.id, vocab);
+  }
+  return [...byId.values()];
+}
+
+export async function lookupPhraseHits(
+  supabase: SupabaseClient<Database>,
+  phrase: string,
+): Promise<PhraseHit[]> {
+  const key = phraseMatchKey(phrase) ?? phraseSearchKey(phrase);
+  if (!key) return [];
+
+  const [{ data: structureRows }, exactVocab] = await Promise.all([
+    supabase
+      .from("structures")
+      .select("id, name, arabic_form, meaning")
+      .eq("search_arabic", key)
+      .limit(5),
+    vocabHitsForKey(supabase, key),
+  ]);
+
+  let vocabRows = exactVocab;
+  if (vocabRows.length === 0) {
+    const peeled = peelClitic(key);
+    if (peeled) {
+      vocabRows = await vocabHitsForKey(supabase, peeled);
+    }
+  }
+
   const hits: PhraseHit[] = [];
 
-  for (const row of vocabRows ?? []) {
+  for (const row of vocabRows) {
     hits.push({
       type: "vocabulary",
       id: row.id,

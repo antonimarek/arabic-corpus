@@ -13,12 +13,17 @@ import {
 import { ArabicSelectionMenu } from "@/components/arabic-selection-menu";
 import {
   renderLinkedArabic,
+  findMatches,
   type ArabicLink,
 } from "@/lib/highlight-arabic";
 import {
+  getReviewModeServerSnapshot,
+  getReviewModeSnapshot,
   getShowTranslationServerSnapshot,
   getShowTranslationSnapshot,
+  subscribeReviewMode,
   subscribeShowTranslation,
+  writeReviewMode,
   writeShowTranslation,
 } from "@/lib/prefs";
 import {
@@ -42,6 +47,7 @@ type TextLineReaderProps = {
   arabic: string;
   translation?: string | null;
   links?: ArabicLink[];
+  knownLinks?: ArabicLink[];
   examples?: LineExampleRef[];
 };
 
@@ -50,6 +56,7 @@ export function TextLineReader({
   arabic,
   translation,
   links = [],
+  knownLinks = [],
   examples = [],
 }: TextLineReaderProps) {
   const lines = useMemo(() => splitTextLines(arabic), [arabic]);
@@ -71,6 +78,19 @@ export function TextLineReader({
     subscribeShowTranslation,
     getShowTranslationSnapshot,
     getShowTranslationServerSnapshot,
+  );
+  const reviewMode = useSyncExternalStore(
+    subscribeReviewMode,
+    getReviewModeSnapshot,
+    getReviewModeServerSnapshot,
+  );
+  const activeLinks = useMemo(
+    () => (reviewMode ? [...links, ...knownLinks] : links),
+    [knownLinks, links, reviewMode],
+  );
+  const hasKnownHits = useMemo(
+    () => findMatches(arabic, knownLinks).length > 0,
+    [arabic, knownLinks],
   );
   const [revealedLines, setRevealedLines] = useState<Set<number>>(
     () => new Set(),
@@ -133,6 +153,10 @@ export function TextLineReader({
       // ignore
     }
   }, []);
+
+  const toggleReview = () => {
+    writeReviewMode(!reviewMode);
+  };
 
   const toggleShowAll = () => {
     const next = !preferShowAll;
@@ -202,6 +226,17 @@ export function TextLineReader({
         </button>
       ) : null}
 
+      {hasKnownHits ? (
+        <button
+          type="button"
+          onClick={toggleReview}
+          className="self-start text-sm text-[var(--accent)] hover:underline"
+          aria-pressed={reviewMode}
+        >
+          {reviewMode ? "Study: focus only" : "Review: show known words"}
+        </button>
+      ) : null}
+
       <div
         className="font-arabic text-[1.45rem] leading-[1.95] text-[var(--ink)] sm:text-[1.6rem]"
         lang="ar"
@@ -261,7 +296,7 @@ export function TextLineReader({
                     {({ onPhraseActivate }) => (
                       <div>
                         {line.length > 0
-                          ? renderLinkedArabic(line, links, onPhraseActivate)
+                          ? renderLinkedArabic(line, activeLinks, onPhraseActivate)
                           : "\u00a0"}
                       </div>
                     )}
@@ -363,6 +398,9 @@ export function TextLineReader({
 
       <p className="text-xs text-[var(--ink-muted)]">
         Select Arabic to search or add. Underlined phrases show a gloss.
+        {hasKnownHits
+          ? " Review marks other words already in your vocabulary."
+          : null}
         {alignment.aligned
           ? " Tap a line number to reveal that line meaning."
           : null}

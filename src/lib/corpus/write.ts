@@ -69,7 +69,136 @@ export async function findExistingVocabulary(
     .eq("search_arabic", searchKey)
     .limit(1)
     .maybeSingle();
-  return data?.id ?? null;
+  if (data?.id) return data.id;
+
+  const { data: form } = await supabase
+    .from("vocabulary_forms")
+    .select("vocabulary_id")
+    .eq("search_arabic", searchKey)
+    .limit(1)
+    .maybeSingle();
+  return form?.vocabulary_id ?? null;
+}
+
+export async function seedTextVocabulary(
+  supabase: CorpusClient,
+  textId: string,
+  vocabularyIds: string[],
+): Promise<{ error?: string }> {
+  const unique = [...new Set(vocabularyIds.filter(Boolean))];
+  if (unique.length === 0) return {};
+  const { error } = await supabase.from("text_vocabulary").upsert(
+    unique.map((vocabularyId) => ({
+      text_id: textId,
+      vocabulary_id: vocabularyId,
+      role: "focus",
+    })),
+    { onConflict: "text_id,vocabulary_id", ignoreDuplicates: true },
+  );
+  if (error) {
+    return { error: error.message };
+  }
+  return {};
+}
+
+export async function writeTextVocabulary(
+  supabase: CorpusClient,
+  textId: string,
+  vocabularyId: string,
+): Promise<WriteResult> {
+  const { error } = await supabase.from("text_vocabulary").upsert(
+    {
+      text_id: textId,
+      vocabulary_id: vocabularyId,
+      role: "focus",
+    },
+    { onConflict: "text_id,vocabulary_id" },
+  );
+  if (error) {
+    return { error: error.message };
+  }
+  return { id: vocabularyId };
+}
+
+export async function deleteTextVocabulary(
+  supabase: CorpusClient,
+  textId: string,
+  vocabularyId: string,
+): Promise<{ error?: string }> {
+  const { error } = await supabase
+    .from("text_vocabulary")
+    .delete()
+    .eq("text_id", textId)
+    .eq("vocabulary_id", vocabularyId);
+  if (error) {
+    return { error: error.message };
+  }
+  return {};
+}
+
+export async function writeVocabularyForm(
+  supabase: CorpusClient,
+  ownerId: string,
+  vocabularyId: string,
+  arabic: string,
+): Promise<WriteResult> {
+  const searchKey = phraseSearchKey(arabic);
+  if (!searchKey) {
+    return { error: "Arabic is required." };
+  }
+
+  const { data: parent, error: parentError } = await supabase
+    .from("vocabulary")
+    .select("id, arabic")
+    .eq("id", vocabularyId)
+    .maybeSingle();
+  if (parentError) {
+    return { error: parentError.message };
+  }
+  if (!parent) {
+    return { error: "Vocabulary not found." };
+  }
+  if (phraseSearchKey(parent.arabic) === searchKey) {
+    return { error: "This is already the stored form of that word." };
+  }
+
+  const existingId = await findExistingVocabulary(supabase, arabic);
+  if (existingId && existingId !== vocabularyId) {
+    return {
+      error: "This form already belongs to another word.",
+      existingId,
+    };
+  }
+  if (existingId === vocabularyId) {
+    return { id: vocabularyId };
+  }
+
+  const { error } = await supabase.from("vocabulary_forms").insert({
+    vocabulary_id: vocabularyId,
+    owner_id: ownerId,
+    arabic: arabic.trim(),
+  });
+  if (error) {
+    if (error.code === "23505") {
+      return { id: vocabularyId };
+    }
+    return { error: error.message };
+  }
+  return { id: vocabularyId };
+}
+
+export async function deleteVocabularyFormRecord(
+  supabase: CorpusClient,
+  formId: string,
+): Promise<{ error?: string }> {
+  const { error } = await supabase
+    .from("vocabulary_forms")
+    .delete()
+    .eq("id", formId);
+  if (error) {
+    return { error: error.message };
+  }
+  return {};
 }
 
 export async function writeVocabulary(
@@ -162,6 +291,17 @@ export async function writeExample(
   );
   if (joinResult.error) {
     return { error: joinResult.error };
+  }
+
+  if (input.textId) {
+    const seed = await seedTextVocabulary(
+      supabase,
+      input.textId,
+      input.vocabularyIds ?? [],
+    );
+    if (seed.error) {
+      return { error: seed.error };
+    }
   }
 
   const tagResult = await syncTags(
@@ -342,6 +482,17 @@ export async function updateExampleRecord(
   );
   if (joinResult.error) {
     return { error: joinResult.error };
+  }
+
+  if (input.textId) {
+    const seed = await seedTextVocabulary(
+      supabase,
+      input.textId,
+      input.vocabularyIds ?? [],
+    );
+    if (seed.error) {
+      return { error: seed.error };
+    }
   }
 
   const tagResult = await syncTags(

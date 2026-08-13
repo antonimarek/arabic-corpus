@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 
-import { deleteVocabulary } from "@/app/(app)/vocabulary/actions";
+import { attachVocabularyForm, deleteVocabulary, deleteVocabularyForm } from "@/app/(app)/vocabulary/actions";
 import { ConfirmDelete } from "@/components/confirm-delete";
 import { ExampleList } from "@/components/example-list";
 import { firstGloss } from "@/lib/arabic-links";
@@ -22,7 +22,7 @@ export default async function VocabularyDetailPage({
   const { data: vocabulary, error } = await supabase
     .from("vocabulary")
     .select(
-      "*, vocabulary_senses(*), vocabulary_tags(tags(name)), example_vocabulary(examples(id, arabic, translation, source_line, texts(id, title)))",
+      "*, vocabulary_senses(*), vocabulary_tags(tags(name)), vocabulary_forms(id, arabic), example_vocabulary(examples(id, arabic, translation, source_line, texts(id, title)))",
     )
     .eq("id", id)
     .maybeSingle();
@@ -147,6 +147,67 @@ export default async function VocabularyDetailPage({
             </li>
           ))}
         </ul>
+      </section>
+
+      <section>
+        <h2 className="mb-3 text-sm text-[var(--ink-muted)]">
+          Forms ({(vocabulary.vocabulary_forms ?? []).length})
+        </h2>
+        {(vocabulary.vocabulary_forms ?? []).length === 0 ? (
+          <p className="mb-3 text-sm text-[var(--ink-muted)]">
+            Extra surface forms (inflected or dialect).
+          </p>
+        ) : (
+          <ul className="mb-3 flex flex-col gap-2">
+            {(vocabulary.vocabulary_forms ?? []).map((form) => (
+              <li
+                key={form.id}
+                className="flex items-center justify-between gap-3"
+              >
+                <span
+                  className="font-arabic text-lg text-[var(--ink)]"
+                  lang="ar"
+                  dir="rtl"
+                >
+                  {form.arabic}
+                </span>
+                <form
+                  action={deleteVocabularyForm.bind(
+                    null,
+                    form.id,
+                    vocabulary.id,
+                  )}
+                >
+                  <button
+                    type="submit"
+                    className="text-xs text-[var(--ink-muted)] hover:text-[var(--danger)] hover:underline"
+                  >
+                    Remove
+                  </button>
+                </form>
+              </li>
+            ))}
+          </ul>
+        )}
+        <form
+          action={attachVocabularyForm.bind(null, vocabulary.id)}
+          className="flex flex-col gap-2 sm:flex-row sm:items-center"
+        >
+          <input
+            name="arabic"
+            required
+            dir="rtl"
+            lang="ar"
+            placeholder="بكتب"
+            className="font-arabic min-w-0 flex-1 rounded-md border border-[var(--line)] bg-[var(--surface)] px-3 py-2 text-lg outline-none focus:border-[var(--accent)]"
+          />
+          <button
+            type="submit"
+            className="self-start text-sm text-[var(--accent)] hover:underline"
+          >
+            Add form
+          </button>
+        </form>
       </section>
 
       {family.length > 0 ? (

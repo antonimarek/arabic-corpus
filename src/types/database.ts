@@ -184,6 +184,39 @@ export type Database = {
           },
         ];
       };
+      vocabulary_forms: {
+        Row: {
+          id: string;
+          vocabulary_id: string;
+          owner_id: string;
+          arabic: string;
+          search_arabic?: string | null;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          vocabulary_id: string;
+          owner_id: string;
+          arabic: string;
+          created_at?: string;
+        };
+        Update: {
+          id?: string;
+          vocabulary_id?: string;
+          owner_id?: string;
+          arabic?: string;
+          created_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "vocabulary_forms_vocabulary_id_fkey";
+            columns: ["vocabulary_id"];
+            isOneToOne: false;
+            referencedRelation: "vocabulary";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
       structures: {
         Row: {
           id: string;
@@ -266,6 +299,42 @@ export type Database = {
             columns: ["tag_id"];
             isOneToOne: false;
             referencedRelation: "tags";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      text_vocabulary: {
+        Row: {
+          text_id: string;
+          vocabulary_id: string;
+          role: string;
+          created_at: string;
+        };
+        Insert: {
+          text_id: string;
+          vocabulary_id: string;
+          role?: string;
+          created_at?: string;
+        };
+        Update: {
+          text_id?: string;
+          vocabulary_id?: string;
+          role?: string;
+          created_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "text_vocabulary_text_id_fkey";
+            columns: ["text_id"];
+            isOneToOne: false;
+            referencedRelation: "texts";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "text_vocabulary_vocabulary_id_fkey";
+            columns: ["vocabulary_id"];
+            isOneToOne: false;
+            referencedRelation: "vocabulary";
             referencedColumns: ["id"];
           },
         ];
@@ -492,6 +561,10 @@ export type Example = Database["public"]["Tables"]["examples"]["Row"];
 export type Vocabulary = Database["public"]["Tables"]["vocabulary"]["Row"];
 export type VocabularySense =
   Database["public"]["Tables"]["vocabulary_senses"]["Row"];
+export type VocabularyForm =
+  Database["public"]["Tables"]["vocabulary_forms"]["Row"];
+export type TextVocabulary =
+  Database["public"]["Tables"]["text_vocabulary"]["Row"];
 export type Structure = Database["public"]["Tables"]["structures"]["Row"];
 export type Tag = Database["public"]["Tables"]["tags"]["Row"];
 export type ImportRun = Database["public"]["Tables"]["import_runs"]["Row"];

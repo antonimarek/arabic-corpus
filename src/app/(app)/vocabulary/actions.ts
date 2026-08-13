@@ -6,6 +6,8 @@ import { redirect } from "next/navigation";
 import {
   updateVocabularyRecord,
   writeVocabulary,
+  writeVocabularyForm,
+  deleteVocabularyFormRecord,
 } from "@/lib/corpus/write";
 import { emptyToNull, parseTagNames } from "@/lib/form";
 import { requireUserId } from "@/lib/require-user";
@@ -100,4 +102,43 @@ export async function deleteVocabulary(id: string) {
   revalidatePath("/vocabulary");
   revalidatePath("/");
   redirect("/vocabulary");
+}
+
+export async function attachVocabularyForm(
+  vocabularyId: string,
+  formData: FormData,
+) {
+  const arabic = String(formData.get("arabic") ?? "").trim();
+  if (!arabic) {
+    throw new Error("Arabic is required.");
+  }
+
+  const { supabase, userId } = await requireUserId();
+  const result = await writeVocabularyForm(
+    supabase,
+    userId,
+    vocabularyId,
+    arabic,
+  );
+  if ("error" in result) {
+    throw new Error(result.error);
+  }
+
+  revalidatePath("/vocabulary");
+  revalidatePath(`/vocabulary/${vocabularyId}`);
+  revalidatePath("/");
+  revalidatePath("/texts", "layout");
+  redirect(`/vocabulary/${vocabularyId}`);
+}
+
+export async function deleteVocabularyForm(formId: string, vocabularyId: string) {
+  const { supabase } = await requireUserId();
+  const result = await deleteVocabularyFormRecord(supabase, formId);
+  if (result.error) {
+    throw new Error(result.error);
+  }
+  revalidatePath("/vocabulary");
+  revalidatePath(`/vocabulary/${vocabularyId}`);
+  revalidatePath("/");
+  revalidatePath("/texts", "layout");
 }

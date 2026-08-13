@@ -21,7 +21,7 @@ export default async function ExampleDetailPage({
   const { data: example, error } = await supabase
     .from("examples")
     .select(
-      "*, texts(id, title), example_tags(tags(name)), example_vocabulary(vocabulary(id, arabic, vocabulary_senses(gloss, created_at))), example_structures(structures(id, name, arabic_form, meaning))",
+      "*, texts(id, title), example_tags(tags(name)), example_vocabulary(vocabulary(id, arabic, vocabulary_senses(gloss, created_at), vocabulary_forms(arabic))), example_structures(structures(id, name, arabic_form, meaning))",
     )
     .eq("id", id)
     .maybeSingle();

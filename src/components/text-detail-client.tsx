@@ -7,106 +7,13 @@ import { useEffect } from "react";
 import { deleteText } from "@/app/(app)/texts/actions";
 import { ConfirmDelete } from "@/components/confirm-delete";
 import { ExampleList } from "@/components/example-list";
+import { FocusTargetStrip } from "@/components/focus-target-strip";
 import { TextLineReader } from "@/components/text-line-reader";
 import { writeLastText } from "@/lib/prefs";
-import { structureLink, vocabularyLink } from "@/lib/arabic-links";
-import type { ArabicLink } from "@/lib/highlight-arabic";
 import { createClient } from "@/lib/supabase/client";
-import { notNull } from "@/lib/tags";
+import { fetchTextDetail, textQueryKey } from "@/lib/text-detail";
+import type { TextDetailPayload } from "@/lib/text-detail";
 import { lineHref } from "@/lib/text-lines";
-
-export type TextDetailPayload = {
-  id: string;
-  title: string;
-  arabic: string;
-  translation: string | null;
-  source: string | null;
-  occurred_on: string | null;
-  notes: string | null;
-  tags: string[];
-  links: ArabicLink[];
-  examples: Array<{
-    id: string;
-    arabic: string;
-    translation: string | null;
-    transliteration: string | null;
-    source_line: number | null;
-    vocabHints: string[];
-  }>;
-};
-
-export const textQueryKey = (id: string) => ["text", id] as const;
-
-async function fetchTextDetail(id: string): Promise<TextDetailPayload> {
-  const supabase = createClient();
-  const { data: text, error } = await supabase
-    .from("texts")
-    .select(
-      `*,
-      text_tags(tags(name)),
-      examples(
-        id,
-        arabic,
-        translation,
-        transliteration,
-        source_line,
-        example_vocabulary(vocabulary(id, arabic, vocabulary_senses(gloss, created_at))),
-        example_structures(structures(id, name, arabic_form, meaning))
-      )`,
-    )
-    .eq("id", id)
-    .maybeSingle();
-
-  if (error) {
-    throw new Error(error.message);
-  }
-  if (!text) {
-    throw new Error("Text not found");
-  }
-
-  const tags =
-    text.text_tags?.map((row) => row.tags?.name).filter(notNull) ?? [];
-  const examples = text.examples ?? [];
-
-  const linkMap = new Map<string, ArabicLink>();
-  for (const example of examples) {
-    for (const row of example.example_vocabulary ?? []) {
-      const vocab = row.vocabulary;
-      if (!vocab?.arabic) continue;
-      linkMap.set(`v:${vocab.id}`, vocabularyLink(vocab));
-    }
-    for (const row of example.example_structures ?? []) {
-      const structure = row.structures;
-      if (!structure) continue;
-      const link = structureLink(structure);
-      if (!link) continue;
-      linkMap.set(`s:${structure.id}`, link);
-    }
-  }
-
-  return {
-    id: text.id,
-    title: text.title,
-    arabic: text.arabic,
-    translation: text.translation,
-    source: text.source,
-    occurred_on: text.occurred_on,
-    notes: text.notes,
-    tags,
-    links: [...linkMap.values()],
-    examples: examples.map((example) => ({
-      id: example.id,
-      arabic: example.arabic,
-      translation: example.translation,
-      transliteration: example.transliteration,
-      source_line: example.source_line ?? null,
-      vocabHints:
-        example.example_vocabulary
-          ?.map((row) => row.vocabulary?.arabic)
-          .filter(notNull) ?? [],
-    })),
-  };
-}
 
 export function TextDetailClient({
   textId,
@@ -118,7 +25,7 @@ export function TextDetailClient({
   const queryClient = useQueryClient();
   const { data } = useQuery({
     queryKey: textQueryKey(textId),
-    queryFn: () => fetchTextDetail(textId),
+    queryFn: () => fetchTextDetail(createClient(), textId),
     initialData,
     staleTime: 5 * 60 * 1000,
   });
@@ -155,11 +62,18 @@ export function TextDetailClient({
         </p>
       </header>
 
+      <FocusTargetStrip
+        textId={text.id}
+        focus={text.focus}
+        vocabOptions={text.vocabOptions}
+      />
+
       <TextLineReader
         textId={text.id}
         arabic={text.arabic}
         translation={text.translation}
         links={text.links}
+        knownLinks={text.knownLinks}
         examples={text.examples.map((example) => ({
           id: example.id,
           arabic: example.arabic,

@@ -3,9 +3,9 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 
+import { updateExampleRecord, writeExample } from "@/lib/corpus/write";
 import { emptyToNull, parseIdList, parseTagNames } from "@/lib/form";
 import { requireUserId } from "@/lib/require-user";
-import { syncTags } from "@/lib/tags";
 
 export type ExampleFormState = {
   error?: string;
@@ -21,53 +21,29 @@ function parseSourceLine(formData: FormData): number | null {
   return n;
 }
 
-async function syncExampleJoins(
-  supabase: Awaited<ReturnType<typeof requireUserId>>["supabase"],
-  exampleId: string,
-  vocabularyIds: string[],
-  structureIds: string[],
-) {
-  const { error: deleteVocabError } = await supabase
-    .from("example_vocabulary")
-    .delete()
-    .eq("example_id", exampleId);
-  if (deleteVocabError) {
-    return { error: deleteVocabError.message };
-  }
+function formInput(formData: FormData, arabic: string) {
+  return {
+    arabic,
+    translation: emptyToNull(formData.get("translation")),
+    transliteration: emptyToNull(formData.get("transliteration")),
+    notes: emptyToNull(formData.get("notes")),
+    textId: emptyToNull(formData.get("text_id")),
+    sourceLine: parseSourceLine(formData),
+    vocabularyIds: parseIdList(formData, "vocabulary_ids"),
+    structureIds: parseIdList(formData, "structure_ids"),
+    tags: parseTagNames(formData.get("tags")),
+  };
+}
 
-  const { error: deleteStructError } = await supabase
-    .from("example_structures")
-    .delete()
-    .eq("example_id", exampleId);
-  if (deleteStructError) {
-    return { error: deleteStructError.message };
+function revalidateExample(textId: string | null) {
+  revalidatePath("/");
+  revalidatePath("/examples");
+  revalidatePath("/vocabulary");
+  revalidatePath("/structures");
+  if (textId) {
+    revalidatePath(`/texts/${textId}`);
+    revalidatePath("/texts");
   }
-
-  if (vocabularyIds.length > 0) {
-    const { error } = await supabase.from("example_vocabulary").insert(
-      vocabularyIds.map((vocabularyId) => ({
-        example_id: exampleId,
-        vocabulary_id: vocabularyId,
-      })),
-    );
-    if (error) {
-      return { error: error.message };
-    }
-  }
-
-  if (structureIds.length > 0) {
-    const { error } = await supabase.from("example_structures").insert(
-      structureIds.map((structureId) => ({
-        example_id: exampleId,
-        structure_id: structureId,
-      })),
-    );
-    if (error) {
-      return { error: error.message };
-    }
-  }
-
-  return {};
 }
 
 export async function createExample(
@@ -79,60 +55,19 @@ export async function createExample(
     return { error: "Arabic is required." };
   }
 
-  const { supabase, userId } = await requireUserId();
-  const textId = emptyToNull(formData.get("text_id"));
-  const sourceLine = parseSourceLine(formData);
-  if (sourceLine != null && !textId) {
+  const input = formInput(formData, arabic);
+  if (input.sourceLine != null && !input.textId) {
     return { error: "Source line requires a source text." };
   }
 
-  const { data, error } = await supabase
-    .from("examples")
-    .insert({
-      owner_id: userId,
-      arabic,
-      translation: emptyToNull(formData.get("translation")),
-      transliteration: emptyToNull(formData.get("transliteration")),
-      notes: emptyToNull(formData.get("notes")),
-      text_id: textId,
-      source_line: sourceLine,
-    })
-    .select("id")
-    .single();
-
-  if (error || !data) {
-    return { error: error?.message ?? "Could not save example." };
+  const { supabase, userId } = await requireUserId();
+  const result = await writeExample(supabase, userId, input);
+  if ("error" in result) {
+    return { error: result.error };
   }
 
-  const joinResult = await syncExampleJoins(
-    supabase,
-    data.id,
-    parseIdList(formData, "vocabulary_ids"),
-    parseIdList(formData, "structure_ids"),
-  );
-  if (joinResult.error) {
-    return { error: joinResult.error };
-  }
-
-  const tagResult = await syncTags(
-    supabase,
-    userId,
-    { kind: "example", entityId: data.id },
-    parseTagNames(formData.get("tags")),
-  );
-  if (tagResult.error) {
-    return { error: tagResult.error };
-  }
-
-  revalidatePath("/");
-  revalidatePath("/examples");
-  revalidatePath("/vocabulary");
-  revalidatePath("/structures");
-  if (textId) {
-    revalidatePath(`/texts/${textId}`);
-    revalidatePath("/texts");
-  }
-  redirect(`/examples/${data.id}`);
+  revalidateExample(input.textId);
+  redirect(`/examples/${result.id}`);
 }
 
 export async function updateExample(
@@ -145,58 +80,19 @@ export async function updateExample(
     return { error: "Arabic is required." };
   }
 
-  const { supabase, userId } = await requireUserId();
-  const textId = emptyToNull(formData.get("text_id"));
-  const sourceLine = parseSourceLine(formData);
-  if (sourceLine != null && !textId) {
+  const input = formInput(formData, arabic);
+  if (input.sourceLine != null && !input.textId) {
     return { error: "Source line requires a source text." };
   }
 
-  const { error } = await supabase
-    .from("examples")
-    .update({
-      arabic,
-      translation: emptyToNull(formData.get("translation")),
-      transliteration: emptyToNull(formData.get("transliteration")),
-      notes: emptyToNull(formData.get("notes")),
-      text_id: textId,
-      source_line: sourceLine,
-    })
-    .eq("id", id);
-
-  if (error) {
-    return { error: error.message };
-  }
-
-  const joinResult = await syncExampleJoins(
-    supabase,
-    id,
-    parseIdList(formData, "vocabulary_ids"),
-    parseIdList(formData, "structure_ids"),
-  );
-  if (joinResult.error) {
-    return { error: joinResult.error };
-  }
-
-  const tagResult = await syncTags(
-    supabase,
-    userId,
-    { kind: "example", entityId: id },
-    parseTagNames(formData.get("tags")),
-  );
-  if (tagResult.error) {
-    return { error: tagResult.error };
+  const { supabase, userId } = await requireUserId();
+  const result = await updateExampleRecord(supabase, userId, id, input);
+  if ("error" in result) {
+    return { error: result.error };
   }
 
   revalidatePath(`/examples/${id}`);
-  revalidatePath("/");
-  revalidatePath("/examples");
-  revalidatePath("/vocabulary");
-  revalidatePath("/structures");
-  if (textId) {
-    revalidatePath(`/texts/${textId}`);
-    revalidatePath("/texts");
-  }
+  revalidateExample(input.textId);
   redirect(`/examples/${id}`);
 }
 

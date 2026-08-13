@@ -375,6 +375,42 @@ export type Database = {
           },
         ];
       };
+      import_runs: {
+        Row: {
+          id: string;
+          owner_id: string;
+          source_label: string | null;
+          bundle: Json;
+          decisions: Json;
+          status: string;
+          counts: Json | null;
+          created_at: string;
+          committed_at: string | null;
+        };
+        Insert: {
+          id?: string;
+          owner_id: string;
+          source_label?: string | null;
+          bundle: Json;
+          decisions?: Json;
+          status?: string;
+          counts?: Json | null;
+          created_at?: string;
+          committed_at?: string | null;
+        };
+        Update: {
+          id?: string;
+          owner_id?: string;
+          source_label?: string | null;
+          bundle?: Json;
+          decisions?: Json;
+          status?: string;
+          counts?: Json | null;
+          created_at?: string;
+          committed_at?: string | null;
+        };
+        Relationships: [];
+      };
       search_misses: {
         Row: {
           id: string;
@@ -458,3 +494,4 @@ export type VocabularySense =
   Database["public"]["Tables"]["vocabulary_senses"]["Row"];
 export type Structure = Database["public"]["Tables"]["structures"]["Row"];
 export type Tag = Database["public"]["Tables"]["tags"]["Row"];
+export type ImportRun = Database["public"]["Tables"]["import_runs"]["Row"];

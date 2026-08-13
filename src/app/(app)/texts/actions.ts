@@ -3,13 +3,25 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 
+import { updateTextRecord, writeText } from "@/lib/corpus/write";
 import { emptyToNull, parseTagNames } from "@/lib/form";
 import { requireUserId } from "@/lib/require-user";
-import { syncTags } from "@/lib/tags";
 
 export type TextFormState = {
   error?: string;
 };
+
+function formInput(formData: FormData, title: string, arabic: string) {
+  return {
+    title,
+    arabic,
+    translation: emptyToNull(formData.get("translation")),
+    source: emptyToNull(formData.get("source")),
+    occurred_on: emptyToNull(formData.get("occurred_on")),
+    notes: emptyToNull(formData.get("notes")),
+    tags: parseTagNames(formData.get("tags")),
+  };
+}
 
 export async function createText(
   _prev: TextFormState,
@@ -23,37 +35,18 @@ export async function createText(
   }
 
   const { supabase, userId } = await requireUserId();
-  const { data, error } = await supabase
-    .from("texts")
-    .insert({
-      owner_id: userId,
-      title,
-      arabic,
-      translation: emptyToNull(formData.get("translation")),
-      source: emptyToNull(formData.get("source")),
-      occurred_on: emptyToNull(formData.get("occurred_on")),
-      notes: emptyToNull(formData.get("notes")),
-    })
-    .select("id")
-    .single();
-
-  if (error || !data) {
-    return { error: error?.message ?? "Could not save text." };
-  }
-
-  const tagResult = await syncTags(
+  const result = await writeText(
     supabase,
     userId,
-    { kind: "text", entityId: data.id },
-    parseTagNames(formData.get("tags")),
+    formInput(formData, title, arabic),
   );
-  if (tagResult.error) {
-    return { error: tagResult.error };
+  if ("error" in result) {
+    return { error: result.error };
   }
 
   revalidatePath("/texts");
   revalidatePath("/");
-  redirect(`/texts/${data.id}`);
+  redirect(`/texts/${result.id}`);
 }
 
 export async function updateText(
@@ -69,30 +62,14 @@ export async function updateText(
   }
 
   const { supabase, userId } = await requireUserId();
-  const { error } = await supabase
-    .from("texts")
-    .update({
-      title,
-      arabic,
-      translation: emptyToNull(formData.get("translation")),
-      source: emptyToNull(formData.get("source")),
-      occurred_on: emptyToNull(formData.get("occurred_on")),
-      notes: emptyToNull(formData.get("notes")),
-    })
-    .eq("id", id);
-
-  if (error) {
-    return { error: error.message };
-  }
-
-  const tagResult = await syncTags(
+  const result = await updateTextRecord(
     supabase,
     userId,
-    { kind: "text", entityId: id },
-    parseTagNames(formData.get("tags")),
+    id,
+    formInput(formData, title, arabic),
   );
-  if (tagResult.error) {
-    return { error: tagResult.error };
+  if ("error" in result) {
+    return { error: result.error };
   }
 
   revalidatePath("/texts");

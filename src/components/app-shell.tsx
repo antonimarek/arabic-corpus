@@ -19,6 +19,7 @@ const ADD_ITEMS = [
   { href: "/examples/new", label: "Example" },
   { href: "/vocabulary/new", label: "Vocabulary" },
   { href: "/structures/new", label: "Structure" },
+  { href: "/import", label: "Import" },
 ] as const;
 
 export function AppShell({ children }: { children: React.ReactNode }) {

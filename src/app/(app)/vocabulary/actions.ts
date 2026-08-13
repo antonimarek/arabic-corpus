@@ -3,10 +3,12 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 
+import {
+  updateVocabularyRecord,
+  writeVocabulary,
+} from "@/lib/corpus/write";
 import { emptyToNull, parseTagNames } from "@/lib/form";
-import { phraseSearchKey } from "@/lib/lookup-phrase";
 import { requireUserId } from "@/lib/require-user";
-import { syncTags } from "@/lib/tags";
 
 export type VocabularyFormState = {
   error?: string;
@@ -25,6 +27,18 @@ function parseSenses(formData: FormData) {
   return senses;
 }
 
+function formInput(formData: FormData, arabic: string) {
+  return {
+    arabic,
+    transliteration: emptyToNull(formData.get("transliteration")),
+    part_of_speech: emptyToNull(formData.get("part_of_speech")),
+    notes: emptyToNull(formData.get("notes")),
+    root: emptyToNull(formData.get("root")),
+    senses: parseSenses(formData),
+    tags: parseTagNames(formData.get("tags")),
+  };
+}
+
 export async function createVocabulary(
   _prev: VocabularyFormState,
   formData: FormData,
@@ -34,72 +48,20 @@ export async function createVocabulary(
     return { error: "Arabic is required." };
   }
 
-  const senses = parseSenses(formData);
-  if (senses.length === 0) {
+  const input = formInput(formData, arabic);
+  if (input.senses.length === 0) {
     return { error: "Add at least one sense (gloss)." };
   }
 
   const { supabase, userId } = await requireUserId();
-  const searchKey = phraseSearchKey(arabic);
-  if (searchKey) {
-    const { data: existing } = await supabase
-      .from("vocabulary")
-      .select("id")
-      .eq("search_arabic", searchKey)
-      .limit(1)
-      .maybeSingle();
-    if (existing) {
-      return {
-        error:
-          "This word is already in the corpus. Open the existing card to add a sense.",
-        existingId: existing.id,
-      };
-    }
-  }
-
-  const { data, error } = await supabase
-    .from("vocabulary")
-    .insert({
-      owner_id: userId,
-      arabic,
-      transliteration: emptyToNull(formData.get("transliteration")),
-      part_of_speech: emptyToNull(formData.get("part_of_speech")),
-      notes: emptyToNull(formData.get("notes")),
-      root: emptyToNull(formData.get("root")),
-    })
-    .select("id")
-    .single();
-
-  if (error || !data) {
-    return { error: error?.message ?? "Could not save vocabulary." };
-  }
-
-  const { error: senseError } = await supabase.from("vocabulary_senses").insert(
-    senses.map((sense) => ({
-      vocabulary_id: data.id,
-      owner_id: userId,
-      gloss: sense.gloss,
-      lang: sense.lang,
-    })),
-  );
-
-  if (senseError) {
-    return { error: senseError.message };
-  }
-
-  const tagResult = await syncTags(
-    supabase,
-    userId,
-    { kind: "vocabulary", entityId: data.id },
-    parseTagNames(formData.get("tags")),
-  );
-  if (tagResult.error) {
-    return { error: tagResult.error };
+  const result = await writeVocabulary(supabase, userId, input);
+  if ("error" in result) {
+    return { error: result.error, existingId: result.existingId };
   }
 
   revalidatePath("/vocabulary");
   revalidatePath("/");
-  redirect(`/vocabulary/${data.id}`);
+  redirect(`/vocabulary/${result.id}`);
 }
 
 export async function updateVocabulary(
@@ -112,57 +74,15 @@ export async function updateVocabulary(
     return { error: "Arabic is required." };
   }
 
-  const senses = parseSenses(formData);
-  if (senses.length === 0) {
+  const input = formInput(formData, arabic);
+  if (input.senses.length === 0) {
     return { error: "Add at least one sense (gloss)." };
   }
 
   const { supabase, userId } = await requireUserId();
-  const { error } = await supabase
-    .from("vocabulary")
-    .update({
-      arabic,
-      transliteration: emptyToNull(formData.get("transliteration")),
-      part_of_speech: emptyToNull(formData.get("part_of_speech")),
-      notes: emptyToNull(formData.get("notes")),
-      root: emptyToNull(formData.get("root")),
-    })
-    .eq("id", id);
-
-  if (error) {
-    return { error: error.message };
-  }
-
-  const { error: deleteSensesError } = await supabase
-    .from("vocabulary_senses")
-    .delete()
-    .eq("vocabulary_id", id);
-
-  if (deleteSensesError) {
-    return { error: deleteSensesError.message };
-  }
-
-  const { error: senseError } = await supabase.from("vocabulary_senses").insert(
-    senses.map((sense) => ({
-      vocabulary_id: id,
-      owner_id: userId,
-      gloss: sense.gloss,
-      lang: sense.lang,
-    })),
-  );
-
-  if (senseError) {
-    return { error: senseError.message };
-  }
-
-  const tagResult = await syncTags(
-    supabase,
-    userId,
-    { kind: "vocabulary", entityId: id },
-    parseTagNames(formData.get("tags")),
-  );
-  if (tagResult.error) {
-    return { error: tagResult.error };
+  const result = await updateVocabularyRecord(supabase, userId, id, input);
+  if ("error" in result) {
+    return { error: result.error };
   }
 
   revalidatePath("/vocabulary");

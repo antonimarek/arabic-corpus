@@ -25,6 +25,12 @@ export default async function AdminPage() {
       <div className="flex flex-col gap-2">
         <h2 className="text-sm font-medium text-[var(--ink-muted)]">Import</h2>
         <Link
+          href="/import"
+          className="text-sm text-[var(--accent)] hover:underline"
+        >
+          Online import
+        </Link>
+        <Link
           href="/admin/imports"
           className="text-sm text-[var(--accent)] hover:underline"
         >

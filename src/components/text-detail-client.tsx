@@ -9,6 +9,7 @@ import { ConfirmDelete } from "@/components/confirm-delete";
 import { ExampleList } from "@/components/example-list";
 import { TextLineReader } from "@/components/text-line-reader";
 import { writeLastText } from "@/lib/prefs";
+import { structureLink, vocabularyLink } from "@/lib/arabic-links";
 import type { ArabicLink } from "@/lib/highlight-arabic";
 import { createClient } from "@/lib/supabase/client";
 import { notNull } from "@/lib/tags";
@@ -49,8 +50,8 @@ async function fetchTextDetail(id: string): Promise<TextDetailPayload> {
         translation,
         transliteration,
         source_line,
-        example_vocabulary(vocabulary(id, arabic)),
-        example_structures(structures(id, name, arabic_form))
+        example_vocabulary(vocabulary(id, arabic, vocabulary_senses(gloss, created_at))),
+        example_structures(structures(id, name, arabic_form, meaning))
       )`,
     )
     .eq("id", id)
@@ -72,20 +73,14 @@ async function fetchTextDetail(id: string): Promise<TextDetailPayload> {
     for (const row of example.example_vocabulary ?? []) {
       const vocab = row.vocabulary;
       if (!vocab?.arabic) continue;
-      linkMap.set(`v:${vocab.id}`, {
-        phrase: vocab.arabic,
-        href: `/vocabulary/${vocab.id}`,
-        kind: "vocabulary",
-      });
+      linkMap.set(`v:${vocab.id}`, vocabularyLink(vocab));
     }
     for (const row of example.example_structures ?? []) {
       const structure = row.structures;
-      if (!structure?.arabic_form) continue;
-      linkMap.set(`s:${structure.id}`, {
-        phrase: structure.arabic_form,
-        href: `/structures/${structure.id}`,
-        kind: "structure",
-      });
+      if (!structure) continue;
+      const link = structureLink(structure);
+      if (!link) continue;
+      linkMap.set(`s:${structure.id}`, link);
     }
   }
 

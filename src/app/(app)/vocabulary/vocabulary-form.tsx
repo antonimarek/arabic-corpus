@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useActionState, useState } from "react";
 
 import {
@@ -165,6 +166,17 @@ export function VocabularyForm(props: VocabularyFormProps) {
       {state.error ? (
         <p className="text-sm text-[var(--danger)]" role="alert">
           {state.error}
+          {state.existingId ? (
+            <>
+              {" "}
+              <Link
+                href={`/vocabulary/${state.existingId}`}
+                className="underline"
+              >
+                Open existing
+              </Link>
+            </>
+          ) : null}
         </p>
       ) : null}
 

@@ -4,11 +4,13 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 
 import { emptyToNull, parseTagNames } from "@/lib/form";
+import { phraseSearchKey } from "@/lib/lookup-phrase";
 import { requireUserId } from "@/lib/require-user";
 import { syncTags } from "@/lib/tags";
 
 export type VocabularyFormState = {
   error?: string;
+  existingId?: string;
 };
 
 function parseSenses(formData: FormData) {
@@ -38,6 +40,23 @@ export async function createVocabulary(
   }
 
   const { supabase, userId } = await requireUserId();
+  const searchKey = phraseSearchKey(arabic);
+  if (searchKey) {
+    const { data: existing } = await supabase
+      .from("vocabulary")
+      .select("id")
+      .eq("search_arabic", searchKey)
+      .limit(1)
+      .maybeSingle();
+    if (existing) {
+      return {
+        error:
+          "This word is already in the corpus. Open the existing card to add a sense.",
+        existingId: existing.id,
+      };
+    }
+  }
+
   const { data, error } = await supabase
     .from("vocabulary")
     .insert({

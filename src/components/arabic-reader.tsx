@@ -57,9 +57,22 @@ export function ArabicReader({
         textId={textId}
         lineNumber={sourceLine ?? undefined}
       >
-        <div lang="ar" dir="rtl">
-          {renderLinkedArabic(arabic, links)}
-        </div>
+        {({ onPhraseActivate }) => {
+          const body = renderLinkedArabic(arabic, links, onPhraseActivate);
+          return size === "example" ? (
+            <h1
+              className="m-0 font-normal [font-size:inherit] [line-height:inherit]"
+              lang="ar"
+              dir="rtl"
+            >
+              {body}
+            </h1>
+          ) : (
+            <div lang="ar" dir="rtl">
+              {body}
+            </div>
+          );
+        }}
       </ArabicSelectionMenu>
 
       {transliteration ? (
@@ -86,16 +99,9 @@ export function ArabicReader({
         </div>
       ) : null}
 
-      {links.length > 0 ? (
-        <p className="text-xs text-[var(--ink-muted)]">
-          Underlined Arabic jumps to linked vocabulary or structures. Select
-          a phrase to add it.
-        </p>
-      ) : (
-        <p className="text-xs text-[var(--ink-muted)]">
-          Select Arabic to search, add vocabulary, or add an example.
-        </p>
-      )}
+      <p className="text-xs text-[var(--ink-muted)]">
+        Select Arabic to search or add. Underlined phrases show a gloss.
+      </p>
     </div>
   );
 }

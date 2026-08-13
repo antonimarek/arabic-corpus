@@ -30,20 +30,21 @@ body {
   font-feature-settings: "locl" 1;
 }
 
-.linked-vocab {
+.linked-vocab,
+.linked-structure {
+  cursor: pointer;
   color: inherit;
   text-decoration: underline;
-  text-decoration-color: color-mix(in srgb, var(--accent) 55%, transparent);
   text-decoration-thickness: 2px;
   text-underline-offset: 0.28em;
 }
 
+.linked-vocab {
+  text-decoration-color: color-mix(in srgb, var(--accent) 55%, transparent);
+}
+
 .linked-structure {
-  color: inherit;
-  text-decoration: underline;
   text-decoration-color: color-mix(in srgb, #5c3a4a 50%, transparent);
-  text-decoration-thickness: 2px;
-  text-underline-offset: 0.28em;
   text-decoration-style: dotted;
 }
 

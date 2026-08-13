@@ -4,6 +4,7 @@ import {
   TextDetailClient,
   type TextDetailPayload,
 } from "@/components/text-detail-client";
+import { structureLink, vocabularyLink } from "@/lib/arabic-links";
 import type { ArabicLink } from "@/lib/highlight-arabic";
 import { createClient } from "@/lib/supabase/server";
 import { notNull } from "@/lib/tags";
@@ -26,8 +27,8 @@ export default async function TextDetailPage({ params }: TextPageProps) {
         translation,
         transliteration,
         source_line,
-        example_vocabulary(vocabulary(id, arabic)),
-        example_structures(structures(id, name, arabic_form))
+        example_vocabulary(vocabulary(id, arabic, vocabulary_senses(gloss, created_at))),
+        example_structures(structures(id, name, arabic_form, meaning))
       )`,
     )
     .eq("id", id)
@@ -54,20 +55,14 @@ export default async function TextDetailPage({ params }: TextPageProps) {
     for (const row of example.example_vocabulary ?? []) {
       const vocab = row.vocabulary;
       if (!vocab?.arabic) continue;
-      linkMap.set(`v:${vocab.id}`, {
-        phrase: vocab.arabic,
-        href: `/vocabulary/${vocab.id}`,
-        kind: "vocabulary",
-      });
+      linkMap.set(`v:${vocab.id}`, vocabularyLink(vocab));
     }
     for (const row of example.example_structures ?? []) {
       const structure = row.structures;
-      if (!structure?.arabic_form) continue;
-      linkMap.set(`s:${structure.id}`, {
-        phrase: structure.arabic_form,
-        href: `/structures/${structure.id}`,
-        kind: "structure",
-      });
+      if (!structure) continue;
+      const link = structureLink(structure);
+      if (!link) continue;
+      linkMap.set(`s:${structure.id}`, link);
     }
   }
 

@@ -4,7 +4,7 @@ import { notFound } from "next/navigation";
 import { deleteExample } from "@/app/(app)/examples/actions";
 import { ArabicReader } from "@/components/arabic-reader";
 import { ConfirmDelete } from "@/components/confirm-delete";
-import type { ArabicLink } from "@/lib/highlight-arabic";
+import { structureLink, vocabularyLink } from "@/lib/arabic-links";
 import { createClient } from "@/lib/supabase/server";
 import { notNull } from "@/lib/tags";
 import { lineHref } from "@/lib/text-lines";
@@ -21,7 +21,7 @@ export default async function ExampleDetailPage({
   const { data: example, error } = await supabase
     .from("examples")
     .select(
-      "*, texts(id, title), example_tags(tags(name)), example_vocabulary(vocabulary(id, arabic)), example_structures(structures(id, name, arabic_form))",
+      "*, texts(id, title), example_tags(tags(name)), example_vocabulary(vocabulary(id, arabic, vocabulary_senses(gloss, created_at))), example_structures(structures(id, name, arabic_form, meaning))",
     )
     .eq("id", id)
     .maybeSingle();
@@ -50,39 +50,15 @@ export default async function ExampleDetailPage({
       .filter(notNull) ?? [];
   const text = example.texts;
 
-  const links: ArabicLink[] = [
-    ...vocabulary.map((row) => ({
-      phrase: row.arabic,
-      href: `/vocabulary/${row.id}`,
-      kind: "vocabulary" as const,
-    })),
+  const links = [
+    ...vocabulary.map((row) => vocabularyLink(row)),
     ...structures
-      .filter((row) => row.arabic_form)
-      .map((row) => ({
-        phrase: row.arabic_form as string,
-        href: `/structures/${row.id}`,
-        kind: "structure" as const,
-      })),
+      .map((row) => structureLink(row))
+      .filter(notNull),
   ];
 
   return (
     <article className="flex flex-col gap-8">
-      <header className="flex flex-col gap-3">
-        <h1 className="sr-only">{example.arabic}</h1>
-        <div className="flex items-start justify-end gap-3 text-sm">
-          <Link
-            href={`/examples/${example.id}/edit`}
-            className="text-[var(--accent)] hover:underline"
-          >
-            Edit
-          </Link>
-          <ConfirmDelete action={deleteExample.bind(null, example.id)} />
-        </div>
-        {tags.length > 0 ? (
-          <p className="text-xs text-[var(--ink-muted)]">{tags.join(" · ")}</p>
-        ) : null}
-      </header>
-
       <ArabicReader
         arabic={example.arabic}
         translation={example.translation}
@@ -92,6 +68,19 @@ export default async function ExampleDetailPage({
         textId={text?.id}
         sourceLine={example.source_line}
       />
+
+      <div className="flex flex-wrap items-center gap-x-4 gap-y-2 text-sm">
+        <Link
+          href={`/examples/${example.id}/edit`}
+          className="text-[var(--accent)] hover:underline"
+        >
+          Edit
+        </Link>
+        <ConfirmDelete action={deleteExample.bind(null, example.id)} />
+        {tags.length > 0 ? (
+          <p className="text-xs text-[var(--ink-muted)]">{tags.join(" · ")}</p>
+        ) : null}
+      </div>
 
       {text ? (
         <section className="border-t border-[var(--line)] pt-6">

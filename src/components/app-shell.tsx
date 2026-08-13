@@ -43,7 +43,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   }, []);
 
   return (
-    <div className="mx-auto flex min-h-full w-full max-w-3xl flex-col px-4 pb-24 pt-4 sm:px-6 sm:pb-10 sm:pt-8">
+    <div className="mx-auto flex min-h-full w-full max-w-3xl flex-col px-4 pb-10 pt-4 sm:px-6 sm:pt-8">
       <header className="mb-8 flex items-start justify-between gap-4">
         <div className="min-w-0">
           <Link href="/" className="block">

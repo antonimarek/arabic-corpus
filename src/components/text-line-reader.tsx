@@ -203,7 +203,7 @@ export function TextLineReader({
       ) : null}
 
       <div
-        className="font-arabic text-[1.25rem] leading-[1.9] text-[var(--ink)] sm:text-[1.35rem] sm:leading-[1.95]"
+        className="font-arabic text-[1.45rem] leading-[1.95] text-[var(--ink)] sm:text-[1.6rem]"
         lang="ar"
         dir="rtl"
       >
@@ -236,7 +236,7 @@ export function TextLineReader({
             >
               <button
                 type="button"
-                className="select-none pt-1 text-left font-sans text-[11px] tabular-nums leading-none text-[var(--ink-muted)]"
+                className="flex min-h-11 w-full select-none items-start pt-1 text-left font-sans text-[11px] tabular-nums leading-none text-[var(--ink-muted)]"
                 dir="ltr"
                 aria-label={
                   lineTranslation
@@ -258,17 +258,13 @@ export function TextLineReader({
                     textId={textId}
                     lineNumber={lineNumber}
                   >
-                    <div
-                      onClick={() => {
-                        if (alignment.aligned && lineTranslation) {
-                          toggleLineTranslation(lineNumber);
-                        }
-                      }}
-                    >
-                      {line.length > 0
-                        ? renderLinkedArabic(line, links)
-                        : "\u00a0"}
-                    </div>
+                    {({ onPhraseActivate }) => (
+                      <div>
+                        {line.length > 0
+                          ? renderLinkedArabic(line, links, onPhraseActivate)
+                          : "\u00a0"}
+                      </div>
+                    )}
                   </ArabicSelectionMenu>
                   <div className="relative shrink-0" dir="ltr">
                     <button
@@ -366,9 +362,9 @@ export function TextLineReader({
       ) : null}
 
       <p className="text-xs text-[var(--ink-muted)]">
-        Select Arabic to search, add vocabulary, or add an example.
+        Select Arabic to search or add. Underlined phrases show a gloss.
         {alignment.aligned
-          ? " Tap a line number to reveal that line’s meaning."
+          ? " Tap a line number to reveal that line meaning."
           : null}
       </p>
     </div>

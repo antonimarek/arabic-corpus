@@ -1,11 +1,13 @@
-import Link from "next/link";
 import type { ReactNode } from "react";
 
 export type ArabicLink = {
   phrase: string;
   href: string;
   kind: "vocabulary" | "structure";
+  gloss?: string;
 };
+
+export type PhraseActivateHandler = (link: ArabicLink, rect: DOMRect) => void;
 
 type Match = {
   start: number;
@@ -13,7 +15,7 @@ type Match = {
   link: ArabicLink;
 };
 
-function findMatches(text: string, links: ArabicLink[]): Match[] {
+export function findMatches(text: string, links: ArabicLink[]): Match[] {
   const usable = links
     .filter((link) => link.phrase.trim().length > 0)
     .sort((a, b) => b.phrase.length - a.phrase.length);
@@ -48,9 +50,16 @@ function findMatches(text: string, links: ArabicLink[]): Match[] {
   return matches.sort((a, b) => a.start - b.start);
 }
 
+function selectionIsActive(): boolean {
+  if (typeof window === "undefined") return false;
+  const selection = window.getSelection();
+  return Boolean(selection && !selection.isCollapsed && selection.toString().trim());
+}
+
 export function renderLinkedArabic(
   text: string,
   links: ArabicLink[],
+  onPhraseActivate?: PhraseActivateHandler,
 ): ReactNode {
   if (!text) return null;
   if (links.length === 0) return text;
@@ -65,18 +74,30 @@ export function renderLinkedArabic(
     if (match.start > cursor) {
       nodes.push(text.slice(cursor, match.start));
     }
+    const className =
+      match.link.kind === "vocabulary" ? "linked-vocab" : "linked-structure";
+    const activate = (target: EventTarget & Element) => {
+      if (selectionIsActive()) return;
+      onPhraseActivate?.(match.link, target.getBoundingClientRect());
+    };
     nodes.push(
-      <Link
+      <span
         key={`${match.link.href}-${match.start}-${index}`}
-        href={match.link.href}
-        className={
-          match.link.kind === "vocabulary"
-            ? "linked-vocab"
-            : "linked-structure"
-        }
+        role="button"
+        tabIndex={0}
+        data-arabic-phrase=""
+        className={className}
+        onClick={(event) => {
+          activate(event.currentTarget);
+        }}
+        onKeyDown={(event) => {
+          if (event.key !== "Enter" && event.key !== " ") return;
+          event.preventDefault();
+          activate(event.currentTarget);
+        }}
       >
         {text.slice(match.start, match.end)}
-      </Link>,
+      </span>,
     );
     cursor = match.end;
   });

@@ -59,3 +59,52 @@ export function textLineKey(ref: TextLineRef): string {
 export function lineHref(textId: string, lineNumber: number): string {
   return `/texts/${textId}#${lineAnchorId(lineNumber)}`;
 }
+
+export type AlignedStudyLine = {
+  arabic: string;
+  translation: string | null;
+};
+
+/**
+ * Zip Arabic lines with translation when non-empty counts match.
+ * Empty Arabic lines keep their index and get no translation.
+ */
+export function alignTranslationLines(
+  arabic: string,
+  translation: string | null | undefined,
+): { aligned: boolean; lines: AlignedStudyLine[] } {
+  const arabicLines = splitTextLines(arabic);
+  if (!translation?.trim()) {
+    return {
+      aligned: false,
+      lines: arabicLines.map((line) => ({ arabic: line, translation: null })),
+    };
+  }
+
+  const translationParts = splitTextLines(translation)
+    .map((line) => line.trim())
+    .filter((line) => line.length > 0);
+  const arabicNonEmpty = arabicLines.filter((line) => line.trim().length > 0);
+
+  if (
+    arabicNonEmpty.length === 0 ||
+    arabicNonEmpty.length !== translationParts.length
+  ) {
+    return {
+      aligned: false,
+      lines: arabicLines.map((line) => ({ arabic: line, translation: null })),
+    };
+  }
+
+  let next = 0;
+  const lines = arabicLines.map((line) => {
+    if (!line.trim()) {
+      return { arabic: line, translation: null };
+    }
+    const meaning = translationParts[next] ?? null;
+    next += 1;
+    return { arabic: line, translation: meaning };
+  });
+
+  return { aligned: true, lines };
+}

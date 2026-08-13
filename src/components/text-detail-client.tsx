@@ -5,8 +5,10 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect } from "react";
 
 import { deleteText } from "@/app/(app)/texts/actions";
+import { ConfirmDelete } from "@/components/confirm-delete";
 import { ExampleList } from "@/components/example-list";
 import { TextLineReader } from "@/components/text-line-reader";
+import { writeLastText } from "@/lib/prefs";
 import type { ArabicLink } from "@/lib/highlight-arabic";
 import { createClient } from "@/lib/supabase/client";
 import { notNull } from "@/lib/tags";
@@ -132,6 +134,10 @@ export function TextDetailClient({
 
   const text = data ?? initialData;
 
+  useEffect(() => {
+    writeLastText({ id: text.id, title: text.title });
+  }, [text.id, text.title]);
+
   return (
     <article className="flex flex-col gap-8">
       <header className="flex flex-col gap-3">
@@ -144,14 +150,7 @@ export function TextDetailClient({
             >
               Edit
             </Link>
-            <form action={deleteText.bind(null, text.id)}>
-              <button
-                type="submit"
-                className="text-[var(--danger)] hover:underline"
-              >
-                Delete
-              </button>
-            </form>
+            <ConfirmDelete action={deleteText.bind(null, text.id)} />
           </div>
         </div>
         <p className="text-xs text-[var(--ink-muted)]">

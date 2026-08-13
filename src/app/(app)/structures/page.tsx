@@ -1,13 +1,15 @@
 import Link from "next/link";
 
+import { FilteredEntityList } from "@/components/filtered-entity-list";
 import { createClient } from "@/lib/supabase/server";
+import { notNull } from "@/lib/tags";
 
 export default async function StructuresPage() {
   const supabase = await createClient();
   const { data: rows, error } = await supabase
     .from("structures")
     .select(
-      "id, name, arabic_form, meaning, created_at, example_structures(example_id)",
+      "id, name, arabic_form, meaning, created_at, example_structures(example_id), structure_tags(tags(name))",
     )
     .order("created_at", { ascending: false });
 
@@ -36,37 +38,28 @@ export default async function StructuresPage() {
           No structures yet. Capture a chunk, pattern, or idiom you keep meeting.
         </p>
       ) : (
-        <ul className="flex flex-col divide-y divide-[var(--line)]">
-          {rows.map((row) => {
+        <FilteredEntityList
+          rows={rows.map((row) => {
             const count = row.example_structures?.length ?? 0;
-            return (
-              <li key={row.id}>
-                <Link
-                  href={`/structures/${row.id}`}
-                  className="flex flex-col gap-1.5 py-4 hover:opacity-80"
-                >
-                  <span className="text-[15px] font-medium text-[var(--ink)]">
-                    {row.name}
-                  </span>
-                  {row.arabic_form ? (
-                    <span
-                      className="font-arabic text-lg text-[var(--ink)]"
-                      lang="ar"
-                      dir="rtl"
-                    >
-                      {row.arabic_form}
-                    </span>
-                  ) : null}
-                  <span className="text-xs text-[var(--ink-muted)]">
-                    {[row.meaning, `${count} example${count === 1 ? "" : "s"}`]
-                      .filter(Boolean)
-                      .join(" · ")}
-                  </span>
-                </Link>
-              </li>
-            );
+            return {
+              id: row.id,
+              href: `/structures/${row.id}`,
+              tags:
+                row.structure_tags
+                  ?.map((link) => link.tags?.name)
+                  .filter(notNull) ?? [],
+              title: row.arabic_form ? undefined : row.name,
+              arabic: row.arabic_form,
+              subtitle: [
+                row.arabic_form ? row.name : null,
+                row.meaning,
+                `${count} example${count === 1 ? "" : "s"}`,
+              ]
+                .filter(Boolean)
+                .join(" · "),
+            };
           })}
-        </ul>
+        />
       )}
     </section>
   );

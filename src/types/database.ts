@@ -113,6 +113,7 @@ export type Database = {
           transliteration: string | null;
           part_of_speech: string | null;
           notes: string | null;
+          root: string | null;
           search_arabic?: string | null;
           search_latin?: string | null;
           embedding?: string | null;
@@ -126,6 +127,7 @@ export type Database = {
           transliteration?: string | null;
           part_of_speech?: string | null;
           notes?: string | null;
+          root?: string | null;
           embedding?: string | null;
           created_at?: string;
           updated_at?: string;
@@ -137,6 +139,7 @@ export type Database = {
           transliteration?: string | null;
           part_of_speech?: string | null;
           notes?: string | null;
+          root?: string | null;
           embedding?: string | null;
           created_at?: string;
           updated_at?: string;

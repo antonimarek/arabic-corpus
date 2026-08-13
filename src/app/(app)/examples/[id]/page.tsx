@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 
 import { deleteExample } from "@/app/(app)/examples/actions";
 import { ArabicReader } from "@/components/arabic-reader";
+import { ConfirmDelete } from "@/components/confirm-delete";
 import type { ArabicLink } from "@/lib/highlight-arabic";
 import { createClient } from "@/lib/supabase/server";
 import { notNull } from "@/lib/tags";
@@ -67,24 +68,15 @@ export default async function ExampleDetailPage({
   return (
     <article className="flex flex-col gap-8">
       <header className="flex flex-col gap-3">
-        <div className="flex items-start justify-between gap-4">
-          <h1 className="text-xl font-medium text-[var(--ink)]">Example</h1>
-          <div className="flex shrink-0 gap-3 text-sm">
-            <Link
-              href={`/examples/${example.id}/edit`}
-              className="text-[var(--accent)] hover:underline"
-            >
-              Edit
-            </Link>
-            <form action={deleteExample.bind(null, example.id)}>
-              <button
-                type="submit"
-                className="text-[var(--danger)] hover:underline"
-              >
-                Delete
-              </button>
-            </form>
-          </div>
+        <h1 className="sr-only">{example.arabic}</h1>
+        <div className="flex items-start justify-end gap-3 text-sm">
+          <Link
+            href={`/examples/${example.id}/edit`}
+            className="text-[var(--accent)] hover:underline"
+          >
+            Edit
+          </Link>
+          <ConfirmDelete action={deleteExample.bind(null, example.id)} />
         </div>
         {tags.length > 0 ? (
           <p className="text-xs text-[var(--ink-muted)]">{tags.join(" · ")}</p>
@@ -97,6 +89,8 @@ export default async function ExampleDetailPage({
         transliteration={example.transliteration}
         links={links}
         size="example"
+        textId={text?.id}
+        sourceLine={example.source_line}
       />
 
       {text ? (

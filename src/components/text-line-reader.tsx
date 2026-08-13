@@ -7,14 +7,23 @@ import {
   useMemo,
   useRef,
   useState,
+  useSyncExternalStore,
 } from "react";
 
+import { ArabicSelectionMenu } from "@/components/arabic-selection-menu";
 import {
   renderLinkedArabic,
   type ArabicLink,
 } from "@/lib/highlight-arabic";
 import {
+  getShowTranslationServerSnapshot,
+  getShowTranslationSnapshot,
+  subscribeShowTranslation,
+  writeShowTranslation,
+} from "@/lib/prefs";
+import {
   LINE_FILTER_MIN_LINES,
+  alignTranslationLines,
   lineAnchorId,
   lineHref,
   parseLineHash,
@@ -34,7 +43,6 @@ type TextLineReaderProps = {
   translation?: string | null;
   links?: ArabicLink[];
   examples?: LineExampleRef[];
-  defaultShowTranslation?: boolean;
 };
 
 export function TextLineReader({
@@ -43,9 +51,12 @@ export function TextLineReader({
   translation,
   links = [],
   examples = [],
-  defaultShowTranslation = true,
 }: TextLineReaderProps) {
   const lines = useMemo(() => splitTextLines(arabic), [arabic]);
+  const alignment = useMemo(
+    () => alignTranslationLines(arabic, translation),
+    [arabic, translation],
+  );
   const nonEmptyLineCount = useMemo(
     () => lines.filter((line) => line.trim().length > 0).length,
     [lines],
@@ -56,9 +67,15 @@ export function TextLineReader({
     [arabic],
   );
   const hasTranslation = Boolean(translation?.trim());
-  const [showTranslation, setShowTranslation] = useState(
-    hasTranslation && defaultShowTranslation,
+  const preferShowAll = useSyncExternalStore(
+    subscribeShowTranslation,
+    getShowTranslationSnapshot,
+    getShowTranslationServerSnapshot,
   );
+  const [revealedLines, setRevealedLines] = useState<Set<number>>(
+    () => new Set(),
+  );
+  const showAllTranslations = hasTranslation && preferShowAll;
   const [query, setQuery] = useState("");
   const [flashLine, setFlashLine] = useState<number | null>(null);
   const [openMenu, setOpenMenu] = useState<number | null>(null);
@@ -117,6 +134,31 @@ export function TextLineReader({
     }
   }, []);
 
+  const toggleShowAll = () => {
+    const next = !preferShowAll;
+    writeShowTranslation(next);
+    if (next) {
+      setRevealedLines(new Set());
+    }
+  };
+
+  const toggleLineTranslation = (lineNumber: number) => {
+    if (showAllTranslations) return;
+    const selection = window.getSelection();
+    if (selection && !selection.isCollapsed && selection.toString().trim()) {
+      return;
+    }
+    setRevealedLines((prev) => {
+      const next = new Set(prev);
+      if (next.has(lineNumber)) {
+        next.delete(lineNumber);
+      } else {
+        next.add(lineNumber);
+      }
+      return next;
+    });
+  };
+
   return (
     <div className="flex flex-col gap-5">
       {offerSentenceSplit ? (
@@ -147,6 +189,19 @@ export function TextLineReader({
         </label>
       ) : null}
 
+      {hasTranslation && alignment.aligned ? (
+        <button
+          type="button"
+          onClick={toggleShowAll}
+          className="self-start text-sm text-[var(--accent)] hover:underline"
+          aria-expanded={showAllTranslations}
+        >
+          {showAllTranslations
+            ? "Hide translations"
+            : "Show all translations"}
+        </button>
+      ) : null}
+
       <div
         className="font-arabic text-[1.25rem] leading-[1.9] text-[var(--ink)] sm:text-[1.35rem] sm:leading-[1.95]"
         lang="ar"
@@ -162,6 +217,12 @@ export function TextLineReader({
           const lineExamples = examplesByLine.get(lineNumber) ?? [];
           const isFlash = flashLine === lineNumber;
           const menuOpen = openMenu === lineNumber;
+          const lineTranslation = alignment.aligned
+            ? alignment.lines[index]?.translation
+            : null;
+          const showLineMeaning =
+            Boolean(lineTranslation) &&
+            (showAllTranslations || revealedLines.has(lineNumber));
 
           return (
             <div
@@ -173,33 +234,55 @@ export function TextLineReader({
                   : "border-transparent hover:border-[var(--line)]"
               }`}
             >
-              <div
+              <button
+                type="button"
                 className="select-none pt-1 text-left font-sans text-[11px] tabular-nums leading-none text-[var(--ink-muted)]"
                 dir="ltr"
-                aria-hidden
+                aria-label={
+                  lineTranslation
+                    ? `Line ${lineNumber}, toggle translation`
+                    : `Line ${lineNumber}`
+                }
+                onClick={() => {
+                  if (lineTranslation) {
+                    toggleLineTranslation(lineNumber);
+                  }
+                }}
               >
                 {String(lineNumber).padStart(2, "0")}
-              </div>
+              </button>
               <div className="min-w-0">
                 <div className="flex items-start justify-between gap-2">
-                  <div className="min-w-0 flex-1 whitespace-pre-wrap">
-                    {line.length > 0
-                      ? renderLinkedArabic(line, links)
-                      : "\u00a0"}
-                  </div>
+                  <ArabicSelectionMenu
+                    className="min-w-0 flex-1 whitespace-pre-wrap"
+                    textId={textId}
+                    lineNumber={lineNumber}
+                  >
+                    <div
+                      onClick={() => {
+                        if (alignment.aligned && lineTranslation) {
+                          toggleLineTranslation(lineNumber);
+                        }
+                      }}
+                    >
+                      {line.length > 0
+                        ? renderLinkedArabic(line, links)
+                        : "\u00a0"}
+                    </div>
+                  </ArabicSelectionMenu>
                   <div className="relative shrink-0" dir="ltr">
                     <button
                       type="button"
-                      className="rounded px-1.5 py-0.5 text-xs text-[var(--ink-muted)] opacity-0 hover:bg-[var(--surface)] hover:text-[var(--accent)] group-hover:opacity-100 focus:opacity-100"
+                      className="flex min-h-11 min-w-11 items-center justify-center rounded text-lg leading-none text-[var(--ink-muted)] hover:bg-[var(--surface)] hover:text-[var(--accent)]"
                       aria-label={`Line ${lineNumber} actions`}
                       onClick={() =>
                         setOpenMenu(menuOpen ? null : lineNumber)
                       }
                     >
-                      ···
+                      +
                     </button>
                     {menuOpen ? (
-                      <div className="absolute end-0 top-full z-20 mt-1 w-48 rounded-md border border-[var(--line)] bg-[var(--surface)] py-1 text-start text-sm shadow-sm">
+                      <div className="absolute end-0 top-full z-20 mt-1 w-48 rounded-md border border-[var(--line)] bg-[var(--surface)] py-1 text-start text-sm">
                         <button
                           type="button"
                           className="block w-full px-3 py-1.5 text-left hover:bg-[color-mix(in_srgb,var(--ink)_6%,transparent)]"
@@ -250,23 +333,31 @@ export function TextLineReader({
                     ) : null}
                   </div>
                 </div>
+                {showLineMeaning ? (
+                  <p
+                    className="mt-1 font-sans text-sm leading-relaxed text-[var(--ink-muted)]"
+                    dir="ltr"
+                  >
+                    {lineTranslation}
+                  </p>
+                ) : null}
               </div>
             </div>
           );
         })}
       </div>
 
-      {hasTranslation ? (
+      {hasTranslation && !alignment.aligned ? (
         <div className="flex flex-col gap-3 border-t border-[var(--line)] pt-5">
           <button
             type="button"
-            onClick={() => setShowTranslation((value) => !value)}
+            onClick={toggleShowAll}
             className="self-start text-sm text-[var(--accent)] hover:underline"
-            aria-expanded={showTranslation}
+            aria-expanded={showAllTranslations}
           >
-            {showTranslation ? "Hide translation" : "Show translation"}
+            {showAllTranslations ? "Hide translation" : "Show translation"}
           </button>
-          {showTranslation ? (
+          {showAllTranslations ? (
             <p className="whitespace-pre-wrap text-[15px] leading-relaxed text-[var(--ink)] sm:text-base">
               {translation}
             </p>
@@ -274,11 +365,12 @@ export function TextLineReader({
         </div>
       ) : null}
 
-      {links.length > 0 ? (
-        <p className="text-xs text-[var(--ink-muted)]">
-          Underlined Arabic jumps to linked vocabulary or structures.
-        </p>
-      ) : null}
+      <p className="text-xs text-[var(--ink-muted)]">
+        Select Arabic to search, add vocabulary, or add an example.
+        {alignment.aligned
+          ? " Tap a line number to reveal that line’s meaning."
+          : null}
+      </p>
     </div>
   );
 }

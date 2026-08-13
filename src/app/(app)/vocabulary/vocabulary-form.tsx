@@ -16,7 +16,7 @@ const initialState: VocabularyFormState = {};
 type SenseDraft = { gloss: string; lang: string };
 
 type VocabularyFormProps =
-  | { mode: "create" }
+  | { mode: "create"; defaultArabic?: string }
   | {
       mode: "edit";
       vocabulary: Vocabulary;
@@ -48,8 +48,23 @@ export function VocabularyForm(props: VocabularyFormProps) {
           required
           dir="rtl"
           lang="ar"
-          defaultValue={vocabulary?.arabic ?? ""}
+          defaultValue={
+            vocabulary?.arabic ??
+            (props.mode === "create" ? (props.defaultArabic ?? "") : "")
+          }
           className="font-arabic rounded-md border border-[var(--line)] bg-[var(--surface)] px-3 py-2.5 text-xl outline-none focus:border-[var(--accent)]"
+        />
+      </label>
+
+      <label className="flex flex-col gap-2">
+        <span className="text-sm text-[var(--ink-muted)]">Root (optional)</span>
+        <input
+          name="root"
+          dir="rtl"
+          lang="ar"
+          defaultValue={vocabulary?.root ?? ""}
+          className="font-arabic rounded-md border border-[var(--line)] bg-[var(--surface)] px-3 py-2.5 text-xl outline-none focus:border-[var(--accent)]"
+          placeholder="كتب"
         />
       </label>
 

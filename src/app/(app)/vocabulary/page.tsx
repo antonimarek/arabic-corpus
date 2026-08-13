@@ -1,13 +1,15 @@
 import Link from "next/link";
 
+import { FilteredEntityList } from "@/components/filtered-entity-list";
 import { createClient } from "@/lib/supabase/server";
+import { notNull } from "@/lib/tags";
 
 export default async function VocabularyPage() {
   const supabase = await createClient();
   const { data: rows, error } = await supabase
     .from("vocabulary")
     .select(
-      "id, arabic, transliteration, part_of_speech, created_at, vocabulary_senses(gloss, lang)",
+      "id, arabic, transliteration, part_of_speech, created_at, vocabulary_senses(gloss, lang, created_at), vocabulary_tags(tags(name))",
     )
     .order("created_at", { ascending: false });
 
@@ -36,35 +38,26 @@ export default async function VocabularyPage() {
           No vocabulary yet. Add a word you met in a lesson or chat.
         </p>
       ) : (
-        <ul className="flex flex-col divide-y divide-[var(--line)]">
-          {rows.map((row) => {
-            const senses = row.vocabulary_senses ?? [];
-            const gloss = senses
-              .map((s) => `${s.gloss} (${s.lang})`)
-              .join(" · ");
-            return (
-              <li key={row.id}>
-                <Link
-                  href={`/vocabulary/${row.id}`}
-                  className="flex flex-col gap-1.5 py-4 hover:opacity-80"
-                >
-                  <span
-                    className="font-arabic text-xl text-[var(--ink)]"
-                    lang="ar"
-                    dir="rtl"
-                  >
-                    {row.arabic}
-                  </span>
-                  <span className="text-[15px] text-[var(--ink-muted)]">
-                    {[row.transliteration, row.part_of_speech, gloss]
-                      .filter(Boolean)
-                      .join(" · ")}
-                  </span>
-                </Link>
-              </li>
+        <FilteredEntityList
+          rows={rows.map((row) => {
+            const senses = [...(row.vocabulary_senses ?? [])].sort((a, b) =>
+              a.created_at.localeCompare(b.created_at),
             );
+            const gloss = senses[0]?.gloss ?? null;
+            return {
+              id: row.id,
+              href: `/vocabulary/${row.id}`,
+              tags:
+                row.vocabulary_tags
+                  ?.map((link) => link.tags?.name)
+                  .filter(notNull) ?? [],
+              arabic: row.arabic,
+              subtitle: [row.transliteration, row.part_of_speech, gloss]
+                .filter(Boolean)
+                .join(" · "),
+            };
           })}
-        </ul>
+        />
       )}
     </section>
   );

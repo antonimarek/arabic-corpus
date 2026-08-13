@@ -9,26 +9,33 @@ import { signOut } from "@/app/login/actions";
 const NAV = [
   { href: "/", label: "Search" },
   { href: "/texts", label: "Texts" },
+  { href: "/examples", label: "Examples" },
   { href: "/vocabulary", label: "Vocabulary" },
   { href: "/structures", label: "Structures" },
 ] as const;
 
 const ADD_ITEMS = [
   { href: "/texts/new", label: "Text" },
+  { href: "/examples/new", label: "Example" },
   { href: "/vocabulary/new", label: "Vocabulary" },
   { href: "/structures/new", label: "Structure" },
-  { href: "/examples/new", label: "Example" },
 ] as const;
 
 export function AppShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const [addOpen, setAddOpen] = useState(false);
+  const [moreOpen, setMoreOpen] = useState(false);
   const addRef = useRef<HTMLDivElement>(null);
+  const moreRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     function onPointerDown(event: PointerEvent) {
-      if (!addRef.current?.contains(event.target as Node)) {
+      const target = event.target as Node;
+      if (!addRef.current?.contains(target)) {
         setAddOpen(false);
+      }
+      if (!moreRef.current?.contains(target)) {
+        setMoreOpen(false);
       }
     }
     document.addEventListener("pointerdown", onPointerDown);
@@ -82,14 +89,42 @@ export function AppShell({ children }: { children: React.ReactNode }) {
               </div>
             ) : null}
           </div>
-          <form action={signOut}>
+          <div className="relative" ref={moreRef}>
             <button
-              type="submit"
-              className="rounded-md px-2 py-1.5 text-sm text-[var(--ink-muted)] hover:text-[var(--ink)]"
+              type="button"
+              onClick={() => setMoreOpen((open) => !open)}
+              className="min-h-11 min-w-11 rounded-md px-2 text-sm text-[var(--ink-muted)] hover:text-[var(--ink)]"
+              aria-expanded={moreOpen}
+              aria-haspopup="menu"
+              aria-label="More"
             >
-              Sign out
+              ···
             </button>
-          </form>
+            {moreOpen ? (
+              <div
+                role="menu"
+                className="absolute right-0 z-20 mt-2 min-w-44 rounded-md border border-[var(--line)] bg-[var(--surface)] py-1"
+              >
+                <Link
+                  href="/admin"
+                  role="menuitem"
+                  className="block px-3 py-3 text-sm text-[var(--ink)] hover:bg-[var(--surface-hover)]"
+                  onClick={() => setMoreOpen(false)}
+                >
+                  Admin
+                </Link>
+                <form action={signOut}>
+                  <button
+                    type="submit"
+                    role="menuitem"
+                    className="block w-full px-3 py-3 text-left text-sm text-[var(--ink-muted)] hover:bg-[var(--surface-hover)] hover:text-[var(--ink)]"
+                  >
+                    Sign out
+                  </button>
+                </form>
+              </div>
+            ) : null}
+          </div>
         </div>
       </header>
 

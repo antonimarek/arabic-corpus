@@ -46,6 +46,7 @@ export async function createVocabulary(
       transliteration: emptyToNull(formData.get("transliteration")),
       part_of_speech: emptyToNull(formData.get("part_of_speech")),
       notes: emptyToNull(formData.get("notes")),
+      root: emptyToNull(formData.get("root")),
     })
     .select("id")
     .single();
@@ -105,6 +106,7 @@ export async function updateVocabulary(
       transliteration: emptyToNull(formData.get("transliteration")),
       part_of_speech: emptyToNull(formData.get("part_of_speech")),
       notes: emptyToNull(formData.get("notes")),
+      root: emptyToNull(formData.get("root")),
     })
     .eq("id", id);
 

@@ -2,6 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 
 import { deleteStructure } from "@/app/(app)/structures/actions";
+import { ConfirmDelete } from "@/components/confirm-delete";
 import { ExampleList } from "@/components/example-list";
 import { createClient } from "@/lib/supabase/server";
 import { notNull } from "@/lib/tags";
@@ -71,9 +72,19 @@ export default async function StructureDetailPage({
     <article className="flex flex-col gap-8">
       <header className="flex flex-col gap-3">
         <div className="flex items-start justify-between gap-4">
-          <h1 className="text-xl font-medium text-[var(--ink)]">
-            {structure.name}
-          </h1>
+          {structure.arabic_form ? (
+            <h1
+              className="font-arabic text-[1.75rem] leading-relaxed text-[var(--ink)]"
+              lang="ar"
+              dir="rtl"
+            >
+              {structure.arabic_form}
+            </h1>
+          ) : (
+            <h1 className="text-xl font-medium text-[var(--ink)]">
+              {structure.name}
+            </h1>
+          )}
           <div className="flex shrink-0 gap-3 text-sm">
             <Link
               href={`/structures/${structure.id}/edit`}
@@ -81,27 +92,12 @@ export default async function StructureDetailPage({
             >
               Edit
             </Link>
-            <form action={deleteStructure.bind(null, structure.id)}>
-              <button
-                type="submit"
-                className="text-[var(--danger)] hover:underline"
-              >
-                Delete
-              </button>
-            </form>
+            <ConfirmDelete action={deleteStructure.bind(null, structure.id)} />
           </div>
         </div>
-        {structure.arabic_form ? (
-          <p
-            className="font-arabic text-[1.75rem] leading-relaxed text-[var(--ink)]"
-            lang="ar"
-            dir="rtl"
-          >
-            {structure.arabic_form}
-          </p>
-        ) : null}
         <p className="text-sm text-[var(--ink-muted)]">
           {[
+            structure.arabic_form ? structure.name : null,
             structure.transliteration,
             structure.meaning,
             `${examples.length} example${examples.length === 1 ? "" : "s"}`,

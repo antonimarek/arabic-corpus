@@ -1,12 +1,16 @@
 import Link from "next/link";
 
+import { FilteredEntityList } from "@/components/filtered-entity-list";
 import { createClient } from "@/lib/supabase/server";
+import { notNull } from "@/lib/tags";
 
 export default async function TextsPage() {
   const supabase = await createClient();
   const { data: texts, error } = await supabase
     .from("texts")
-    .select("id, title, arabic, source, occurred_on, created_at")
+    .select(
+      "id, title, arabic, source, occurred_on, created_at, text_tags(tags(name))",
+    )
     .order("created_at", { ascending: false });
 
   if (error) {
@@ -34,31 +38,19 @@ export default async function TextsPage() {
           No texts yet. Paste a short story or lesson note to start your corpus.
         </p>
       ) : (
-        <ul className="flex flex-col divide-y divide-[var(--line)]">
-          {texts.map((text) => (
-            <li key={text.id}>
-              <Link
-                href={`/texts/${text.id}`}
-                className="flex flex-col gap-2 py-4 hover:opacity-80"
-              >
-                <span className="text-[15px] font-medium text-[var(--ink)]">
-                  {text.title}
-                </span>
-                <span
-                  className="font-arabic line-clamp-2 text-lg leading-relaxed text-[var(--ink)]"
-                  lang="ar"
-                  dir="rtl"
-                >
-                  {text.arabic}
-                </span>
-                <span className="text-xs text-[var(--ink-muted)]">
-                  {[text.source, text.occurred_on].filter(Boolean).join(" · ") ||
-                    new Date(text.created_at).toLocaleDateString()}
-                </span>
-              </Link>
-            </li>
-          ))}
-        </ul>
+        <FilteredEntityList
+          rows={texts.map((text) => ({
+            id: text.id,
+            href: `/texts/${text.id}`,
+            tags:
+              text.text_tags?.map((row) => row.tags?.name).filter(notNull) ?? [],
+            title: text.title,
+            arabic: text.arabic,
+            subtitle:
+              [text.source, text.occurred_on].filter(Boolean).join(" · ") ||
+              new Date(text.created_at).toLocaleDateString(),
+          }))}
+        />
       )}
     </section>
   );

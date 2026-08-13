@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import {
+  alignTranslationLines,
   breakTextIntoSentenceLines,
   lineAnchorId,
   parseLineHash,
@@ -53,5 +54,24 @@ describe("text lines", () => {
     ).toBe(true);
     expect(shouldOfferSentenceSplit("جملة واحدة.\nجملة اثنين.")).toBe(false);
     expect(shouldOfferSentenceSplit("سطر بلا نقاط")).toBe(false);
+  });
+
+  it("aligns translation when non-empty line counts match", () => {
+    const result = alignTranslationLines(
+      "سطر واحد\n\nسطر اثنين",
+      "Line one\nLine two",
+    );
+    expect(result.aligned).toBe(true);
+    expect(result.lines).toEqual([
+      { arabic: "سطر واحد", translation: "Line one" },
+      { arabic: "", translation: null },
+      { arabic: "سطر اثنين", translation: "Line two" },
+    ]);
+  });
+
+  it("does not align when counts differ", () => {
+    const result = alignTranslationLines("أ\nب\nج", "Only one");
+    expect(result.aligned).toBe(false);
+    expect(result.lines.every((line) => line.translation == null)).toBe(true);
   });
 });

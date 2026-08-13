@@ -2,6 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 
 import { deleteVocabulary } from "@/app/(app)/vocabulary/actions";
+import { ConfirmDelete } from "@/components/confirm-delete";
 import { createClient } from "@/lib/supabase/server";
 import { notNull } from "@/lib/tags";
 
@@ -61,14 +62,7 @@ export default async function VocabularyDetailPage({
             >
               Edit
             </Link>
-            <form action={deleteVocabulary.bind(null, vocabulary.id)}>
-              <button
-                type="submit"
-                className="text-[var(--danger)] hover:underline"
-              >
-                Delete
-              </button>
-            </form>
+            <ConfirmDelete action={deleteVocabulary.bind(null, vocabulary.id)} />
           </div>
         </div>
         <p className="text-sm text-[var(--ink-muted)]">
@@ -76,6 +70,15 @@ export default async function VocabularyDetailPage({
             .filter(Boolean)
             .join(" · ")}
         </p>
+        {vocabulary.root ? (
+          <p
+            className="font-arabic text-lg text-[var(--ink-muted)]"
+            lang="ar"
+            dir="rtl"
+          >
+            {vocabulary.root}
+          </p>
+        ) : null}
         {tags.length > 0 ? (
           <p className="text-xs text-[var(--ink-muted)]">{tags.join(" · ")}</p>
         ) : null}

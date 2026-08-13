@@ -1,11 +1,18 @@
 "use client";
 
-import { useState } from "react";
+import { useSyncExternalStore } from "react";
 
+import { ArabicSelectionMenu } from "@/components/arabic-selection-menu";
 import {
   renderLinkedArabic,
   type ArabicLink,
 } from "@/lib/highlight-arabic";
+import {
+  getShowTranslationServerSnapshot,
+  getShowTranslationSnapshot,
+  subscribeShowTranslation,
+  writeShowTranslation,
+} from "@/lib/prefs";
 
 type ArabicReaderProps = {
   arabic: string;
@@ -13,7 +20,8 @@ type ArabicReaderProps = {
   transliteration?: string | null;
   links?: ArabicLink[];
   size?: "text" | "example";
-  defaultShowTranslation?: boolean;
+  textId?: string;
+  sourceLine?: number | null;
 };
 
 export function ArabicReader({
@@ -22,12 +30,20 @@ export function ArabicReader({
   transliteration,
   links = [],
   size = "text",
-  defaultShowTranslation = true,
+  textId,
+  sourceLine,
 }: ArabicReaderProps) {
   const hasTranslation = Boolean(translation?.trim());
-  const [showTranslation, setShowTranslation] = useState(
-    hasTranslation && defaultShowTranslation,
+  const preferShow = useSyncExternalStore(
+    subscribeShowTranslation,
+    getShowTranslationSnapshot,
+    getShowTranslationServerSnapshot,
   );
+  const showTranslation = hasTranslation && preferShow;
+
+  const toggleTranslation = () => {
+    writeShowTranslation(!preferShow);
+  };
 
   const arabicClass =
     size === "text"
@@ -36,9 +52,15 @@ export function ArabicReader({
 
   return (
     <div className="flex flex-col gap-5">
-      <div className={arabicClass} lang="ar" dir="rtl">
-        {renderLinkedArabic(arabic, links)}
-      </div>
+      <ArabicSelectionMenu
+        className={arabicClass}
+        textId={textId}
+        lineNumber={sourceLine ?? undefined}
+      >
+        <div lang="ar" dir="rtl">
+          {renderLinkedArabic(arabic, links)}
+        </div>
+      </ArabicSelectionMenu>
 
       {transliteration ? (
         <p className="text-[15px] leading-relaxed text-[var(--ink-muted)]">
@@ -50,7 +72,7 @@ export function ArabicReader({
         <div className="flex flex-col gap-3 border-t border-[var(--line)] pt-5">
           <button
             type="button"
-            onClick={() => setShowTranslation((value) => !value)}
+            onClick={toggleTranslation}
             className="self-start text-sm text-[var(--accent)] hover:underline"
             aria-expanded={showTranslation}
           >
@@ -66,9 +88,14 @@ export function ArabicReader({
 
       {links.length > 0 ? (
         <p className="text-xs text-[var(--ink-muted)]">
-          Underlined Arabic jumps to linked vocabulary or structures.
+          Underlined Arabic jumps to linked vocabulary or structures. Select
+          a phrase to add it.
         </p>
-      ) : null}
+      ) : (
+        <p className="text-xs text-[var(--ink-muted)]">
+          Select Arabic to search, add vocabulary, or add an example.
+        </p>
+      )}
     </div>
   );
 }

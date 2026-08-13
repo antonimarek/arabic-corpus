@@ -125,6 +125,7 @@ export async function createExample(
   }
 
   revalidatePath("/");
+  revalidatePath("/examples");
   revalidatePath("/vocabulary");
   revalidatePath("/structures");
   if (textId) {
@@ -189,6 +190,7 @@ export async function updateExample(
 
   revalidatePath(`/examples/${id}`);
   revalidatePath("/");
+  revalidatePath("/examples");
   revalidatePath("/vocabulary");
   revalidatePath("/structures");
   if (textId) {
@@ -205,7 +207,8 @@ export async function deleteExample(id: string) {
     throw new Error(error.message);
   }
   revalidatePath("/");
+  revalidatePath("/examples");
   revalidatePath("/vocabulary");
   revalidatePath("/structures");
-  redirect("/");
+  redirect("/examples");
 }

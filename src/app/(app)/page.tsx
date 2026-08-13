@@ -1,8 +1,8 @@
 import Link from "next/link";
 
-import { ReindexEmbeddingsButton } from "@/components/reindex-embeddings-button";
+import { ContinueLastText } from "@/components/continue-last-text";
 import { SearchResults } from "@/components/search-results";
-import { isEmbeddingConfigured } from "@/lib/embeddings";
+import { SentenceCapture } from "@/components/sentence-capture";
 import { createClient } from "@/lib/supabase/server";
 import { searchCorpus, type SearchResult } from "@/lib/search";
 
@@ -14,17 +14,14 @@ export default async function SearchHomePage({ searchParams }: SearchHomeProps) 
   const { q = "" } = await searchParams;
   const query = q.trim();
   const supabase = await createClient();
-  const semanticReady = isEmbeddingConfigured();
 
   let result: SearchResult | null = null;
   let errorMessage: string | null = null;
-  let recentTexts: { id: string; title: string; arabic: string }[] = [];
   let recentExamples: {
     id: string;
     arabic: string;
     translation: string | null;
   }[] = [];
-  let recentMisses: { id: string; query: string }[] = [];
 
   if (query) {
     try {
@@ -34,27 +31,12 @@ export default async function SearchHomePage({ searchParams }: SearchHomeProps) 
         error instanceof Error ? error.message : "Search failed.";
     }
   } else {
-    const [{ data: texts }, { data: examples }, { data: misses }] =
-      await Promise.all([
-        supabase
-          .from("texts")
-          .select("id, title, arabic")
-          .order("created_at", { ascending: false })
-          .limit(5),
-        supabase
-          .from("examples")
-          .select("id, arabic, translation")
-          .order("created_at", { ascending: false })
-          .limit(5),
-        supabase
-          .from("search_misses")
-          .select("id, query")
-          .order("created_at", { ascending: false })
-          .limit(8),
-      ]);
-    recentTexts = texts ?? [];
+    const { data: examples } = await supabase
+      .from("examples")
+      .select("id, arabic, translation")
+      .order("created_at", { ascending: false })
+      .limit(5);
     recentExamples = examples ?? [];
-    recentMisses = misses ?? [];
   }
 
   const hits = result?.hits ?? [];
@@ -77,12 +59,6 @@ export default async function SearchHomePage({ searchParams }: SearchHomeProps) 
           placeholder="مبارح · shu 3am · how do I say…"
           className="w-full rounded-md border border-[var(--line)] bg-[var(--surface)] px-4 py-3.5 text-base outline-none focus:border-[var(--accent)]"
         />
-        <p className="text-sm text-[var(--ink-muted)]">
-          Exact + fuzzy (trigram).{" "}
-          {semanticReady
-            ? "Semantic layer on when embeddings exist."
-            : "Semantic optional — set OPENAI_API_KEY to enable."}
-        </p>
       </form>
 
       {errorMessage ? (
@@ -93,56 +69,32 @@ export default async function SearchHomePage({ searchParams }: SearchHomeProps) 
 
       {!query ? (
         <div className="flex flex-col gap-8">
-          <div className="flex flex-col gap-3">
-            <h2 className="text-sm font-medium text-[var(--ink-muted)]">
-              Capture
-            </h2>
-            <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
-              {[
-                { href: "/texts/new", label: "Text" },
-                { href: "/vocabulary/new", label: "Vocab" },
-                { href: "/structures/new", label: "Structure" },
-                { href: "/examples/new", label: "Example" },
-              ].map((item) => (
-                <Link
-                  key={item.href}
-                  href={item.href}
-                  className="rounded-md border border-[var(--line)] bg-[var(--surface)] px-3 py-3.5 text-center text-sm text-[var(--ink)] hover:bg-[var(--surface-hover)]"
-                >
-                  {item.label}
-                </Link>
-              ))}
-            </div>
+          <ContinueLastText />
+          <SentenceCapture />
+          <div className="flex flex-wrap gap-x-4 gap-y-2 text-sm">
+            <span className="text-[var(--ink-muted)]">More</span>
+            <Link href="/texts/new" className="text-[var(--accent)] hover:underline">
+              Text
+            </Link>
+            <Link
+              href="/vocabulary/new"
+              className="text-[var(--accent)] hover:underline"
+            >
+              Vocab
+            </Link>
+            <Link
+              href="/structures/new"
+              className="text-[var(--accent)] hover:underline"
+            >
+              Structure
+            </Link>
+            <Link
+              href="/examples/new"
+              className="text-[var(--accent)] hover:underline"
+            >
+              Example
+            </Link>
           </div>
-
-          {recentTexts.length > 0 ? (
-            <div className="flex flex-col gap-2">
-              <h2 className="text-sm font-medium text-[var(--ink-muted)]">
-                Recent texts
-              </h2>
-              <ul className="flex flex-col divide-y divide-[var(--line)]">
-                {recentTexts.map((text) => (
-                  <li key={text.id}>
-                    <Link
-                      href={`/texts/${text.id}`}
-                      className="flex flex-col gap-1 py-3 hover:opacity-80"
-                    >
-                      <span className="text-[15px] font-medium text-[var(--ink)]">
-                        {text.title}
-                      </span>
-                      <span
-                        className="font-arabic line-clamp-1 text-base text-[var(--ink-muted)]"
-                        lang="ar"
-                        dir="rtl"
-                      >
-                        {text.arabic}
-                      </span>
-                    </Link>
-                  </li>
-                ))}
-              </ul>
-            </div>
-          ) : null}
 
           {recentExamples.length > 0 ? (
             <div className="flex flex-col gap-2">
@@ -173,74 +125,27 @@ export default async function SearchHomePage({ searchParams }: SearchHomeProps) 
                 ))}
               </ul>
             </div>
-          ) : null}
-
-          {recentMisses.length > 0 ? (
-            <div className="flex flex-col gap-2">
-              <h2 className="text-sm font-medium text-[var(--ink-muted)]">
-                Recent search misses
-              </h2>
-              <ul className="flex flex-col gap-1.5">
-                {recentMisses.map((miss) => (
-                  <li key={miss.id}>
-                    <Link
-                      href={`/?q=${encodeURIComponent(miss.query)}`}
-                      className="text-sm text-[var(--ink)] hover:underline"
-                    >
-                      {miss.query}
-                    </Link>
-                  </li>
-                ))}
-              </ul>
-            </div>
-          ) : null}
-
-          {semanticReady ? (
-            <div className="border-t border-[var(--line)] pt-6">
-              <h2 className="mb-2 text-sm font-medium text-[var(--ink-muted)]">
-                Semantic index
-              </h2>
-              <p className="mb-3 text-sm text-[var(--ink-muted)]">
-                Rebuild embeddings after adding lots of material.
-              </p>
-              <ReindexEmbeddingsButton />
-            </div>
-          ) : null}
-
-          {recentTexts.length === 0 && recentExamples.length === 0 ? (
-            <p className="text-[15px] text-[var(--ink)]">
-              Corpus empty. Capture a text or example to start.
+          ) : (
+            <p className="text-[15px] text-[var(--ink-muted)]">
+              Paste a short dialogue as a text, or save a sentence you just
+              heard.
             </p>
-          ) : null}
+          )}
         </div>
       ) : hits.length === 0 ? (
         <div className="flex flex-col gap-3">
           <p className="text-[15px] text-[var(--ink-muted)]">
-            No exact or fuzzy matches for “{query}”.
-            {result?.missLogged ? " Logged as a miss." : null}
+            No matches for “{query}”.
           </p>
-          {result?.layersTried?.length ? (
-            <p className="text-xs text-[var(--ink-muted)]">
-              Layers tried: {result.layersTried.join(" · ")}
-            </p>
-          ) : null}
           <Link
-            href="/examples/new"
+            href={`/examples/new?arabic=${encodeURIComponent(query)}`}
             className="text-sm text-[var(--accent)] hover:underline"
           >
             Add as new example
           </Link>
         </div>
       ) : (
-        <div className="flex flex-col gap-3">
-          {result?.layersTried?.length ? (
-            <p className="text-xs text-[var(--ink-muted)]">
-              Layers: {result.layersTried.join(" · ")} · {hits.length} hit
-              {hits.length === 1 ? "" : "s"}
-            </p>
-          ) : null}
-          <SearchResults hits={hits} />
-        </div>
+        <SearchResults hits={hits} />
       )}
     </section>
   );

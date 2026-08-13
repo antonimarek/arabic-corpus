@@ -76,6 +76,14 @@ export default async function ExampleDetailPage({
         >
           Edit
         </Link>
+        {vocabulary.length === 0 ? (
+          <Link
+            href={`/examples/${example.id}/edit`}
+            className="text-[var(--accent)] hover:underline"
+          >
+            Link vocabulary
+          </Link>
+        ) : null}
         <ConfirmDelete action={deleteExample.bind(null, example.id)} />
         {tags.length > 0 ? (
           <p className="text-xs text-[var(--ink-muted)]">{tags.join(" · ")}</p>

@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState } from "react";
+import { useActionState, useState } from "react";
 
 import {
   createExample,
@@ -77,6 +77,9 @@ export function ExampleForm(props: ExampleFormProps) {
       ? props.selectedStructureIds
       : (props.defaultStructureIds ?? []);
 
+  const extrasOpen = props.mode === "edit";
+  const [moreOpen, setMoreOpen] = useState(extrasOpen);
+
   return (
     <form action={formAction} className="flex flex-col gap-5">
       <label className="flex flex-col gap-2">
@@ -93,7 +96,9 @@ export function ExampleForm(props: ExampleFormProps) {
       </label>
 
       <label className="flex flex-col gap-2">
-        <span className="text-sm text-[var(--ink-muted)]">Translation</span>
+        <span className="text-sm text-[var(--ink-muted)]">
+          Translation (optional)
+        </span>
         <textarea
           name="translation"
           rows={2}
@@ -102,73 +107,88 @@ export function ExampleForm(props: ExampleFormProps) {
         />
       </label>
 
-      <label className="flex flex-col gap-2">
-        <span className="text-sm text-[var(--ink-muted)]">Transliteration</span>
-        <input
-          name="transliteration"
-          defaultValue={example?.transliteration ?? ""}
-          className="rounded-md border border-[var(--line)] bg-[var(--surface)] px-3 py-2.5 text-[15px] outline-none focus:border-[var(--accent)]"
-        />
-      </label>
+      <details
+        className="flex flex-col gap-5"
+        open={moreOpen}
+        onToggle={(event) => {
+          setMoreOpen(event.currentTarget.open);
+        }}
+      >
+        <summary className="cursor-pointer text-sm text-[var(--accent)]">
+          Source, links, notes
+        </summary>
+        <div className="mt-4 flex flex-col gap-5">
+          <label className="flex flex-col gap-2">
+            <span className="text-sm text-[var(--ink-muted)]">
+              Transliteration
+            </span>
+            <input
+              name="transliteration"
+              defaultValue={example?.transliteration ?? ""}
+              className="rounded-md border border-[var(--line)] bg-[var(--surface)] px-3 py-2.5 text-[15px] outline-none focus:border-[var(--accent)]"
+            />
+          </label>
 
-      <label className="flex flex-col gap-2">
-        <span className="text-sm text-[var(--ink-muted)]">Source text</span>
-        <select
-          name="text_id"
-          defaultValue={defaultTextId}
-          className="rounded-md border border-[var(--line)] bg-[var(--surface)] px-3 py-2.5 text-[15px] outline-none focus:border-[var(--accent)]"
-        >
-          <option value="">None (free-standing)</option>
-          {props.textOptions.map((option) => (
-            <option key={option.id} value={option.id}>
-              {option.label}
-            </option>
-          ))}
-        </select>
-      </label>
+          <label className="flex flex-col gap-2">
+            <span className="text-sm text-[var(--ink-muted)]">Source text</span>
+            <select
+              name="text_id"
+              defaultValue={defaultTextId}
+              className="rounded-md border border-[var(--line)] bg-[var(--surface)] px-3 py-2.5 text-[15px] outline-none focus:border-[var(--accent)]"
+            >
+              <option value="">None (free-standing)</option>
+              {props.textOptions.map((option) => (
+                <option key={option.id} value={option.id}>
+                  {option.label}
+                </option>
+              ))}
+            </select>
+          </label>
 
-      <label className="flex flex-col gap-2">
-        <span className="text-sm text-[var(--ink-muted)]">Source line</span>
-        <input
-          name="source_line"
-          type="number"
-          min={1}
-          step={1}
-          defaultValue={defaultSourceLine}
-          placeholder="Optional line number in source text"
-          className="rounded-md border border-[var(--line)] bg-[var(--surface)] px-3 py-2.5 text-[15px] outline-none focus:border-[var(--accent)]"
-        />
-      </label>
+          <label className="flex flex-col gap-2">
+            <span className="text-sm text-[var(--ink-muted)]">Source line</span>
+            <input
+              name="source_line"
+              type="number"
+              min={1}
+              step={1}
+              defaultValue={defaultSourceLine}
+              placeholder="Optional line number in source text"
+              className="rounded-md border border-[var(--line)] bg-[var(--surface)] px-3 py-2.5 text-[15px] outline-none focus:border-[var(--accent)]"
+            />
+          </label>
 
-      <MultiCheckPicker
-        name="vocabulary_ids"
-        label="Vocabulary"
-        options={props.vocabularyOptions}
-        selectedIds={selectedVocabularyIds}
-        emptyHint="No vocabulary yet."
-      />
+          <MultiCheckPicker
+            name="vocabulary_ids"
+            label="Vocabulary"
+            options={props.vocabularyOptions}
+            selectedIds={selectedVocabularyIds}
+            emptyHint="No vocabulary yet."
+          />
 
-      <MultiCheckPicker
-        name="structure_ids"
-        label="Structures"
-        options={props.structureOptions}
-        selectedIds={selectedStructureIds}
-        emptyHint="No structures yet."
-      />
+          <MultiCheckPicker
+            name="structure_ids"
+            label="Structures"
+            options={props.structureOptions}
+            selectedIds={selectedStructureIds}
+            emptyHint="No structures yet."
+          />
 
-      <label className="flex flex-col gap-2">
-        <span className="text-sm text-[var(--ink-muted)]">Notes</span>
-        <textarea
-          name="notes"
-          rows={3}
-          defaultValue={example?.notes ?? ""}
-          className="rounded-md border border-[var(--line)] bg-[var(--surface)] px-3 py-2.5 text-[15px] outline-none focus:border-[var(--accent)]"
-        />
-      </label>
+          <label className="flex flex-col gap-2">
+            <span className="text-sm text-[var(--ink-muted)]">Notes</span>
+            <textarea
+              name="notes"
+              rows={3}
+              defaultValue={example?.notes ?? ""}
+              className="rounded-md border border-[var(--line)] bg-[var(--surface)] px-3 py-2.5 text-[15px] outline-none focus:border-[var(--accent)]"
+            />
+          </label>
 
-      <TagField
-        defaultValue={props.mode === "edit" ? props.tagsInput : ""}
-      />
+          <TagField
+            defaultValue={props.mode === "edit" ? props.tagsInput : ""}
+          />
+        </div>
+      </details>
 
       {state.error ? (
         <p className="text-sm text-[var(--danger)]" role="alert">

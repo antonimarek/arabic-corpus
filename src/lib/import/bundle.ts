@@ -33,6 +33,8 @@ export type ImportItem = {
   glosses?: ImportGloss[];
   part_of_speech?: string;
   root?: string;
+  present?: string;
+  plural?: string;
   name?: string;
   arabic_form?: string;
   meaning?: string;
@@ -76,6 +78,8 @@ const itemSchema = z.object({
   glosses: z.array(glossSchema).optional(),
   part_of_speech: z.string().optional(),
   root: z.string().optional(),
+  present: z.string().optional(),
+  plural: z.string().optional(),
   name: z.string().optional(),
   arabic_form: z.string().optional(),
   meaning: z.string().optional(),
@@ -272,6 +276,8 @@ export const IMPORT_BUNDLE_SCHEMA_TEXT = `{
       "glosses": [{ "text": "required for vocabulary", "lang": "en" }],
       "part_of_speech": "vocabulary only",
       "root": "vocabulary only",
+      "present": "verb present (he), vocabulary only",
+      "plural": "noun plural, vocabulary only",
       "name": "required for structure",
       "arabic_form": "structure",
       "meaning": "structure",

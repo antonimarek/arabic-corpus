@@ -2,8 +2,9 @@ import { describe, expect, it } from "vitest";
 
 import { findMatches } from "@/lib/highlight-arabic";
 import {
-  lookupKeysForSurface,
+  matchKeysForNormalized,
   peelClitic,
+  peelPersonSuffix,
   phraseMatchKey,
   tokenizeArabic,
 } from "@/lib/match-arabic";
@@ -33,10 +34,21 @@ describe("tokenizeArabic", () => {
   });
 });
 
-describe("lookupKeysForSurface", () => {
-  it("includes exact and peeled keys", () => {
-    const keys = lookupKeysForSurface("بكتب");
-    expect(keys).toContain(phraseMatchKey("بكتب"));
+describe("peelPersonSuffix", () => {
+  it("peels Levantine they-suffix", () => {
+    expect(peelPersonSuffix(phraseMatchKey("كتبوا")!)).toBe(phraseMatchKey("كتب"));
+  });
+
+  it("peels 1sg/3fs ت only when three letters remain", () => {
+    expect(peelPersonSuffix(phraseMatchKey("كتبت")!)).toBe(phraseMatchKey("كتب"));
+    expect(peelPersonSuffix(phraseMatchKey("بيت")!)).toBeNull();
+  });
+});
+
+describe("matchKeysForNormalized", () => {
+  it("peels b- prefix and they-suffix together", () => {
+    const keys = matchKeysForNormalized(phraseMatchKey("بكتبوا")!);
+    expect(keys).toContain(phraseMatchKey("بكتبوا"));
     expect(keys).toContain(phraseMatchKey("كتب"));
   });
 });
@@ -82,6 +94,29 @@ describe("findMatches", () => {
   it("does not match a lemma inside a longer unrelated token", () => {
     const matches = findMatches("المكتب", [
       { phrase: "كتب", href: "/vocabulary/1", kind: "vocabulary" },
+    ]);
+    expect(matches).toHaveLength(0);
+  });
+
+  it("matches a they-suffix to the past lemma", () => {
+    const matches = findMatches("كتبوا", [
+      { phrase: "كتب", href: "/vocabulary/1", kind: "vocabulary" },
+    ]);
+    expect(matches).toHaveLength(1);
+    expect(matches[0]?.surface).toBe("كتبوا");
+  });
+
+  it("matches b- plus they-suffix to the past lemma", () => {
+    const matches = findMatches("بكتبوا", [
+      { phrase: "كتب", href: "/vocabulary/1", kind: "vocabulary" },
+    ]);
+    expect(matches).toHaveLength(1);
+    expect(matches[0]?.surface).toBe("بكتبوا");
+  });
+
+  it("does not peel ت from a short noun", () => {
+    const matches = findMatches("بيت", [
+      { phrase: "بي", href: "/vocabulary/1", kind: "vocabulary" },
     ]);
     expect(matches).toHaveLength(0);
   });

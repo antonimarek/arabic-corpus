@@ -9,6 +9,7 @@ export type EntityListRow = {
   tags: string[];
   title?: string;
   arabic?: string | null;
+  arabicPair?: string | null;
   subtitle?: string | null;
 };
 
@@ -86,6 +87,12 @@ export function FilteredEntityList({ rows }: { rows: EntityListRow[] }) {
                     dir="rtl"
                   >
                     {row.arabic}
+                    {row.arabicPair ? (
+                      <span className="text-[var(--ink-muted)]">
+                        {" "}
+                        · {row.arabicPair}
+                      </span>
+                    ) : null}
                   </span>
                 ) : null}
                 {row.subtitle ? (

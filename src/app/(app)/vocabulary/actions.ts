@@ -9,6 +9,7 @@ import {
   writeVocabularyForm,
   deleteVocabularyFormRecord,
 } from "@/lib/corpus/write";
+import { isFormSlot } from "@/lib/citation";
 import { emptyToNull, parseTagNames } from "@/lib/form";
 import { requireUserId } from "@/lib/require-user";
 
@@ -36,6 +37,7 @@ function formInput(formData: FormData, arabic: string) {
     part_of_speech: emptyToNull(formData.get("part_of_speech")),
     notes: emptyToNull(formData.get("notes")),
     root: emptyToNull(formData.get("root")),
+    pairArabic: emptyToNull(formData.get("pair_arabic")),
     senses: parseSenses(formData),
     tags: parseTagNames(formData.get("tags")),
   };
@@ -114,11 +116,14 @@ export async function attachVocabularyForm(
   }
 
   const { supabase, userId } = await requireUserId();
+  const slotRaw = String(formData.get("slot") ?? "").trim();
+  const slot = isFormSlot(slotRaw) ? slotRaw : null;
   const result = await writeVocabularyForm(
     supabase,
     userId,
     vocabularyId,
     arabic,
+    slot,
   );
   if ("error" in result) {
     throw new Error(result.error);

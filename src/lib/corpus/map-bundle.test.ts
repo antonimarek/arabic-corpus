@@ -25,6 +25,31 @@ describe("mapImportItem", () => {
     expect(mapped.input.root).toBe("برح");
     expect(mapped.input.notes).toBe("time word");
     expect(mapped.input.tags).toEqual(["time"]);
+    expect(mapped.input.pairArabic).toBeNull();
+  });
+
+  it("maps verb present and noun plural citation fields", () => {
+    const verb = mapImportItem({
+      type: "vocabulary",
+      arabic: "كتب",
+      glosses: [{ text: "write", lang: "en" }],
+      part_of_speech: "verb",
+      present: "بكتب",
+    });
+    expect("error" in verb).toBe(false);
+    if ("error" in verb || verb.type !== "vocabulary") return;
+    expect(verb.input.pairArabic).toBe("بكتب");
+
+    const noun = mapImportItem({
+      type: "vocabulary",
+      arabic: "كتاب",
+      glosses: [{ text: "book", lang: "en" }],
+      part_of_speech: "noun",
+      plural: "كتب",
+    });
+    expect("error" in noun).toBe(false);
+    if ("error" in noun || noun.type !== "vocabulary") return;
+    expect(noun.input.pairArabic).toBe("كتب");
   });
 
   it("maps example columns", () => {

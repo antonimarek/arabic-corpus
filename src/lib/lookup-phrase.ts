@@ -1,8 +1,15 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 
 import { firstGloss } from "@/lib/arabic-links";
+import {
+  suggestedFormHosts,
+  type FormHost,
+} from "@/lib/form-suggest";
 import { normalizeArabic } from "@/lib/import/normalize";
-import { peelClitic, phraseMatchKey } from "@/lib/match-arabic";
+import {
+  matchKeysForNormalized,
+  phraseMatchKey,
+} from "@/lib/match-arabic";
 import type { Database } from "@/types/database";
 
 export type PhraseHit = {
@@ -36,21 +43,26 @@ type VocabRow = {
   vocabulary_senses: { gloss: string; created_at?: string }[] | null;
 };
 
-async function vocabHitsForKey(
+async function vocabHitsForKeys(
   supabase: SupabaseClient<Database>,
-  key: string,
+  keys: string[],
 ): Promise<VocabRow[]> {
+  const unique = [...new Set(keys.filter(Boolean))];
+  if (unique.length === 0) return [];
+
   const [{ data: vocabRows }, { data: formRows }] = await Promise.all([
     supabase
       .from("vocabulary")
       .select("id, arabic, vocabulary_senses(gloss, created_at)")
-      .eq("search_arabic", key)
-      .limit(5),
+      .in("search_arabic", unique)
+      .limit(10),
     supabase
       .from("vocabulary_forms")
-      .select("vocabulary_id, vocabulary(id, arabic, vocabulary_senses(gloss, created_at))")
-      .eq("search_arabic", key)
-      .limit(5),
+      .select(
+        "vocabulary_id, vocabulary(id, arabic, vocabulary_senses(gloss, created_at))",
+      )
+      .in("search_arabic", unique)
+      .limit(10),
   ]);
 
   const byId = new Map<string, VocabRow>();
@@ -71,23 +83,16 @@ export async function lookupPhraseHits(
 ): Promise<PhraseHit[]> {
   const key = phraseMatchKey(phrase) ?? phraseSearchKey(phrase);
   if (!key) return [];
+  const keys = matchKeysForNormalized(key);
 
-  const [{ data: structureRows }, exactVocab] = await Promise.all([
+  const [{ data: structureRows }, vocabRows] = await Promise.all([
     supabase
       .from("structures")
       .select("id, name, arabic_form, meaning")
       .eq("search_arabic", key)
       .limit(5),
-    vocabHitsForKey(supabase, key),
+    vocabHitsForKeys(supabase, keys),
   ]);
-
-  let vocabRows = exactVocab;
-  if (vocabRows.length === 0) {
-    const peeled = peelClitic(key);
-    if (peeled) {
-      vocabRows = await vocabHitsForKey(supabase, peeled);
-    }
-  }
 
   const hits: PhraseHit[] = [];
 
@@ -113,4 +118,32 @@ export async function lookupPhraseHits(
   }
 
   return hits;
+}
+
+export async function suggestFormHostsForPhrase(
+  supabase: SupabaseClient<Database>,
+  phrase: string,
+): Promise<PhraseHit[]> {
+  const { data } = await supabase
+    .from("vocabulary")
+    .select(
+      "id, arabic, root, part_of_speech, vocabulary_senses(gloss, created_at)",
+    )
+    .order("created_at", { ascending: false });
+
+  const hosts: FormHost[] = (data ?? []).map((row) => ({
+    id: row.id,
+    arabic: row.arabic,
+    root: row.root,
+    part_of_speech: row.part_of_speech,
+    gloss: firstGloss(row.vocabulary_senses),
+  }));
+
+  return suggestedFormHosts(phrase, hosts).map((host) => ({
+    type: "vocabulary" as const,
+    id: host.id,
+    arabic: host.arabic,
+    href: `/vocabulary/${host.id}`,
+    gloss: host.gloss,
+  }));
 }

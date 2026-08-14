@@ -1,10 +1,20 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 
+import {
+  citationSlotForPos,
+  existingWordError,
+  type FormSlot,
+} from "@/lib/citation";
 import { phraseSearchKey } from "@/lib/lookup-phrase";
 import { syncTags } from "@/lib/tags";
 import type { Database } from "@/types/database";
 
 export type CorpusClient = SupabaseClient<Database>;
+
+export type ExistingVocabulary = {
+  id: string;
+  arabic: string;
+};
 
 export type VocabularyWriteInput = {
   arabic: string;
@@ -12,6 +22,7 @@ export type VocabularyWriteInput = {
   part_of_speech?: string | null;
   notes?: string | null;
   root?: string | null;
+  pairArabic?: string | null;
   senses: { gloss: string; lang: string }[];
   tags: string[];
 };
@@ -60,24 +71,26 @@ export function isWriteErr(result: WriteResult): result is WriteErr {
 export async function findExistingVocabulary(
   supabase: CorpusClient,
   arabic: string,
-): Promise<string | null> {
+): Promise<ExistingVocabulary | null> {
   const searchKey = phraseSearchKey(arabic);
   if (!searchKey) return null;
   const { data } = await supabase
     .from("vocabulary")
-    .select("id")
+    .select("id, arabic")
     .eq("search_arabic", searchKey)
     .limit(1)
     .maybeSingle();
-  if (data?.id) return data.id;
+  if (data?.id) return { id: data.id, arabic: data.arabic };
 
   const { data: form } = await supabase
     .from("vocabulary_forms")
-    .select("vocabulary_id")
+    .select("vocabulary_id, vocabulary(id, arabic)")
     .eq("search_arabic", searchKey)
     .limit(1)
     .maybeSingle();
-  return form?.vocabulary_id ?? null;
+  const vocab = form?.vocabulary;
+  if (!vocab) return null;
+  return { id: vocab.id, arabic: vocab.arabic };
 }
 
 export async function seedTextVocabulary(
@@ -141,7 +154,12 @@ export async function writeVocabularyForm(
   ownerId: string,
   vocabularyId: string,
   arabic: string,
+  slot?: FormSlot | null,
 ): Promise<WriteResult> {
+  if (slot) {
+    return syncCitationForm(supabase, ownerId, vocabularyId, slot, arabic);
+  }
+
   const searchKey = phraseSearchKey(arabic);
   if (!searchKey) {
     return { error: "Arabic is required." };
@@ -162,14 +180,14 @@ export async function writeVocabularyForm(
     return { error: "This is already the stored form of that word." };
   }
 
-  const existingId = await findExistingVocabulary(supabase, arabic);
-  if (existingId && existingId !== vocabularyId) {
+  const existing = await findExistingVocabulary(supabase, arabic);
+  if (existing && existing.id !== vocabularyId) {
     return {
       error: "This form already belongs to another word.",
-      existingId,
+      existingId: existing.id,
     };
   }
-  if (existingId === vocabularyId) {
+  if (existing && existing.id === vocabularyId) {
     return { id: vocabularyId };
   }
 
@@ -185,6 +203,143 @@ export async function writeVocabularyForm(
     return { error: error.message };
   }
   return { id: vocabularyId };
+}
+
+export async function syncCitationForm(
+  supabase: CorpusClient,
+  ownerId: string,
+  vocabularyId: string,
+  slot: FormSlot,
+  arabic: string | null | undefined,
+): Promise<WriteResult> {
+  const trimmed = arabic?.trim() ?? "";
+  if (!trimmed) {
+    const { error } = await supabase
+      .from("vocabulary_forms")
+      .delete()
+      .eq("vocabulary_id", vocabularyId)
+      .eq("slot", slot);
+    if (error) return { error: error.message };
+    return { id: vocabularyId };
+  }
+
+  const searchKey = phraseSearchKey(trimmed);
+  if (!searchKey) {
+    return { error: "Arabic is required." };
+  }
+
+  const { data: parent, error: parentError } = await supabase
+    .from("vocabulary")
+    .select("id, arabic")
+    .eq("id", vocabularyId)
+    .maybeSingle();
+  if (parentError) return { error: parentError.message };
+  if (!parent) return { error: "Vocabulary not found." };
+
+  if (phraseSearchKey(parent.arabic) === searchKey) {
+    const { error } = await supabase
+      .from("vocabulary_forms")
+      .delete()
+      .eq("vocabulary_id", vocabularyId)
+      .eq("slot", slot);
+    if (error) return { error: error.message };
+    return { id: vocabularyId };
+  }
+
+  const existing = await findExistingVocabulary(supabase, trimmed);
+  if (existing && existing.id !== vocabularyId) {
+    return {
+      error: "This form already belongs to another word.",
+      existingId: existing.id,
+    };
+  }
+
+  const [{ data: byKey }, { data: bySlot }] = await Promise.all([
+    supabase
+      .from("vocabulary_forms")
+      .select("id, slot")
+      .eq("vocabulary_id", vocabularyId)
+      .eq("search_arabic", searchKey)
+      .maybeSingle(),
+    supabase
+      .from("vocabulary_forms")
+      .select("id")
+      .eq("vocabulary_id", vocabularyId)
+      .eq("slot", slot)
+      .maybeSingle(),
+  ]);
+
+  if (byKey && bySlot && byKey.id !== bySlot.id) {
+    const { error: deleteSlotError } = await supabase
+      .from("vocabulary_forms")
+      .delete()
+      .eq("id", bySlot.id);
+    if (deleteSlotError) return { error: deleteSlotError.message };
+    const { error: updateError } = await supabase
+      .from("vocabulary_forms")
+      .update({ slot, arabic: trimmed })
+      .eq("id", byKey.id);
+    if (updateError) return { error: updateError.message };
+    return { id: vocabularyId };
+  }
+
+  if (byKey) {
+    const { error } = await supabase
+      .from("vocabulary_forms")
+      .update({ slot, arabic: trimmed })
+      .eq("id", byKey.id);
+    if (error) return { error: error.message };
+    return { id: vocabularyId };
+  }
+
+  if (bySlot) {
+    const { error } = await supabase
+      .from("vocabulary_forms")
+      .update({ arabic: trimmed })
+      .eq("id", bySlot.id);
+    if (error) return { error: error.message };
+    return { id: vocabularyId };
+  }
+
+  const { error } = await supabase.from("vocabulary_forms").insert({
+    vocabulary_id: vocabularyId,
+    owner_id: ownerId,
+    arabic: trimmed,
+    slot,
+  });
+  if (error) {
+    if (error.code === "23505") return { id: vocabularyId };
+    return { error: error.message };
+  }
+  return { id: vocabularyId };
+}
+
+async function syncPosCitation(
+  supabase: CorpusClient,
+  ownerId: string,
+  vocabularyId: string,
+  partOfSpeech: string | null | undefined,
+  pairArabic: string | null | undefined,
+): Promise<WriteResult> {
+  const slot = citationSlotForPos(partOfSpeech);
+  const present =
+    slot === "present_3ms" ? (pairArabic ?? null) : null;
+  const plural = slot === "plural" ? (pairArabic ?? null) : null;
+  const presentResult = await syncCitationForm(
+    supabase,
+    ownerId,
+    vocabularyId,
+    "present_3ms",
+    present,
+  );
+  if ("error" in presentResult) return presentResult;
+  return syncCitationForm(
+    supabase,
+    ownerId,
+    vocabularyId,
+    "plural",
+    plural,
+  );
 }
 
 export async function deleteVocabularyFormRecord(
@@ -208,12 +363,11 @@ export async function writeVocabulary(
   options?: { allowDuplicate?: boolean },
 ): Promise<WriteResult> {
   if (!options?.allowDuplicate) {
-    const existingId = await findExistingVocabulary(supabase, input.arabic);
-    if (existingId) {
+    const existing = await findExistingVocabulary(supabase, input.arabic);
+    if (existing) {
       return {
-        error:
-          "This word is already in the corpus. Open the existing card to add a sense.",
-        existingId,
+        error: existingWordError(input.arabic, existing.arabic),
+        existingId: existing.id,
       };
     }
   }
@@ -255,6 +409,17 @@ export async function writeVocabulary(
   );
   if (tagResult.error) {
     return { error: tagResult.error };
+  }
+
+  const pairResult = await syncPosCitation(
+    supabase,
+    ownerId,
+    data.id,
+    input.part_of_speech,
+    input.pairArabic,
+  );
+  if ("error" in pairResult) {
+    return pairResult;
   }
 
   return { id: data.id };
@@ -447,6 +612,17 @@ export async function updateVocabularyRecord(
   );
   if (tagResult.error) {
     return { error: tagResult.error };
+  }
+
+  const pairResult = await syncPosCitation(
+    supabase,
+    ownerId,
+    id,
+    input.part_of_speech,
+    input.pairArabic,
+  );
+  if ("error" in pairResult) {
+    return pairResult;
   }
 
   return { id };

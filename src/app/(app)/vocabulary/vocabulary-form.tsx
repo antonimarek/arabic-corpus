@@ -10,6 +10,12 @@ import {
 } from "@/app/(app)/vocabulary/actions";
 import { FormSubmit } from "@/components/form-submit";
 import { TagField } from "@/components/tag-field";
+import {
+  headwordLabel,
+  pairLabel,
+  posKind,
+  type PosKind,
+} from "@/lib/citation";
 import type { Vocabulary, VocabularySense } from "@/types/database";
 
 const initialState: VocabularyFormState = {};
@@ -23,6 +29,7 @@ type VocabularyFormProps =
       vocabulary: Vocabulary;
       senses: VocabularySense[];
       tagsInput: string;
+      pairArabic?: string | null;
     };
 
 export function VocabularyForm(props: VocabularyFormProps) {
@@ -33,6 +40,13 @@ export function VocabularyForm(props: VocabularyFormProps) {
 
   const [state, formAction, pending] = useActionState(action, initialState);
   const vocabulary = props.mode === "edit" ? props.vocabulary : null;
+  const [kind, setKind] = useState<PosKind>(() =>
+    posKind(vocabulary?.part_of_speech),
+  );
+  const [otherPos, setOtherPos] = useState(() => {
+    const stored = vocabulary?.part_of_speech ?? "";
+    return posKind(stored) === "other" ? stored : "";
+  });
   const [senses, setSenses] = useState<SenseDraft[]>(() => {
     if (props.mode === "edit" && props.senses.length > 0) {
       return props.senses.map((s) => ({ gloss: s.gloss, lang: s.lang }));
@@ -40,10 +54,16 @@ export function VocabularyForm(props: VocabularyFormProps) {
     return [{ gloss: "", lang: "en" }];
   });
 
+  const pairName = pairLabel(kind);
+  const partOfSpeechValue =
+    kind === "other" ? otherPos : kind;
+
   return (
     <form action={formAction} className="flex flex-col gap-5">
       <label className="flex flex-col gap-2">
-        <span className="text-sm text-[var(--ink-muted)]">Arabic</span>
+        <span className="text-sm text-[var(--ink-muted)]">
+          {headwordLabel(kind)}
+        </span>
         <input
           name="arabic"
           required
@@ -55,7 +75,26 @@ export function VocabularyForm(props: VocabularyFormProps) {
           }
           className="font-arabic rounded-md border border-[var(--line)] bg-[var(--surface)] px-3 py-2.5 text-xl outline-none focus:border-[var(--accent)]"
         />
+        <span className="text-xs text-[var(--ink-muted)]">
+          Search treats vowel marks and no vowel marks as the same word.
+        </span>
       </label>
+
+      {pairName ? (
+        <label className="flex flex-col gap-2">
+          <span className="text-sm text-[var(--ink-muted)]">{pairName}</span>
+          <input
+            name="pair_arabic"
+            dir="rtl"
+            lang="ar"
+            defaultValue={
+              props.mode === "edit" ? (props.pairArabic ?? "") : ""
+            }
+            placeholder={kind === "verb" ? "بكتب" : "كتب"}
+            className="font-arabic rounded-md border border-[var(--line)] bg-[var(--surface)] px-3 py-2.5 text-xl outline-none focus:border-[var(--accent)]"
+          />
+        </label>
+      ) : null}
 
       <label className="flex flex-col gap-2">
         <span className="text-sm text-[var(--ink-muted)]">Root (optional)</span>
@@ -85,14 +124,32 @@ export function VocabularyForm(props: VocabularyFormProps) {
           <span className="text-sm text-[var(--ink-muted)]">
             Part of speech
           </span>
-          <input
-            name="part_of_speech"
-            defaultValue={vocabulary?.part_of_speech ?? ""}
+          <select
+            value={kind}
+            onChange={(event) => setKind(event.target.value as PosKind)}
             className="rounded-md border border-[var(--line)] bg-[var(--surface)] px-3 py-2.5 text-[15px] outline-none focus:border-[var(--accent)]"
-            placeholder="noun, verb, particle…"
-          />
+          >
+            <option value="verb">verb</option>
+            <option value="noun">noun</option>
+            <option value="other">other</option>
+          </select>
+          <input type="hidden" name="part_of_speech" value={partOfSpeechValue} />
         </label>
       </div>
+
+      {kind === "other" ? (
+        <label className="flex flex-col gap-2">
+          <span className="text-sm text-[var(--ink-muted)]">
+            Label (optional)
+          </span>
+          <input
+            value={otherPos}
+            onChange={(event) => setOtherPos(event.target.value)}
+            placeholder="particle, adjective…"
+            className="rounded-md border border-[var(--line)] bg-[var(--surface)] px-3 py-2.5 text-[15px] outline-none focus:border-[var(--accent)]"
+          />
+        </label>
+      ) : null}
 
       <fieldset className="flex flex-col gap-3">
         <legend className="text-sm text-[var(--ink-muted)]">Senses</legend>

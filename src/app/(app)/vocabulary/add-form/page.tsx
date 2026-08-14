@@ -2,6 +2,7 @@ import Link from "next/link";
 
 import { AddFormPicker } from "@/app/(app)/vocabulary/add-form/add-form-picker";
 import { firstGloss } from "@/lib/arabic-links";
+import { formHostHint, rankFormHosts } from "@/lib/form-suggest";
 import { createClient } from "@/lib/supabase/server";
 
 type AddFormPageProps = {
@@ -17,7 +18,7 @@ export default async function AddVocabularyFormPage({
   const { data: rows, error } = await supabase
     .from("vocabulary")
     .select(
-      "id, arabic, transliteration, vocabulary_senses(gloss, created_at)",
+      "id, arabic, transliteration, root, part_of_speech, vocabulary_senses(gloss, created_at)",
     )
     .order("created_at", { ascending: false });
 
@@ -29,13 +30,33 @@ export default async function AddVocabularyFormPage({
     );
   }
 
-  const options = (rows ?? []).map((row) => ({
-    id: row.id,
-    arabic: row.arabic,
-    hint: [row.transliteration, firstGloss(row.vocabulary_senses)]
-      .filter(Boolean)
-      .join(" · "),
-  }));
+  const ranked = rankFormHosts(
+    arabic,
+    (rows ?? []).map((row) => ({
+      id: row.id,
+      arabic: row.arabic,
+      root: row.root,
+      part_of_speech: row.part_of_speech,
+      gloss: firstGloss(row.vocabulary_senses),
+    })),
+  );
+
+  const byId = new Map((rows ?? []).map((row) => [row.id, row]));
+  const options = ranked.map((host) => {
+    const row = byId.get(host.id);
+    const rootHint = arabic ? formHostHint(arabic, host) : null;
+    return {
+      id: host.id,
+      arabic: host.arabic,
+      hint: [
+        rootHint,
+        row?.transliteration,
+        host.gloss,
+      ]
+        .filter(Boolean)
+        .join(" · "),
+    };
+  });
 
   return (
     <section className="flex flex-col gap-6">
@@ -53,7 +74,8 @@ export default async function AddVocabularyFormPage({
             >
               {arabic}
             </span>{" "}
-            as a surface form of a word you already have.
+            as a surface form of a word you already have. Same-root verbs
+            (including alef drop) sit at the top.
           </p>
         ) : (
           <p className="text-sm text-[var(--ink-muted)]">

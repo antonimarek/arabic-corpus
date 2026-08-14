@@ -1,6 +1,10 @@
 import Link from "next/link";
 
 import { FilteredEntityList } from "@/components/filtered-entity-list";
+import {
+  citationArabic,
+  citationSlotForPos,
+} from "@/lib/citation";
 import { createClient } from "@/lib/supabase/server";
 import { notNull } from "@/lib/tags";
 
@@ -9,7 +13,7 @@ export default async function VocabularyPage() {
   const { data: rows, error } = await supabase
     .from("vocabulary")
     .select(
-      "id, arabic, transliteration, part_of_speech, created_at, vocabulary_senses(gloss, lang, created_at), vocabulary_tags(tags(name))",
+      "id, arabic, transliteration, part_of_speech, created_at, vocabulary_senses(gloss, lang, created_at), vocabulary_forms(arabic, slot), vocabulary_tags(tags(name))",
     )
     .order("created_at", { ascending: false });
 
@@ -44,6 +48,10 @@ export default async function VocabularyPage() {
               a.created_at.localeCompare(b.created_at),
             );
             const gloss = senses[0]?.gloss ?? null;
+            const slot = citationSlotForPos(row.part_of_speech);
+            const pair = slot
+              ? citationArabic(row.vocabulary_forms, slot)
+              : null;
             return {
               id: row.id,
               href: `/vocabulary/${row.id}`,
@@ -52,6 +60,7 @@ export default async function VocabularyPage() {
                   ?.map((link) => link.tags?.name)
                   .filter(notNull) ?? [],
               arabic: row.arabic,
+              arabicPair: pair,
               subtitle: [row.transliteration, row.part_of_speech, gloss]
                 .filter(Boolean)
                 .join(" · "),

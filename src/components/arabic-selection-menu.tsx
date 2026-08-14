@@ -12,6 +12,7 @@ import {
 } from "react";
 
 import { lookupPhrase, type PhraseHit } from "@/app/(app)/lookup/actions";
+import { attachVocabularyForm } from "@/app/(app)/vocabulary/actions";
 import type { ArabicLink } from "@/lib/highlight-arabic";
 
 type NoticeApi = {
@@ -29,6 +30,7 @@ type MenuState =
       top: number;
       left: number;
       hits: PhraseHit[];
+      suggestions: PhraseHit[];
       looking: boolean;
     }
   | {
@@ -139,6 +141,7 @@ export function ArabicSelectionMenu({
       top: rect.bottom + 8,
       left: rect.left + rect.width / 2,
       hits: [],
+      suggestions: [],
       looking: true,
     };
     setMenu(next);
@@ -154,6 +157,7 @@ export function ArabicSelectionMenu({
         return {
           ...current,
           hits: result.hits,
+          suggestions: result.suggestions,
           looking: false,
         };
       });
@@ -281,6 +285,28 @@ export function ArabicSelectionMenu({
                   Add vocabulary
                 </Link>
               ) : null}
+              {vocabHits.length === 0
+                ? menu.suggestions.map((hit) => (
+                    <form
+                      key={`suggest:${hit.id}`}
+                      action={attachVocabularyForm.bind(null, hit.id)}
+                    >
+                      <input type="hidden" name="arabic" value={menu.text} />
+                      <button
+                        type="submit"
+                        className="block w-full px-3 py-2.5 text-start hover:bg-[var(--surface-hover)]"
+                        onClick={close}
+                      >
+                        Add as form of {hit.arabic}
+                        {hit.gloss ? (
+                          <span className="mt-0.5 block text-xs text-[var(--ink-muted)]">
+                            {hit.gloss}
+                          </span>
+                        ) : null}
+                      </button>
+                    </form>
+                  ))
+                : null}
               {vocabHits.length === 0 ? (
                 <Link
                   href={`/vocabulary/add-form?arabic=${encoded}`}

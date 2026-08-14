@@ -5,6 +5,14 @@ import { attachVocabularyForm, deleteVocabulary, deleteVocabularyForm } from "@/
 import { ConfirmDelete } from "@/components/confirm-delete";
 import { ExampleList } from "@/components/example-list";
 import { firstGloss } from "@/lib/arabic-links";
+import {
+  citationArabic,
+  citationSlotForPos,
+  extraForms,
+  headwordLabel,
+  pairLabel,
+  posKind,
+} from "@/lib/citation";
 import { rootsMatch } from "@/lib/option-filter";
 import { createClient } from "@/lib/supabase/server";
 import { notNull } from "@/lib/tags";
@@ -22,7 +30,7 @@ export default async function VocabularyDetailPage({
   const { data: vocabulary, error } = await supabase
     .from("vocabulary")
     .select(
-      "*, vocabulary_senses(*), vocabulary_tags(tags(name)), vocabulary_forms(id, arabic), example_vocabulary(examples(id, arabic, translation, source_line, texts(id, title)))",
+      "*, vocabulary_senses(*), vocabulary_tags(tags(name)), vocabulary_forms(id, arabic, slot), example_vocabulary(examples(id, arabic, translation, source_line, texts(id, title)))",
     )
     .eq("id", id)
     .maybeSingle();
@@ -87,18 +95,78 @@ export default async function VocabularyDetailPage({
       ? `${textCount} text${textCount === 1 ? "" : "s"}`
       : null,
   ].filter(Boolean);
+  const kind = posKind(vocabulary.part_of_speech);
+  const pairSlot = citationSlotForPos(vocabulary.part_of_speech);
+  const pairArabic = pairSlot
+    ? citationArabic(vocabulary.vocabulary_forms, pairSlot)
+    : null;
+  const alsoMatches = extraForms(vocabulary.vocabulary_forms);
+  const pairName = pairLabel(kind);
 
   return (
     <article className="flex flex-col gap-8">
       <header className="flex flex-col gap-3">
         <div className="flex items-start justify-between gap-4">
-          <h1
-            className="font-arabic text-3xl leading-relaxed text-[var(--ink)]"
-            lang="ar"
-            dir="rtl"
-          >
-            {vocabulary.arabic}
-          </h1>
+          {pairName ? (
+            <div className="grid min-w-0 flex-1 grid-cols-2 gap-4" dir="rtl">
+              <div className="flex flex-col gap-1">
+                <span className="text-xs text-[var(--ink-muted)]" dir="ltr">
+                  {headwordLabel(kind)}
+                </span>
+                <h1
+                  className="font-arabic text-3xl leading-relaxed text-[var(--ink)]"
+                  lang="ar"
+                  dir="rtl"
+                >
+                  {vocabulary.arabic}
+                </h1>
+              </div>
+              <div className="flex flex-col gap-1">
+                <span className="text-xs text-[var(--ink-muted)]" dir="ltr">
+                  {pairName}
+                </span>
+                {pairArabic ? (
+                  <p
+                    className="font-arabic text-3xl leading-relaxed text-[var(--ink)]"
+                    lang="ar"
+                    dir="rtl"
+                  >
+                    {pairArabic}
+                  </p>
+                ) : (
+                  <form
+                    action={attachVocabularyForm.bind(null, vocabulary.id)}
+                    className="flex flex-col gap-2"
+                  >
+                    <input type="hidden" name="slot" value={pairSlot ?? ""} />
+                    <input
+                      name="arabic"
+                      required
+                      dir="rtl"
+                      lang="ar"
+                      placeholder={kind === "verb" ? "بكتب" : "كتب"}
+                      className="font-arabic rounded-md border border-[var(--line)] bg-[var(--surface)] px-3 py-2 text-xl outline-none focus:border-[var(--accent)]"
+                    />
+                    <button
+                      type="submit"
+                      className="self-start text-sm text-[var(--accent)] hover:underline"
+                      dir="ltr"
+                    >
+                      Add {pairName.toLowerCase()}
+                    </button>
+                  </form>
+                )}
+              </div>
+            </div>
+          ) : (
+            <h1
+              className="font-arabic text-3xl leading-relaxed text-[var(--ink)]"
+              lang="ar"
+              dir="rtl"
+            >
+              {vocabulary.arabic}
+            </h1>
+          )}
           <div className="flex shrink-0 gap-3 text-sm">
             <Link
               href={`/vocabulary/${vocabulary.id}/edit`}
@@ -133,6 +201,9 @@ export default async function VocabularyDetailPage({
         {tags.length > 0 ? (
           <p className="text-xs text-[var(--ink-muted)]">{tags.join(" · ")}</p>
         ) : null}
+        <p className="text-xs text-[var(--ink-muted)]">
+          Search treats vowel marks and no vowel marks as the same word.
+        </p>
       </header>
 
       <section>
@@ -151,15 +222,15 @@ export default async function VocabularyDetailPage({
 
       <section>
         <h2 className="mb-3 text-sm text-[var(--ink-muted)]">
-          Forms ({(vocabulary.vocabulary_forms ?? []).length})
+          Also matches ({alsoMatches.length})
         </h2>
-        {(vocabulary.vocabulary_forms ?? []).length === 0 ? (
+        {alsoMatches.length === 0 ? (
           <p className="mb-3 text-sm text-[var(--ink-muted)]">
-            Extra surface forms (inflected or dialect).
+            Extra surfaces from texts (كتبوا, كلت). Not for memorizing.
           </p>
         ) : (
           <ul className="mb-3 flex flex-col gap-2">
-            {(vocabulary.vocabulary_forms ?? []).map((form) => (
+            {alsoMatches.map((form) => (
               <li
                 key={form.id}
                 className="flex items-center justify-between gap-3"
@@ -198,7 +269,7 @@ export default async function VocabularyDetailPage({
             required
             dir="rtl"
             lang="ar"
-            placeholder="بكتب"
+            placeholder="بكتبوا"
             className="font-arabic min-w-0 flex-1 rounded-md border border-[var(--line)] bg-[var(--surface)] px-3 py-2 text-lg outline-none focus:border-[var(--accent)]"
           />
           <button

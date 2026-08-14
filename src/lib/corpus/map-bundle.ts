@@ -4,6 +4,7 @@ import {
   type ImportItem,
 } from "@/lib/import/bundle";
 import { blankToNull, normalizeTagNames } from "@/lib/form";
+import { citationSlotForPos } from "@/lib/citation";
 
 import type {
   ExampleWriteInput,
@@ -30,6 +31,7 @@ export function mapImportItem(item: ImportItem): MappedWrite | { error: string }
   const translation = blankToNull(item.translation);
 
   if (assessment.type === "vocabulary") {
+    const slot = citationSlotForPos(item.part_of_speech);
     return {
       type: "vocabulary",
       input: {
@@ -38,6 +40,12 @@ export function mapImportItem(item: ImportItem): MappedWrite | { error: string }
         part_of_speech: blankToNull(item.part_of_speech),
         notes,
         root: blankToNull(item.root),
+        pairArabic:
+          slot === "plural"
+            ? blankToNull(item.plural)
+            : slot === "present_3ms"
+              ? blankToNull(item.present)
+              : null,
         senses: vocabGlosses(item).map((gloss) => ({
           gloss: gloss.text,
           lang: gloss.lang || "en",

@@ -43,6 +43,8 @@ Rules:
 - At most ${IMPORT_BUNDLE_MAX_ITEMS} items.
 - Drop empty rows, chat meta, and duplicates inside this file.
 - Vocabulary needs arabic plus at least one gloss (or translation).
+- For verbs, arabic is past (he). Put present (he) in present.
+- For nouns, arabic is singular. Put the plural in plural.
 - Example needs arabic. translation is optional.
 - Structure needs name. arabic_form and meaning help.
 - Text needs title and arabic.

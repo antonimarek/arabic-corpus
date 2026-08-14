@@ -62,13 +62,43 @@ export function peelClitic(normalized: string): string | null {
   return null;
 }
 
+/** Longest first. `ت` only when the remainder has at least 3 letters. */
+const PERSON_SUFFIXES = ["وا", "ون", "ين", "نا"];
+
+export function peelPersonSuffix(normalized: string): string | null {
+  for (const suffix of PERSON_SUFFIXES) {
+    if (
+      normalized.endsWith(suffix) &&
+      normalized.length - suffix.length >= 2
+    ) {
+      return normalized.slice(0, -suffix.length);
+    }
+  }
+  if (normalized.endsWith("ت") && normalized.length - 1 >= 3) {
+    return normalized.slice(0, -1);
+  }
+  return null;
+}
+
+export function matchKeysForNormalized(normalized: string): string[] {
+  const keys = new Set<string>([normalized]);
+  const clitic = peelClitic(normalized);
+  if (clitic) keys.add(clitic);
+  const person = peelPersonSuffix(normalized);
+  if (person) keys.add(person);
+  if (clitic) {
+    const afterPerson = peelPersonSuffix(clitic);
+    if (afterPerson) keys.add(afterPerson);
+  }
+  if (person) {
+    const afterClitic = peelClitic(person);
+    if (afterClitic) keys.add(afterClitic);
+  }
+  return [...keys];
+}
+
 export function lookupKeysForSurface(surface: string): string[] {
   const key = phraseMatchKey(surface);
   if (!key) return [];
-  const keys = [key];
-  const peeled = peelClitic(key);
-  if (peeled && peeled !== key) {
-    keys.push(peeled);
-  }
-  return keys;
+  return matchKeysForNormalized(key);
 }

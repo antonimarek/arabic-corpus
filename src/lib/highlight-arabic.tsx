@@ -1,7 +1,7 @@
 import type { ReactNode } from "react";
 
 import {
-  peelClitic,
+  matchKeysForNormalized,
   phraseMatchKey,
   tokenizeArabic,
 } from "@/lib/match-arabic";
@@ -101,8 +101,7 @@ export function findMatches(text: string, links: ArabicLink[]): Match[] {
       const exact = windowKey(tokens, i, count);
       let hit = exact != null && keySet.has(exact);
       if (!hit && count === 1 && exact) {
-        const peeled = peelClitic(exact);
-        hit = peeled != null && keySet.has(peeled);
+        hit = matchKeysForNormalized(exact).some((key) => keySet.has(key));
       }
       if (!hit) continue;
 

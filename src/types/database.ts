@@ -190,6 +190,7 @@ export type Database = {
           vocabulary_id: string;
           owner_id: string;
           arabic: string;
+          slot: "present_3ms" | "plural" | null;
           search_arabic?: string | null;
           created_at: string;
         };
@@ -198,6 +199,7 @@ export type Database = {
           vocabulary_id: string;
           owner_id: string;
           arabic: string;
+          slot?: "present_3ms" | "plural" | null;
           created_at?: string;
         };
         Update: {
@@ -205,6 +207,7 @@ export type Database = {
           vocabulary_id?: string;
           owner_id?: string;
           arabic?: string;
+          slot?: "present_3ms" | "plural" | null;
           created_at?: string;
         };
         Relationships: [

@@ -5,44 +5,12 @@ import { useState, useSyncExternalStore } from "react";
 
 import { rankSession, SESSION_BUDGETS, type SessionBudget } from "@/lib/session";
 import type { SessionTextCandidate } from "@/lib/session";
-import { readLastText } from "@/lib/prefs";
 import {
-  readLastFinishedText,
-  readSessionBudget,
-  readSessionProgress,
+  getTodayPrefsServerSnapshot,
+  readTodayPrefs,
+  subscribeTodayPrefs,
   writeSessionBudget,
 } from "@/lib/session-prefs";
-
-type TodayPrefs = {
-  budget: SessionBudget;
-  lastTextId: string | null;
-  unfinished: boolean;
-  finishedId: string | null;
-};
-
-const SERVER_PREFS: TodayPrefs = {
-  budget: 15,
-  lastTextId: null,
-  unfinished: false,
-  finishedId: null,
-};
-
-function readTodayPrefs(): TodayPrefs {
-  if (typeof window === "undefined") return SERVER_PREFS;
-  const progress = readSessionProgress();
-  return {
-    budget: readSessionBudget(),
-    lastTextId: progress?.textId ?? readLastText()?.id ?? null,
-    unfinished: Boolean(progress),
-    finishedId: readLastFinishedText()?.id ?? null,
-  };
-}
-
-function subscribeTodayPrefs(onStoreChange: () => void) {
-  if (typeof window === "undefined") return () => undefined;
-  window.addEventListener("storage", onStoreChange);
-  return () => window.removeEventListener("storage", onStoreChange);
-}
 
 export function TodayHome({
   candidates,
@@ -52,7 +20,7 @@ export function TodayHome({
   const prefs = useSyncExternalStore(
     subscribeTodayPrefs,
     readTodayPrefs,
-    () => SERVER_PREFS,
+    getTodayPrefsServerSnapshot,
   );
   const [budgetOverride, setBudgetOverride] = useState<SessionBudget | null>(
     null,

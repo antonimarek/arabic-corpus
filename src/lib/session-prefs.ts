@@ -1,3 +1,4 @@
+import { readLastText } from "@/lib/prefs";
 import {
   parseSessionBudget,
   type SessionBudget,
@@ -75,4 +76,58 @@ export function readLastFinishedText(): FinishedText | null {
 
 export function writeLastFinishedText(value: FinishedText): void {
   window.localStorage.setItem(LAST_FINISHED_TEXT_KEY, JSON.stringify(value));
+}
+
+export type TodayPrefs = {
+  budget: SessionBudget;
+  lastTextId: string | null;
+  unfinished: boolean;
+  finishedId: string | null;
+};
+
+export const SERVER_TODAY_PREFS: TodayPrefs = {
+  budget: 15,
+  lastTextId: null,
+  unfinished: false,
+  finishedId: null,
+};
+
+let todayPrefsCache = SERVER_TODAY_PREFS;
+
+export function reuseTodayPrefs(
+  previous: TodayPrefs,
+  next: TodayPrefs,
+): TodayPrefs {
+  if (
+    previous.budget === next.budget &&
+    previous.lastTextId === next.lastTextId &&
+    previous.unfinished === next.unfinished &&
+    previous.finishedId === next.finishedId
+  ) {
+    return previous;
+  }
+  return next;
+}
+
+export function getTodayPrefsServerSnapshot(): TodayPrefs {
+  return SERVER_TODAY_PREFS;
+}
+
+export function readTodayPrefs(): TodayPrefs {
+  if (typeof window === "undefined") return SERVER_TODAY_PREFS;
+  const progress = readSessionProgress();
+  const next: TodayPrefs = {
+    budget: readSessionBudget(),
+    lastTextId: progress?.textId ?? readLastText()?.id ?? null,
+    unfinished: Boolean(progress),
+    finishedId: readLastFinishedText()?.id ?? null,
+  };
+  todayPrefsCache = reuseTodayPrefs(todayPrefsCache, next);
+  return todayPrefsCache;
+}
+
+export function subscribeTodayPrefs(onStoreChange: () => void) {
+  if (typeof window === "undefined") return () => undefined;
+  window.addEventListener("storage", onStoreChange);
+  return () => window.removeEventListener("storage", onStoreChange);
 }

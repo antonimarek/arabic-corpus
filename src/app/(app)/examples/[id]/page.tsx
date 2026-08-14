@@ -4,6 +4,7 @@ import { notFound } from "next/navigation";
 import { deleteExample } from "@/app/(app)/examples/actions";
 import { ArabicReader } from "@/components/arabic-reader";
 import { ConfirmDelete } from "@/components/confirm-delete";
+import { LearnExampleButton } from "@/components/learn-example-button";
 import { structureLink, vocabularyLink } from "@/lib/arabic-links";
 import { createClient } from "@/lib/supabase/server";
 import { notNull } from "@/lib/tags";
@@ -49,6 +50,11 @@ export default async function ExampleDetailPage({
       ?.map((row) => row.structures)
       .filter(notNull) ?? [];
   const text = example.texts;
+  const { data: reviewRow } = await supabase
+    .from("review_items")
+    .select("id")
+    .eq("example_id", example.id)
+    .maybeSingle();
 
   const links = [
     ...vocabulary.map((row) => vocabularyLink(row)),
@@ -84,6 +90,10 @@ export default async function ExampleDetailPage({
             Link vocabulary
           </Link>
         ) : null}
+        <LearnExampleButton
+          exampleId={example.id}
+          enrolled={Boolean(reviewRow)}
+        />
         <ConfirmDelete action={deleteExample.bind(null, example.id)} />
         {tags.length > 0 ? (
           <p className="text-xs text-[var(--ink-muted)]">{tags.join(" · ")}</p>

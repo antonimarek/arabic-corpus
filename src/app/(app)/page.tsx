@@ -3,8 +3,10 @@ import Link from "next/link";
 import { ContinueLastText } from "@/components/continue-last-text";
 import { SearchResults } from "@/components/search-results";
 import { SentenceCapture } from "@/components/sentence-capture";
+import { TodayHome } from "@/components/today-home";
 import { createClient } from "@/lib/supabase/server";
 import { searchCorpus, type SearchResult } from "@/lib/search";
+import { loadSessionCandidates } from "@/lib/session-data";
 
 type SearchHomeProps = {
   searchParams: Promise<{ q?: string }>;
@@ -22,6 +24,7 @@ export default async function SearchHomePage({ searchParams }: SearchHomeProps) 
     arabic: string;
     translation: string | null;
   }[] = [];
+  let candidates: Awaited<ReturnType<typeof loadSessionCandidates>> = [];
 
   if (query) {
     try {
@@ -31,12 +34,16 @@ export default async function SearchHomePage({ searchParams }: SearchHomeProps) 
         error instanceof Error ? error.message : "Search failed.";
     }
   } else {
-    const { data: examples } = await supabase
-      .from("examples")
-      .select("id, arabic, translation")
-      .order("created_at", { ascending: false })
-      .limit(5);
+    const [{ data: examples }, sessionCandidates] = await Promise.all([
+      supabase
+        .from("examples")
+        .select("id, arabic, translation")
+        .order("created_at", { ascending: false })
+        .limit(5),
+      loadSessionCandidates(supabase),
+    ]);
     recentExamples = examples ?? [];
+    candidates = sessionCandidates;
   }
 
   const hits = result?.hits ?? [];
@@ -69,6 +76,7 @@ export default async function SearchHomePage({ searchParams }: SearchHomeProps) 
 
       {!query ? (
         <div className="flex flex-col gap-8">
+          <TodayHome candidates={candidates} />
           <ContinueLastText />
           <SentenceCapture />
           <div className="flex flex-wrap gap-x-4 gap-y-2 text-sm">

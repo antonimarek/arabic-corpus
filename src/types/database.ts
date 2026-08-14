@@ -19,6 +19,9 @@ export type Database = {
           source: string | null;
           occurred_on: string | null;
           notes: string | null;
+          audio_path: string | null;
+          audio_duration_ms: number | null;
+          audio_line_starts_ms: number[] | null;
           search_arabic?: string | null;
           search_latin?: string | null;
           embedding?: string | null;
@@ -34,6 +37,9 @@ export type Database = {
           source?: string | null;
           occurred_on?: string | null;
           notes?: string | null;
+          audio_path?: string | null;
+          audio_duration_ms?: number | null;
+          audio_line_starts_ms?: number[] | null;
           embedding?: string | null;
           created_at?: string;
           updated_at?: string;
@@ -47,6 +53,9 @@ export type Database = {
           source?: string | null;
           occurred_on?: string | null;
           notes?: string | null;
+          audio_path?: string | null;
+          audio_duration_ms?: number | null;
+          audio_line_starts_ms?: number[] | null;
           embedding?: string | null;
           created_at?: string;
           updated_at?: string;
@@ -483,6 +492,65 @@ export type Database = {
         };
         Relationships: [];
       };
+      review_items: {
+        Row: {
+          id: string;
+          owner_id: string;
+          example_id: string;
+          due: string;
+          stability: number;
+          difficulty: number;
+          elapsed_days: number;
+          scheduled_days: number;
+          learning_steps: number;
+          reps: number;
+          lapses: number;
+          state: number;
+          last_review_at: string | null;
+          enrolled_at: string;
+        };
+        Insert: {
+          id?: string;
+          owner_id: string;
+          example_id: string;
+          due?: string;
+          stability?: number;
+          difficulty?: number;
+          elapsed_days?: number;
+          scheduled_days?: number;
+          learning_steps?: number;
+          reps?: number;
+          lapses?: number;
+          state?: number;
+          last_review_at?: string | null;
+          enrolled_at?: string;
+        };
+        Update: {
+          id?: string;
+          owner_id?: string;
+          example_id?: string;
+          due?: string;
+          stability?: number;
+          difficulty?: number;
+          elapsed_days?: number;
+          scheduled_days?: number;
+          learning_steps?: number;
+          reps?: number;
+          lapses?: number;
+          state?: number;
+          last_review_at?: string | null;
+          enrolled_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "review_items_example_id_fkey";
+            columns: ["example_id"];
+            isOneToOne: false;
+            referencedRelation: "examples";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
       search_misses: {
         Row: {
           id: string;
@@ -571,3 +639,4 @@ export type TextVocabulary =
 export type Structure = Database["public"]["Tables"]["structures"]["Row"];
 export type Tag = Database["public"]["Tables"]["tags"]["Row"];
 export type ImportRun = Database["public"]["Tables"]["import_runs"]["Row"];
+export type ReviewItem = Database["public"]["Tables"]["review_items"]["Row"];

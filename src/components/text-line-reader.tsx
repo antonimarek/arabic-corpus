@@ -12,6 +12,12 @@ import {
 
 import { ArabicSelectionMenu } from "@/components/arabic-selection-menu";
 import {
+  linePlaybackWindow,
+  normalizeLineStarts,
+  setLineStart,
+} from "@/lib/audio";
+import { saveTextLineStarts } from "@/app/(app)/texts/audio-actions";
+import {
   renderLinkedArabic,
   findMatches,
   type ArabicLink,
@@ -42,6 +48,12 @@ export type LineExampleRef = {
   sourceLine: number | null;
 };
 
+export type TextAudioProps = {
+  url: string;
+  durationMs: number | null;
+  lineStarts: number[] | null;
+};
+
 type TextLineReaderProps = {
   textId: string;
   arabic: string;
@@ -49,6 +61,10 @@ type TextLineReaderProps = {
   links?: ArabicLink[];
   knownLinks?: ArabicLink[];
   examples?: LineExampleRef[];
+  audio?: TextAudioProps | null;
+  hideTranslation?: boolean;
+  hideLookup?: boolean;
+  fixedRate?: number;
 };
 
 export function TextLineReader({
@@ -58,6 +74,10 @@ export function TextLineReader({
   links = [],
   knownLinks = [],
   examples = [],
+  audio = null,
+  hideTranslation = false,
+  hideLookup = false,
+  fixedRate,
 }: TextLineReaderProps) {
   const lines = useMemo(() => splitTextLines(arabic), [arabic]);
   const alignment = useMemo(
@@ -73,7 +93,7 @@ export function TextLineReader({
     () => shouldOfferSentenceSplit(arabic),
     [arabic],
   );
-  const hasTranslation = Boolean(translation?.trim());
+  const hasTranslation = Boolean(translation?.trim()) && !hideTranslation;
   const preferShowAll = useSyncExternalStore(
     subscribeShowTranslation,
     getShowTranslationSnapshot,
@@ -100,6 +120,46 @@ export function TextLineReader({
   const [flashLine, setFlashLine] = useState<number | null>(null);
   const [openMenu, setOpenMenu] = useState<number | null>(null);
   const scrollRestored = useRef(false);
+  const audioRef = useRef<HTMLAudioElement>(null);
+  const stopAtRef = useRef<number | null>(null);
+  const [marking, setMarking] = useState(false);
+  const [playing, setPlaying] = useState(false);
+  const [rate, setRate] = useState(fixedRate ?? 1);
+  const [lineStarts, setLineStarts] = useState(() =>
+    normalizeLineStarts(audio?.lineStarts),
+  );
+  const [lineStartsSource, setLineStartsSource] = useState(audio?.lineStarts);
+  if (audio?.lineStarts !== lineStartsSource) {
+    setLineStartsSource(audio?.lineStarts);
+    setLineStarts(normalizeLineStarts(audio?.lineStarts));
+  }
+
+  useEffect(() => {
+    const el = audioRef.current;
+    if (!el) return;
+    el.playbackRate = fixedRate ?? rate;
+  }, [fixedRate, rate, audio?.url]);
+
+  const playSpan = useCallback((startMs: number, endMs: number | null) => {
+    const el = audioRef.current;
+    if (!el) return;
+    stopAtRef.current = endMs != null ? endMs / 1000 : null;
+    el.currentTime = startMs / 1000;
+    void el.play();
+  }, []);
+
+  const playLine = useCallback(
+    (lineNumber: number) => {
+      const span = linePlaybackWindow(
+        lineStarts,
+        lineNumber,
+        audio?.durationMs ?? null,
+      );
+      if (!span) return;
+      playSpan(span.startMs, span.endMs);
+    },
+    [audio?.durationMs, lineStarts, playSpan],
+  );
 
   const examplesByLine = useMemo(() => {
     const map = new Map<number, LineExampleRef[]>();
@@ -183,8 +243,131 @@ export function TextLineReader({
     });
   };
 
+  const onLineNumberClick = (lineNumber: number, hasLineTranslation: boolean) => {
+    const el = audioRef.current;
+    if (marking && el && audio) {
+      const next = setLineStart(lineStarts, lineNumber, el.currentTime * 1000);
+      setLineStarts(next);
+      void saveTextLineStarts(textId, next);
+      return;
+    }
+    const span = linePlaybackWindow(
+      lineStarts,
+      lineNumber,
+      audio?.durationMs ?? null,
+    );
+    if (span) {
+      playLine(lineNumber);
+      return;
+    }
+    if (hasLineTranslation) {
+      toggleLineTranslation(lineNumber);
+    }
+  };
+
   return (
     <div className="flex flex-col gap-5">
+      {audio ? (
+        <div className="flex flex-col gap-2 rounded-md border border-[var(--line)] bg-[var(--surface)] px-3 py-3">
+          <audio
+            ref={audioRef}
+            src={audio.url}
+            preload="metadata"
+            onPlay={() => setPlaying(true)}
+            onPause={() => setPlaying(false)}
+            onEnded={() => {
+              setPlaying(false);
+              stopAtRef.current = null;
+            }}
+            onTimeUpdate={(event) => {
+              const stopAt = stopAtRef.current;
+              if (stopAt == null) return;
+              if (event.currentTarget.currentTime >= stopAt) {
+                event.currentTarget.pause();
+                stopAtRef.current = null;
+              }
+            }}
+          />
+          <div className="flex flex-wrap items-center gap-2">
+            <button
+              type="button"
+              className="min-h-11 rounded-md bg-[var(--accent)] px-4 py-2 text-sm font-medium text-white"
+              onClick={() => {
+                const el = audioRef.current;
+                if (!el) return;
+                if (el.paused) {
+                  stopAtRef.current = null;
+                  void el.play();
+                } else {
+                  el.pause();
+                }
+              }}
+            >
+              {playing ? "Pause" : "Play"}
+            </button>
+            <button
+              type="button"
+              className="min-h-11 rounded-md border border-[var(--line)] px-3 py-2 text-sm text-[var(--ink)]"
+              onClick={() => {
+                const el = audioRef.current;
+                if (!el) return;
+                el.currentTime = Math.max(0, el.currentTime - 5);
+              }}
+            >
+              −5s
+            </button>
+            <button
+              type="button"
+              className="min-h-11 rounded-md border border-[var(--line)] px-3 py-2 text-sm text-[var(--ink)]"
+              onClick={() => {
+                const el = audioRef.current;
+                if (!el) return;
+                el.currentTime = Math.min(
+                  el.duration || 0,
+                  el.currentTime + 5,
+                );
+              }}
+            >
+              +5s
+            </button>
+            {fixedRate == null
+              ? [0.75, 0.9, 1].map((value) => (
+                  <button
+                    key={value}
+                    type="button"
+                    aria-pressed={rate === value}
+                    className={`min-h-11 rounded-md px-3 py-2 text-sm ${
+                      rate === value
+                        ? "bg-[var(--accent)] text-white"
+                        : "border border-[var(--line)] text-[var(--ink)]"
+                    }`}
+                    onClick={() => setRate(value)}
+                  >
+                    {value}×
+                  </button>
+                ))
+              : (
+                <span className="text-sm text-[var(--ink-muted)]">{fixedRate}×</span>
+              )}
+          </div>
+          <button
+            type="button"
+            aria-pressed={marking}
+            className="self-start text-sm text-[var(--accent)] hover:underline"
+            onClick={() => setMarking((open) => !open)}
+          >
+            {marking
+              ? "Done marking lines"
+              : "Mark line starts while audio plays"}
+          </button>
+          {marking ? (
+            <p className="text-xs text-[var(--ink-muted)]">
+              Tap a line number when that line begins. Marks save 200 ms early.
+            </p>
+          ) : null}
+        </div>
+      ) : null}
+
       {offerSentenceSplit ? (
         <p className="text-sm text-[var(--ink-muted)]">
           Looks like prose in few lines.{" "}
@@ -226,7 +409,7 @@ export function TextLineReader({
         </button>
       ) : null}
 
-      {hasKnownHits ? (
+      {hasKnownHits && !hideLookup ? (
         <button
           type="button"
           onClick={toggleReview}
@@ -271,37 +454,48 @@ export function TextLineReader({
             >
               <button
                 type="button"
-                className="flex min-h-11 w-full select-none items-start pt-1 text-left font-sans text-[11px] tabular-nums leading-none text-[var(--ink-muted)]"
+                className={`flex min-h-11 w-full select-none items-start pt-1 text-left font-sans text-[11px] tabular-nums leading-none ${
+                  lineStarts[lineNumber - 1] != null
+                    ? "text-[var(--accent)]"
+                    : "text-[var(--ink-muted)]"
+                }`}
                 dir="ltr"
                 aria-label={
-                  lineTranslation
-                    ? `Line ${lineNumber}, toggle translation`
-                    : `Line ${lineNumber}`
+                  marking
+                    ? `Line ${lineNumber}, mark audio start`
+                    : lineStarts[lineNumber - 1] != null
+                      ? `Line ${lineNumber}, play clip`
+                      : lineTranslation
+                        ? `Line ${lineNumber}, toggle translation`
+                        : `Line ${lineNumber}`
                 }
-                onClick={() => {
-                  if (lineTranslation) {
-                    toggleLineTranslation(lineNumber);
-                  }
-                }}
+                onClick={() => onLineNumberClick(lineNumber, Boolean(lineTranslation))}
               >
                 {String(lineNumber).padStart(2, "0")}
               </button>
               <div className="min-w-0">
                 <div className="flex items-start justify-between gap-2">
-                  <ArabicSelectionMenu
-                    className="min-w-0 flex-1 whitespace-pre-wrap"
-                    textId={textId}
-                    lineNumber={lineNumber}
-                  >
-                    {({ onPhraseActivate }) => (
-                      <div>
-                        {line.length > 0
-                          ? renderLinkedArabic(line, activeLinks, onPhraseActivate)
-                          : "\u00a0"}
-                      </div>
-                    )}
-                  </ArabicSelectionMenu>
-                  <div className="relative shrink-0" dir="ltr">
+                  {hideLookup ? (
+                    <div className="min-w-0 flex-1 whitespace-pre-wrap">
+                      {line.length > 0 ? line : "\u00a0"}
+                    </div>
+                  ) : (
+                    <ArabicSelectionMenu
+                      className="min-w-0 flex-1 whitespace-pre-wrap"
+                      textId={textId}
+                      lineNumber={lineNumber}
+                    >
+                      {({ onPhraseActivate }) => (
+                        <div>
+                          {line.length > 0
+                            ? renderLinkedArabic(line, activeLinks, onPhraseActivate)
+                            : "\u00a0"}
+                        </div>
+                      )}
+                    </ArabicSelectionMenu>
+                  )}
+                  {!hideLookup ? (
+                    <div className="relative shrink-0" dir="ltr">
                     <button
                       type="button"
                       className="flex min-h-11 min-w-11 items-center justify-center rounded text-lg leading-none text-[var(--ink-muted)] hover:bg-[var(--surface)] hover:text-[var(--accent)]"
@@ -363,6 +557,7 @@ export function TextLineReader({
                       </div>
                     ) : null}
                   </div>
+                  ) : null}
                 </div>
                 {showLineMeaning ? (
                   <p

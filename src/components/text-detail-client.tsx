@@ -8,6 +8,7 @@ import { deleteText } from "@/app/(app)/texts/actions";
 import { ConfirmDelete } from "@/components/confirm-delete";
 import { ExampleList } from "@/components/example-list";
 import { FocusTargetStrip } from "@/components/focus-target-strip";
+import { TextAudioField } from "@/components/text-audio-field";
 import { TextLineReader } from "@/components/text-line-reader";
 import { writeLastText } from "@/lib/prefs";
 import { createClient } from "@/lib/supabase/client";
@@ -68,6 +69,8 @@ export function TextDetailClient({
         vocabOptions={text.vocabOptions}
       />
 
+      <TextAudioField textId={text.id} hasAudio={Boolean(text.audioPath)} />
+
       <TextLineReader
         textId={text.id}
         arabic={text.arabic}
@@ -79,6 +82,15 @@ export function TextDetailClient({
           arabic: example.arabic,
           sourceLine: example.source_line,
         }))}
+        audio={
+          text.audioUrl
+            ? {
+                url: text.audioUrl,
+                durationMs: text.audioDurationMs,
+                lineStarts: text.audioLineStartsMs,
+              }
+            : null
+        }
       />
 
       {text.notes ? (

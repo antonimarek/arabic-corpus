@@ -9,6 +9,7 @@ import {
 } from "@/app/(app)/texts/actions";
 import { FormSubmit } from "@/components/form-submit";
 import { TagField } from "@/components/tag-field";
+import { TextAudioField } from "@/components/text-audio-field";
 import {
   breakTextIntoSentenceLines,
   shouldOfferSentenceSplit,
@@ -141,6 +142,17 @@ export function TextForm(props: TextFormProps) {
       </label>
 
       <TagField defaultValue={props.mode === "edit" ? props.tagsInput : ""} />
+
+      {props.mode === "edit" ? (
+        <TextAudioField
+          textId={props.text.id}
+          hasAudio={Boolean(props.text.audio_path)}
+        />
+      ) : (
+        <p className="text-sm text-[var(--ink-muted)]">
+          Add a WhatsApp voice note after you save. Today needs audio.
+        </p>
+      )}
 
       {state.error ? (
         <p className="text-sm text-[var(--danger)]" role="alert">

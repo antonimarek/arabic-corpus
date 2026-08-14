@@ -9,6 +9,7 @@ import {
   writeText,
   writeTextVocabulary,
 } from "@/lib/corpus/write";
+import { removeTextAudioObjects } from "@/lib/audio-storage";
 import { emptyToNull, parseTagNames } from "@/lib/form";
 import { requireUserId } from "@/lib/require-user";
 
@@ -84,7 +85,8 @@ export async function updateText(
 }
 
 export async function deleteText(id: string) {
-  const { supabase } = await requireUserId();
+  const { supabase, userId } = await requireUserId();
+  await removeTextAudioObjects(supabase, userId, id);
   const { error } = await supabase.from("texts").delete().eq("id", id);
   if (error) {
     throw new Error(error.message);

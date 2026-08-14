@@ -1,4 +1,5 @@
 import { firstGloss, structureLink, vocabularyLink } from "@/lib/arabic-links";
+import { signedTextAudioUrl } from "@/lib/audio-storage";
 import type { ArabicLink } from "@/lib/highlight-arabic";
 import { notNull } from "@/lib/tags";
 import type { CorpusClient } from "@/lib/corpus/write";
@@ -25,6 +26,10 @@ export type TextDetailPayload = {
   source: string | null;
   occurred_on: string | null;
   notes: string | null;
+  audioPath: string | null;
+  audioDurationMs: number | null;
+  audioLineStartsMs: number[] | null;
+  audioUrl: string | null;
   tags: string[];
   links: ArabicLink[];
   knownLinks: ArabicLink[];
@@ -142,6 +147,10 @@ export async function fetchTextDetail(
     source: text.source,
     occurred_on: text.occurred_on,
     notes: text.notes,
+    audioPath: text.audio_path ?? null,
+    audioDurationMs: text.audio_duration_ms ?? null,
+    audioLineStartsMs: text.audio_line_starts_ms ?? null,
+    audioUrl: await signedTextAudioUrl(supabase, text.audio_path),
     tags,
     links: [...linkMap.values()],
     knownLinks,

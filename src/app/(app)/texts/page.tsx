@@ -9,7 +9,7 @@ export default async function TextsPage() {
   const { data: texts, error } = await supabase
     .from("texts")
     .select(
-      "id, title, arabic, source, occurred_on, created_at, text_tags(tags(name))",
+      "id, title, arabic, source, occurred_on, created_at, audio_path, text_tags(tags(name))",
     )
     .order("created_at", { ascending: false });
 
@@ -47,7 +47,13 @@ export default async function TextsPage() {
             title: text.title,
             arabic: text.arabic,
             subtitle:
-              [text.source, text.occurred_on].filter(Boolean).join(" · ") ||
+              [
+                text.audio_path ? "Audio" : "No audio",
+                text.source,
+                text.occurred_on,
+              ]
+                .filter(Boolean)
+                .join(" · ") ||
               new Date(text.created_at).toLocaleDateString(),
           }))}
         />

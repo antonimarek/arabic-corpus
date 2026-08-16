@@ -1,6 +1,5 @@
 export const TEXT_AUDIO_BUCKET = "text-audio";
 export const AUDIO_MAX_BYTES = 20 * 1024 * 1024;
-export const LINE_MARK_BUFFER_MS = 200;
 export const UNMARKED_LINE_START = -1;
 
 const MIME_TO_EXT: Record<string, string> = {
@@ -67,11 +66,6 @@ export function textAudioPath(userId: string, textId: string, ext: string): stri
   return `${userId}/${textId}/audio.${ext}`;
 }
 
-export function markedLineStartMs(tapMs: number): number {
-  if (!Number.isFinite(tapMs) || tapMs < 0) return 0;
-  return Math.max(0, Math.round(tapMs) - LINE_MARK_BUFFER_MS);
-}
-
 export function normalizeLineStarts(
   raw: number[] | null | undefined,
 ): (number | null)[] {
@@ -92,8 +86,35 @@ export function setLineStart(
   if (!Number.isInteger(lineNumber) || lineNumber < 1) return current;
   const next = current.slice();
   while (next.length < lineNumber) next.push(null);
-  next[lineNumber - 1] = markedLineStartMs(tapMs);
+  next[lineNumber - 1] = stampLineStartMs(tapMs);
   return next;
+}
+
+export function stampLineStartMs(playheadMs: number): number {
+  if (!Number.isFinite(playheadMs) || playheadMs < 0) return 0;
+  return Math.round(playheadMs);
+}
+
+export function formatPlaybackClock(ms: number): string {
+  if (!Number.isFinite(ms) || ms < 0) return "0:00";
+  const totalSec = Math.floor(ms / 1000);
+  const minutes = Math.floor(totalSec / 60);
+  const seconds = totalSec % 60;
+  return `${minutes}:${String(seconds).padStart(2, "0")}`;
+}
+
+export function lineAtTimeMs(
+  starts: (number | null)[],
+  currentMs: number,
+): number | null {
+  if (!Number.isFinite(currentMs) || currentMs < 0) return null;
+  let found: number | null = null;
+  for (let i = 0; i < starts.length; i += 1) {
+    const start = starts[i];
+    if (start == null) continue;
+    if (start <= currentMs) found = i + 1;
+  }
+  return found;
 }
 
 export function linePlaybackWindow(

@@ -35,7 +35,12 @@ export default async function TextsPage() {
 
       {!texts || texts.length === 0 ? (
         <p className="text-[15px] text-[var(--ink-muted)]">
-          No texts yet. Paste a short story or lesson note to start your corpus.
+          No texts yet. Import a Shwayy section, or paste a short scene with
+          audio. See{" "}
+          <Link href="/sources" className="text-[var(--accent)] hover:underline">
+            Sources
+          </Link>
+          .
         </p>
       ) : (
         <FilteredEntityList

@@ -57,7 +57,7 @@ Example output:
 ${JSON.stringify(PROMPT_EXAMPLE_BUNDLE, null, 2)}`;
 
 export type ImportPrompt = {
-  id: "messy-notes" | "vocab-list" | "examples";
+  id: "messy-notes" | "vocab-list" | "examples" | "scene-clip";
   title: string;
   summary: string;
   text: string;
@@ -87,5 +87,13 @@ Task: The user will attach or paste a vocabulary list (two columns, bullets, Ank
     text: `${RULES}
 
 Task: The user will attach or paste example sentences with optional translations. Emit only example items. Keep each sentence as one item. Return one ImportBundle.`,
+  },
+  {
+    id: "scene-clip",
+    title: "Scene clip",
+    summary: "60–120 s native transcript. One text, then juicy lines as examples.",
+    text: `${RULES}
+
+Task: The user will paste a short Levantine scene (sketch clip, cooking step, tutor roleplay, or one Shwayy-style answer block). Emit one text with title plus arabic. Split speaker turns onto separate lines in arabic. Put English on matching translation lines if present. Add 3–8 example items only for lines worth retrieving. Tag city (lebanese, syrian, palestinian, jordanian) when known. Set source to a stable slug such as buqat-daw s3 sketch-shop or tutor-2026-08-16-pharmacy. Keep dialect. Drop MSA rewrite. Return one ImportBundle.`,
   },
 ];

@@ -12,6 +12,7 @@ const NAV = [
   { href: "/examples", label: "Examples" },
   { href: "/vocabulary", label: "Vocabulary" },
   { href: "/structures", label: "Structures" },
+  { href: "/sources", label: "Sources" },
 ] as const;
 
 const ADD_ITEMS = [

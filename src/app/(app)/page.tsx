@@ -102,6 +102,9 @@ export default async function SearchHomePage({ searchParams }: SearchHomeProps) 
             >
               Example
             </Link>
+            <Link href="/sources" className="text-[var(--accent)] hover:underline">
+              Sources
+            </Link>
           </div>
 
           {recentExamples.length > 0 ? (
@@ -135,8 +138,8 @@ export default async function SearchHomePage({ searchParams }: SearchHomeProps) 
             </div>
           ) : (
             <p className="text-[15px] text-[var(--ink-muted)]">
-              Paste a short dialogue as a text, or save a sentence you just
-              heard.
+              Save a sentence you just heard, or start with a Shwayy section.
+              See Sources if you forget what to import.
             </p>
           )}
         </div>

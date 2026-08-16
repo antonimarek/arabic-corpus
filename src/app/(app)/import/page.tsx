@@ -21,6 +21,11 @@ export default async function ImportPage() {
         <h1 className="text-xl font-medium text-[var(--ink)]">Import</h1>
         <p className="text-sm text-[var(--ink-muted)]">
           Copy a prompt into any chat. Paste the JSON here. Review, then commit.
+          Shwayy and other source rules live on{" "}
+          <Link href="/sources" className="text-[var(--accent)] hover:underline">
+            Sources
+          </Link>
+          .
         </p>
         <ol className="list-decimal space-y-1 pl-5 text-sm text-[var(--ink-muted)]">
           <li>Copy a prompt and attach your notes</li>

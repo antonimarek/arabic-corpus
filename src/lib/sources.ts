@@ -44,6 +44,11 @@ export const SOURCE_OBJECTS = [
     body: "Tutor lines and typical ways people say things. Structures and examples. Retrieve and say.",
   },
   {
+    id: "families",
+    title: "Families",
+    body: "Same-root words and morphological moves (Patterns). Notice the operation across words you already know. Not a grammar chapter.",
+  },
+  {
     id: "scenes",
     title: "Scenes",
     body: "Connected talk, 8–20 turns or one survey section. Texts with audio. Listen, then read.",

@@ -11,6 +11,7 @@ const NAV = [
   { href: "/texts", label: "Texts" },
   { href: "/examples", label: "Examples" },
   { href: "/vocabulary", label: "Vocabulary" },
+  { href: "/patterns", label: "Patterns" },
   { href: "/structures", label: "Structures" },
   { href: "/sources", label: "Sources" },
 ] as const;
@@ -19,6 +20,7 @@ const ADD_ITEMS = [
   { href: "/texts/new", label: "Text" },
   { href: "/examples/new", label: "Example" },
   { href: "/vocabulary/new", label: "Vocabulary" },
+  { href: "/patterns/new", label: "Pattern" },
   { href: "/structures/new", label: "Structure" },
   { href: "/import", label: "Import" },
 ] as const;

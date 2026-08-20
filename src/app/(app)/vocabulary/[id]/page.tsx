@@ -1,7 +1,12 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 
-import { attachVocabularyForm, deleteVocabulary, deleteVocabularyForm } from "@/app/(app)/vocabulary/actions";
+import { unlinkVocabularyFromPattern } from "@/app/(app)/patterns/actions";
+import {
+  attachVocabularyForm,
+  deleteVocabulary,
+  deleteVocabularyForm,
+} from "@/app/(app)/vocabulary/actions";
 import { ConfirmDelete } from "@/components/confirm-delete";
 import { ExampleList } from "@/components/example-list";
 import { firstGloss } from "@/lib/arabic-links";
@@ -14,6 +19,7 @@ import {
   posKind,
 } from "@/lib/citation";
 import { rootsMatch } from "@/lib/option-filter";
+import { isPatternRole, PATTERN_ROLE_LABEL } from "@/lib/patterns";
 import { createClient } from "@/lib/supabase/server";
 import { notNull } from "@/lib/tags";
 import { lineHref } from "@/lib/text-lines";
@@ -30,7 +36,15 @@ export default async function VocabularyDetailPage({
   const { data: vocabulary, error } = await supabase
     .from("vocabulary")
     .select(
-      "*, vocabulary_senses(*), vocabulary_tags(tags(name)), vocabulary_forms(id, arabic, slot), example_vocabulary(examples(id, arabic, translation, source_line, texts(id, title)))",
+      `*,
+      vocabulary_senses(*),
+      vocabulary_tags(tags(name)),
+      vocabulary_forms(id, arabic, slot),
+      example_vocabulary(examples(id, arabic, translation, source_line, texts(id, title))),
+      pattern_vocabulary(
+        role,
+        morph_patterns(id, name, mastery_state)
+      )`,
     )
     .eq("id", id)
     .maybeSingle();
@@ -63,17 +77,36 @@ export default async function VocabularyDetailPage({
   const exampleCount = examples.length;
   const textCount = textIds.size;
 
-  let family: {
+  const linkedPatterns = (vocabulary.pattern_vocabulary ?? [])
+    .map((row) => {
+      const pattern = row.morph_patterns;
+      if (!pattern) return null;
+      const role = isPatternRole(row.role) ? row.role : "related";
+      return {
+        id: pattern.id,
+        name: pattern.name,
+        role,
+        roleLabel: PATTERN_ROLE_LABEL[role],
+      };
+    })
+    .filter(notNull);
+
+  type FamilyRow = {
     id: string;
     arabic: string;
     transliteration: string | null;
     gloss?: string;
-  }[] = [];
+    patternNames: string[];
+  };
+
+  let family: FamilyRow[] = [];
   if (vocabulary.root) {
     const { data: candidates } = await supabase
       .from("vocabulary")
       .select(
-        "id, arabic, transliteration, root, vocabulary_senses(gloss, created_at)",
+        `id, arabic, transliteration, root,
+        vocabulary_senses(gloss, created_at),
+        pattern_vocabulary(morph_patterns(name))`,
       )
       .neq("id", id)
       .not("root", "is", null);
@@ -84,8 +117,16 @@ export default async function VocabularyDetailPage({
         arabic: row.arabic,
         transliteration: row.transliteration,
         gloss: firstGloss(row.vocabulary_senses),
+        patternNames: (row.pattern_vocabulary ?? [])
+          .map((link) => link.morph_patterns?.name)
+          .filter(notNull),
       }));
   }
+
+  const familyLinked = family.filter((row) => row.patternNames.length > 0);
+  const familyUnlinked = family.filter((row) => row.patternNames.length === 0);
+  const familyTotal = family.length + (vocabulary.root ? 1 : 0);
+  const patternsOnFamily = linkedPatterns.length;
 
   const encounterBits = [
     exampleCount > 0
@@ -125,37 +166,13 @@ export default async function VocabularyDetailPage({
                 <span className="text-xs text-[var(--ink-muted)]" dir="ltr">
                   {pairName}
                 </span>
-                {pairArabic ? (
-                  <p
-                    className="font-arabic text-3xl leading-relaxed text-[var(--ink)]"
-                    lang="ar"
-                    dir="rtl"
-                  >
-                    {pairArabic}
-                  </p>
-                ) : (
-                  <form
-                    action={attachVocabularyForm.bind(null, vocabulary.id)}
-                    className="flex flex-col gap-2"
-                  >
-                    <input type="hidden" name="slot" value={pairSlot ?? ""} />
-                    <input
-                      name="arabic"
-                      required
-                      dir="rtl"
-                      lang="ar"
-                      placeholder={kind === "verb" ? "بكتب" : "كتب"}
-                      className="font-arabic rounded-md border border-[var(--line)] bg-[var(--surface)] px-3 py-2 text-xl outline-none focus:border-[var(--accent)]"
-                    />
-                    <button
-                      type="submit"
-                      className="self-start text-sm text-[var(--accent)] hover:underline"
-                      dir="ltr"
-                    >
-                      Add {pairName.toLowerCase()}
-                    </button>
-                  </form>
-                )}
+                <p
+                  className="font-arabic text-3xl leading-relaxed text-[var(--ink)]"
+                  lang="ar"
+                  dir="rtl"
+                >
+                  {pairArabic ?? "—"}
+                </p>
               </div>
             </div>
           ) : (
@@ -174,30 +191,21 @@ export default async function VocabularyDetailPage({
             >
               Edit
             </Link>
-            <ConfirmDelete action={deleteVocabulary.bind(null, vocabulary.id)} />
+            <ConfirmDelete
+              action={deleteVocabulary.bind(null, vocabulary.id)}
+            />
           </div>
         </div>
         <p className="text-sm text-[var(--ink-muted)]">
           {[
             vocabulary.transliteration,
             vocabulary.part_of_speech,
+            vocabulary.root ? `root ${vocabulary.root}` : null,
             ...encounterBits,
           ]
             .filter(Boolean)
             .join(" · ")}
         </p>
-        {vocabulary.root ? (
-          <p className="text-sm text-[var(--ink-muted)]">
-            Root{" "}
-            <span
-              className="font-arabic text-lg text-[var(--ink)]"
-              lang="ar"
-              dir="rtl"
-            >
-              {vocabulary.root}
-            </span>
-          </p>
-        ) : null}
         {tags.length > 0 ? (
           <p className="text-xs text-[var(--ink-muted)]">{tags.join(" · ")}</p>
         ) : null}
@@ -281,33 +289,154 @@ export default async function VocabularyDetailPage({
         </form>
       </section>
 
-      {family.length > 0 ? (
-        <section className="border-t border-[var(--line)] pt-6">
-          <h2 className="mb-3 text-sm text-[var(--ink-muted)]">
-            Same root ({family.length})
+      <section className="border-t border-[var(--line)] pt-6">
+        <div className="mb-3 flex items-baseline justify-between gap-4">
+          <h2 className="text-sm text-[var(--ink-muted)]">
+            {vocabulary.root
+              ? `Family · root ${vocabulary.root}`
+              : "Patterns"}
           </h2>
-          <ul className="flex flex-wrap gap-x-4 gap-y-3">
-            {family.map((row) => (
-              <li key={row.id}>
-                <Link href={`/vocabulary/${row.id}`} className="flex flex-col gap-0.5">
-                  <span
-                    className="font-arabic text-lg text-[var(--accent)] hover:underline"
-                    lang="ar"
-                    dir="rtl"
-                  >
-                    {row.arabic}
-                  </span>
-                  <span className="text-xs text-[var(--ink-muted)]">
-                    {[row.transliteration, row.gloss]
-                      .filter(Boolean)
-                      .join(" · ")}
+          <div className="flex flex-wrap gap-3 text-sm">
+            <Link
+              href={`/patterns/new?vocabulary=${vocabulary.id}`}
+              className="text-[var(--accent)] hover:underline"
+            >
+              New pattern
+            </Link>
+            <Link
+              href={`/vocabulary/${vocabulary.id}/link-pattern`}
+              className="text-[var(--accent)] hover:underline"
+            >
+              Link to pattern
+            </Link>
+          </div>
+        </div>
+
+        {vocabulary.root ? (
+          <p className="mb-4 text-sm text-[var(--ink-muted)]">
+            {familyTotal} same-root word{familyTotal === 1 ? "" : "s"}
+            {" · "}
+            {patternsOnFamily} pattern
+            {patternsOnFamily === 1 ? "" : "s"} on this word
+            {family.length > 0
+              ? ` · ${familyUnlinked.length} sibling${familyUnlinked.length === 1 ? "" : "s"} with no pattern yet`
+              : null}
+          </p>
+        ) : (
+          <p className="mb-4 text-sm text-[var(--ink-muted)]">
+            Add a root on edit to see same-root siblings. You can still link
+            patterns.
+          </p>
+        )}
+
+        {linkedPatterns.length > 0 ? (
+          <ul className="mb-5 flex flex-col gap-3">
+            {linkedPatterns.map((pattern) => (
+              <li
+                key={pattern.id}
+                className="flex items-center justify-between gap-3"
+              >
+                <Link
+                  href={`/patterns/${pattern.id}`}
+                  className="inline-flex min-w-0 items-center gap-2 rounded-md border border-[var(--line)] px-3 py-1.5 text-sm text-[var(--ink)] hover:border-[var(--accent)]"
+                >
+                  <span className="truncate">{pattern.name}</span>
+                  <span className="shrink-0 text-xs text-[var(--ink-muted)]">
+                    {pattern.roleLabel}
                   </span>
                 </Link>
+                <form
+                  action={unlinkVocabularyFromPattern.bind(
+                    null,
+                    pattern.id,
+                    vocabulary.id,
+                  )}
+                >
+                  <button
+                    type="submit"
+                    className="text-xs text-[var(--ink-muted)] hover:text-[var(--danger)] hover:underline"
+                  >
+                    Unlink
+                  </button>
+                </form>
               </li>
             ))}
           </ul>
-        </section>
-      ) : null}
+        ) : (
+          <p className="mb-5 text-sm text-[var(--ink-muted)]">
+            No patterns linked yet. Mark a move you keep seeing across words.
+          </p>
+        )}
+
+        {family.length > 0 ? (
+          <div className="flex flex-col gap-5">
+            {familyLinked.length > 0 ? (
+              <div>
+                <h3 className="mb-2 text-xs uppercase tracking-wide text-[var(--ink-muted)]">
+                  Linked siblings
+                </h3>
+                <ul className="flex flex-wrap gap-x-4 gap-y-3">
+                  {familyLinked.map((row) => (
+                    <li key={row.id}>
+                      <Link
+                        href={`/vocabulary/${row.id}`}
+                        className="flex flex-col gap-0.5"
+                      >
+                        <span
+                          className="font-arabic text-lg text-[var(--accent)] hover:underline"
+                          lang="ar"
+                          dir="rtl"
+                        >
+                          {row.arabic}
+                        </span>
+                        <span className="text-xs text-[var(--ink-muted)]">
+                          {[
+                            row.transliteration,
+                            row.gloss,
+                            row.patternNames.join(", "),
+                          ]
+                            .filter(Boolean)
+                            .join(" · ")}
+                        </span>
+                      </Link>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            ) : null}
+            {familyUnlinked.length > 0 ? (
+              <div>
+                <h3 className="mb-2 text-xs uppercase tracking-wide text-[var(--ink-muted)]">
+                  Unlinked in family
+                </h3>
+                <ul className="flex flex-wrap gap-x-4 gap-y-3">
+                  {familyUnlinked.map((row) => (
+                    <li key={row.id}>
+                      <Link
+                        href={`/vocabulary/${row.id}`}
+                        className="flex flex-col gap-0.5"
+                      >
+                        <span
+                          className="font-arabic text-lg text-[var(--accent)] hover:underline"
+                          lang="ar"
+                          dir="rtl"
+                        >
+                          {row.arabic}
+                        </span>
+                        <span className="text-xs text-[var(--ink-muted)]">
+                          {[row.transliteration, row.gloss]
+                            .filter(Boolean)
+                            .join(" · ")}
+                        </span>
+                      </Link>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            ) : null}
+          </div>
+        ) : null}
+      </section>
 
       {vocabulary.notes ? (
         <section className="border-t border-[var(--line)] pt-6">

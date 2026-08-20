@@ -1,6 +1,8 @@
 # Levantine Arabic corpus
 
-Web app for storing and searching Levantine Arabic texts, examples, vocabulary, and structures. The database is the source of truth. An LLM layer is optional and not required.
+Web app for storing and searching Levantine Arabic texts, examples, vocabulary, structures, and morphological patterns. The database is the source of truth. An LLM layer is optional and not required.
+
+**Patterns** are word-formation moves (double middle, denominal verb, and so on). They hang off vocabulary and roots. **Structures** stay chunks and idioms (`عم + participle`, `بدي…`). Do not mix the two.
 
 ## Stack
 
@@ -42,7 +44,7 @@ Done in this slice:
 
 - Schema + RLS for texts, examples, vocabulary, senses, structures, tags, joins
 - Email + password auth with email allowlist (public signup off after setup)
-- App shell (Search / Texts / Vocabulary / Structures + Add menu)
+- App shell (Search / Texts / Vocabulary / Patterns / Structures + Add menu)
 - Texts CRUD with RTL Arabic paste/save
 - `LLMProvider = none` stub
 

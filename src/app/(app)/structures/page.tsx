@@ -35,7 +35,7 @@ export default async function StructuresPage() {
 
       {!rows || rows.length === 0 ? (
         <p className="text-[15px] text-[var(--ink-muted)]">
-          No structures yet. Capture a chunk, pattern, or idiom you keep meeting.
+          No structures yet. Capture a chunk or idiom you keep meeting.
         </p>
       ) : (
         <FilteredEntityList

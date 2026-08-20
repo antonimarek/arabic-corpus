@@ -843,3 +843,105 @@ export async function syncStructureExampleLinks(
 
   return {};
 }
+
+export type PatternWriteInput = {
+  name: string;
+  arabic_sketch?: string | null;
+  form_label?: string | null;
+  meaning_shift?: string | null;
+  cue?: string | null;
+  notes?: string | null;
+  mastery_state?: string;
+};
+
+export async function writePattern(
+  supabase: CorpusClient,
+  ownerId: string,
+  input: PatternWriteInput,
+): Promise<WriteResult> {
+  const { data, error } = await supabase
+    .from("morph_patterns")
+    .insert({
+      owner_id: ownerId,
+      name: input.name,
+      arabic_sketch: input.arabic_sketch ?? null,
+      form_label: input.form_label ?? null,
+      meaning_shift: input.meaning_shift ?? null,
+      cue: input.cue ?? null,
+      notes: input.notes ?? null,
+      mastery_state: input.mastery_state ?? "noticed",
+    })
+    .select("id")
+    .single();
+
+  if (error || !data) {
+    return { error: error?.message ?? "Could not save pattern." };
+  }
+
+  return { id: data.id };
+}
+
+export async function updatePatternRecord(
+  supabase: CorpusClient,
+  id: string,
+  input: PatternWriteInput,
+): Promise<WriteResult> {
+  const { error } = await supabase
+    .from("morph_patterns")
+    .update({
+      name: input.name,
+      arabic_sketch: input.arabic_sketch ?? null,
+      form_label: input.form_label ?? null,
+      meaning_shift: input.meaning_shift ?? null,
+      cue: input.cue ?? null,
+      notes: input.notes ?? null,
+      mastery_state: input.mastery_state ?? "noticed",
+    })
+    .eq("id", id);
+
+  if (error) {
+    return { error: error.message };
+  }
+
+  return { id };
+}
+
+export async function linkPatternVocabulary(
+  supabase: CorpusClient,
+  patternId: string,
+  vocabularyId: string,
+  role: string,
+): Promise<{ error?: string }> {
+  const { error } = await supabase.from("pattern_vocabulary").upsert(
+    {
+      pattern_id: patternId,
+      vocabulary_id: vocabularyId,
+      role,
+    },
+    { onConflict: "pattern_id,vocabulary_id" },
+  );
+
+  if (error) {
+    return { error: error.message };
+  }
+
+  return {};
+}
+
+export async function unlinkPatternVocabulary(
+  supabase: CorpusClient,
+  patternId: string,
+  vocabularyId: string,
+): Promise<{ error?: string }> {
+  const { error } = await supabase
+    .from("pattern_vocabulary")
+    .delete()
+    .eq("pattern_id", patternId)
+    .eq("vocabulary_id", vocabularyId);
+
+  if (error) {
+    return { error: error.message };
+  }
+
+  return {};
+}

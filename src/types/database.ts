@@ -229,6 +229,84 @@ export type Database = {
           },
         ];
       };
+      morph_patterns: {
+        Row: {
+          id: string;
+          owner_id: string;
+          name: string;
+          arabic_sketch: string | null;
+          form_label: string | null;
+          meaning_shift: string | null;
+          cue: string | null;
+          notes: string | null;
+          mastery_state: string;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          owner_id: string;
+          name: string;
+          arabic_sketch?: string | null;
+          form_label?: string | null;
+          meaning_shift?: string | null;
+          cue?: string | null;
+          notes?: string | null;
+          mastery_state?: string;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: {
+          id?: string;
+          owner_id?: string;
+          name?: string;
+          arabic_sketch?: string | null;
+          form_label?: string | null;
+          meaning_shift?: string | null;
+          cue?: string | null;
+          notes?: string | null;
+          mastery_state?: string;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Relationships: [];
+      };
+      pattern_vocabulary: {
+        Row: {
+          pattern_id: string;
+          vocabulary_id: string;
+          role: string;
+          created_at: string;
+        };
+        Insert: {
+          pattern_id: string;
+          vocabulary_id: string;
+          role?: string;
+          created_at?: string;
+        };
+        Update: {
+          pattern_id?: string;
+          vocabulary_id?: string;
+          role?: string;
+          created_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "pattern_vocabulary_pattern_id_fkey";
+            columns: ["pattern_id"];
+            isOneToOne: false;
+            referencedRelation: "morph_patterns";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "pattern_vocabulary_vocabulary_id_fkey";
+            columns: ["vocabulary_id"];
+            isOneToOne: false;
+            referencedRelation: "vocabulary";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
       structures: {
         Row: {
           id: string;
@@ -637,6 +715,10 @@ export type VocabularyForm =
 export type TextVocabulary =
   Database["public"]["Tables"]["text_vocabulary"]["Row"];
 export type Structure = Database["public"]["Tables"]["structures"]["Row"];
+export type MorphPattern =
+  Database["public"]["Tables"]["morph_patterns"]["Row"];
+export type PatternVocabulary =
+  Database["public"]["Tables"]["pattern_vocabulary"]["Row"];
 export type Tag = Database["public"]["Tables"]["tags"]["Row"];
 export type ImportRun = Database["public"]["Tables"]["import_runs"]["Row"];
 export type ReviewItem = Database["public"]["Tables"]["review_items"]["Row"];

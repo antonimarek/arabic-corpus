@@ -1,0 +1,87 @@
+import Link from "next/link";
+
+import { createClient } from "@/lib/supabase/server";
+import {
+  isMasteryState,
+  MASTERY_LABEL,
+} from "@/lib/patterns";
+
+export default async function PatternsPage() {
+  const supabase = await createClient();
+  const { data: rows, error } = await supabase
+    .from("morph_patterns")
+    .select(
+      "id, name, arabic_sketch, form_label, mastery_state, updated_at, pattern_vocabulary(vocabulary_id)",
+    )
+    .order("updated_at", { ascending: false });
+
+  if (error) {
+    return (
+      <p className="text-sm text-[var(--danger)]" role="alert">
+        Could not load patterns: {error.message}
+      </p>
+    );
+  }
+
+  return (
+    <section className="flex flex-col gap-6">
+      <div className="flex items-baseline justify-between gap-4">
+        <h1 className="text-xl font-medium text-[var(--ink)]">Patterns</h1>
+        <Link
+          href="/patterns/new"
+          className="text-sm text-[var(--accent)] hover:underline"
+        >
+          New pattern
+        </Link>
+      </div>
+
+      {!rows || rows.length === 0 ? (
+        <p className="text-[15px] text-[var(--ink-muted)]">
+          Patterns grow from words you already know. Name a move you keep
+          seeing, then link examples.
+        </p>
+      ) : (
+        <ul className="divide-y divide-[var(--line)] border-t border-[var(--line)]">
+          {rows.map((row) => {
+            const count = row.pattern_vocabulary?.length ?? 0;
+            const mastery = isMasteryState(row.mastery_state)
+              ? MASTERY_LABEL[row.mastery_state]
+              : row.mastery_state;
+            return (
+              <li key={row.id}>
+                <Link
+                  href={`/patterns/${row.id}`}
+                  className="flex flex-col gap-1 py-4 hover:bg-[var(--surface-hover)]"
+                >
+                  <span className="flex items-baseline justify-between gap-3">
+                    <span className="text-[15px] font-medium text-[var(--ink)]">
+                      {row.name}
+                    </span>
+                    {row.arabic_sketch ? (
+                      <span
+                        className="font-arabic shrink-0 text-lg text-[var(--ink-muted)]"
+                        lang="ar"
+                        dir="rtl"
+                      >
+                        {row.arabic_sketch}
+                      </span>
+                    ) : null}
+                  </span>
+                  <span className="text-xs text-[var(--ink-muted)]">
+                    {[
+                      mastery,
+                      row.form_label,
+                      `${count} word${count === 1 ? "" : "s"}`,
+                    ]
+                      .filter(Boolean)
+                      .join(" · ")}
+                  </span>
+                </Link>
+              </li>
+            );
+          })}
+        </ul>
+      )}
+    </section>
+  );
+}

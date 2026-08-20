@@ -4,8 +4,10 @@ import { parseImportBundle } from "@/lib/import/bundle";
 import {
   alignSectionTranslations,
   buildShwayyBundle,
+  buildShwayyGlossaryBundle,
   parseShwayyAppendix,
   parseShwayyEnglish,
+  parseShwayyGlossary,
   parseShwayyToc,
   tidyArabic,
 } from "@/lib/import/parsers/shwayy";
@@ -159,5 +161,49 @@ describe("alignSectionTranslations", () => {
 describe("tidyArabic", () => {
   it("drops bidi marks and fixes punctuation space", () => {
     expect(tidyArabic("اسمي\u202a.\u202cهدى")).toBe("اسمي. هدى");
+  });
+});
+
+describe("parseShwayyGlossary", () => {
+  it("reads layout vocab callouts and skips plural forms inside parens", () => {
+    const raw = `
+♀ شو اسمك؟                                             معروفma3rūf well-known, common
+شوšū what
+اسمísim (pl.  أساميasêmi) name                         هوhúwwi m. it; he
+توجيهtawjīh orientation                                شويšwayy (+ adjective) a little, somewhat
+إرشادiršêd guidance
+ـي-i my
+1|                  ©
+`;
+    const entries = parseShwayyGlossary(raw);
+    const byArabic = Object.fromEntries(
+      entries.map((entry) => [entry.arabic, entry]),
+    );
+    expect(byArabic["معروف"]).toMatchObject({
+      transliteration: "ma3rūf",
+      gloss: "well-known, common",
+    });
+    expect(byArabic["اسم"]).toMatchObject({
+      transliteration: "ísim",
+      gloss: "name",
+    });
+    expect(byArabic["أسامي"]).toBeUndefined();
+    expect(byArabic["توجيه"]?.gloss).toBe("orientation");
+    expect(byArabic["شوي"]?.gloss).toBe("a little, somewhat");
+    expect(byArabic["إرشاد"]?.gloss).toBe("guidance");
+    expect(byArabic["ـي"]?.gloss).toMatch(/my/i);
+  });
+
+  it("builds a vocabulary-only import bundle", () => {
+    const bundle = buildShwayyGlossaryBundle(`
+معروفma3rūf well-known, common
+بسbass but; just
+`);
+    expect(bundle.items).toHaveLength(2);
+    expect(bundle.items[0]?.type).toBe("vocabulary");
+    expect(bundle.items[0]?.source).toBe("shwayy-an-haali-glossary");
+    expect(bundle.items[0]?.glosses?.[0]?.text).toBe("well-known, common");
+    const parsed = parseImportBundle(JSON.stringify(bundle));
+    expect(parsed.ok).toBe(true);
   });
 });

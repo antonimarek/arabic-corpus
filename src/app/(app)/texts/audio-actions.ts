@@ -55,7 +55,7 @@ export async function saveTextLineStarts(
     .eq("id", textId)
     .eq("owner_id", userId);
   if (error) return { error: error.message };
-  revalidateText(textId);
+  // Skip revalidate: fresh signed audio URL reloads <audio> and resets playhead.
   return {};
 }
 

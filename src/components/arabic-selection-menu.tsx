@@ -13,6 +13,7 @@ import {
 
 import { lookupPhrase, type PhraseHit } from "@/app/(app)/lookup/actions";
 import { attachVocabularyForm } from "@/app/(app)/vocabulary/actions";
+import { arwordsSearchUrl } from "@/lib/arwords";
 import type { ArabicLink } from "@/lib/highlight-arabic";
 
 type NoticeApi = {
@@ -47,6 +48,7 @@ type ArabicSelectionMenuProps = {
   className?: string;
   textId?: string;
   lineNumber?: number;
+  lineTranslation?: string | null;
 };
 
 function exampleHref(
@@ -68,6 +70,7 @@ export function ArabicSelectionMenu({
   className,
   textId,
   lineNumber,
+  lineTranslation,
 }: ArabicSelectionMenuProps) {
   const rootRef = useRef<HTMLDivElement>(null);
   const menuRef = useRef<HTMLDivElement>(null);
@@ -168,6 +171,8 @@ export function ArabicSelectionMenu({
   const addExampleHref = menu
     ? exampleHref(menu.text, textId, lineNumber)
     : "/examples/new";
+  const arwordsHref = menu ? arwordsSearchUrl(menu.text) : "https://www.arwords.com/words";
+  const lineGloss = lineTranslation?.trim() || null;
   const vocabHits =
     menu?.mode === "selection"
       ? menu.hits.filter((hit) => hit.type === "vocabulary")
@@ -219,6 +224,14 @@ export function ArabicSelectionMenu({
                   {menu.link.gloss}
                 </p>
               ) : null}
+              {lineGloss ? (
+                <p className="px-3 pb-2 text-[13px] leading-relaxed text-[var(--ink-muted)]">
+                  <span className="block text-[11px] uppercase tracking-wide text-[var(--ink-muted)]">
+                    This line
+                  </span>
+                  {lineGloss}
+                </p>
+              ) : null}
               <Link
                 href={menu.link.href}
                 className="block px-3 py-2.5 hover:bg-[var(--surface-hover)]"
@@ -226,6 +239,15 @@ export function ArabicSelectionMenu({
               >
                 Open
               </Link>
+              <a
+                href={arwordsHref}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="block px-3 py-2.5 hover:bg-[var(--surface-hover)]"
+                onClick={close}
+              >
+                Arabic Words
+              </a>
               <Link
                 href={addExampleHref}
                 className="block px-3 py-2.5 hover:bg-[var(--surface-hover)]"
@@ -236,6 +258,14 @@ export function ArabicSelectionMenu({
             </>
           ) : (
             <>
+              {lineGloss ? (
+                <p className="border-b border-[var(--line)] px-3 py-2.5 text-[13px] leading-relaxed text-[var(--ink-muted)]">
+                  <span className="mb-1 block text-[11px] uppercase tracking-wide">
+                    This line
+                  </span>
+                  {lineGloss}
+                </p>
+              ) : null}
               {menu.looking ? (
                 <p className="px-3 py-2.5 text-[var(--ink-muted)]">Looking…</p>
               ) : null}
@@ -269,6 +299,15 @@ export function ArabicSelectionMenu({
                   ) : null}
                 </Link>
               ))}
+              <a
+                href={arwordsHref}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="block px-3 py-2.5 hover:bg-[var(--surface-hover)]"
+                onClick={close}
+              >
+                Arabic Words
+              </a>
               <Link
                 href={`/?q=${encoded}`}
                 className="block px-3 py-2.5 hover:bg-[var(--surface-hover)]"

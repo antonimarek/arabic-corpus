@@ -70,8 +70,8 @@ export const SOURCE_ENTRIES: SourceEntry[] = [
     owned: true,
     sourcePrefix: SHWAYY_SOURCE_PREFIX,
     use: "30 survey questions. 10 native answers each. Already has script + MP3.",
-    skip: "Do not dump glossary particles. Do not generate a story around the section.",
-    how: "Import the parsed JSON. Attach the section MP3 on the text. Mark the 10 answer lines. Study one question a week.",
+    skip: "Do not dump glossary particles onto spine texts. Optional: import glossary as vocab via review.",
+    how: "Import the parsed JSON. Attach the section MP3 on the text. Mark the 10 answer lines. Study one question a week. Optional: --glossary-out for vocab review import.",
   },
   {
     id: "kameen",

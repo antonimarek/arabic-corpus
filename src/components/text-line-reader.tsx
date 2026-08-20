@@ -125,6 +125,12 @@ export function TextLineReader({
   const audioRef = useRef<HTMLAudioElement>(null);
   const stopAtRef = useRef<number | null>(null);
   const scrubbingRef = useRef(false);
+  const audioUrlRef = useRef(audio?.url ?? null);
+  const restorePlaybackRef = useRef<{
+    timeSec: number;
+    wasPlaying: boolean;
+  } | null>(null);
+  const stampSaveChainRef = useRef<Promise<void>>(Promise.resolve());
   const [marking, setMarking] = useState(false);
   const [playing, setPlaying] = useState(false);
   const [currentMs, setCurrentMs] = useState(0);
@@ -144,6 +150,52 @@ export function TextLineReader({
     if (!el) return;
     el.playbackRate = fixedRate ?? rate;
   }, [fixedRate, rate, audio?.url]);
+
+  useEffect(() => {
+    const nextUrl = audio?.url ?? null;
+    const prevUrl = audioUrlRef.current;
+    if (nextUrl === prevUrl) return;
+    const el = audioRef.current;
+    if (el && prevUrl && nextUrl && (el.currentTime > 0.05 || !el.paused)) {
+      restorePlaybackRef.current = {
+        timeSec: el.currentTime,
+        wasPlaying: !el.paused,
+      };
+    } else {
+      restorePlaybackRef.current = null;
+    }
+    audioUrlRef.current = nextUrl;
+  }, [audio?.url]);
+
+  const restorePlaybackAfterSrcSwap = useCallback(() => {
+    const el = audioRef.current;
+    const restore = restorePlaybackRef.current;
+    if (!el || !restore) return;
+    restorePlaybackRef.current = null;
+    const apply = () => {
+      el.currentTime = restore.timeSec;
+      setCurrentMs(Math.round(restore.timeSec * 1000));
+      if (restore.wasPlaying) {
+        void el.play();
+      }
+    };
+    if (el.readyState >= 1) {
+      apply();
+      return;
+    }
+    el.addEventListener("loadedmetadata", apply, { once: true });
+  }, []);
+
+  const queueStampSave = useCallback(
+    (starts: (number | null)[]) => {
+      stampSaveChainRef.current = stampSaveChainRef.current
+        .catch(() => undefined)
+        .then(async () => {
+          await saveTextLineStarts(textId, starts);
+        });
+    },
+    [textId],
+  );
 
   const seekToMs = useCallback((ms: number) => {
     const el = audioRef.current;
@@ -267,7 +319,7 @@ export function TextLineReader({
     if (marking && el && audio) {
       const next = setLineStart(lineStarts, lineNumber, el.currentTime * 1000);
       setLineStarts(next);
-      void saveTextLineStarts(textId, next);
+      queueStampSave(next);
       return;
     }
     const span = linePlaybackWindow(
@@ -296,6 +348,7 @@ export function TextLineReader({
             onLoadedMetadata={(event) => {
               const ms = event.currentTarget.duration * 1000;
               if (Number.isFinite(ms) && ms > 0) setDurationMs(Math.round(ms));
+              restorePlaybackAfterSrcSwap();
             }}
             onPlay={() => setPlaying(true)}
             onPause={() => setPlaying(false)}
@@ -547,6 +600,7 @@ export function TextLineReader({
                       className="min-w-0 flex-1 whitespace-pre-wrap"
                       textId={textId}
                       lineNumber={lineNumber}
+                      lineTranslation={lineTranslation}
                     >
                       {({ onPhraseActivate }) => (
                         <div>

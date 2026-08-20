@@ -1,7 +1,7 @@
 import { z } from "zod";
 
 export const IMPORT_BUNDLE_VERSION = 1;
-export const IMPORT_BUNDLE_MAX_ITEMS = 500;
+export const IMPORT_BUNDLE_MAX_ITEMS = 1200;
 export const IMPORT_BUNDLE_MAX_BYTES = 1_000_000;
 
 export const IMPORT_ITEM_TYPES = [

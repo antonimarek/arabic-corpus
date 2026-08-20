@@ -122,7 +122,9 @@ export default async function SourcesPage() {
             <Link href="/import" className="text-[var(--accent)] hover:underline">
               Import
             </Link>
-            . Keep the 30 texts. Do not import the glossary.
+            . Keep the 30 texts. Optional: parse{" "}
+            <code className="text-xs">--glossary-out</code> and import that file
+            as vocabulary after review. Skip noisy particles.
           </li>
           <li>
             Attach one MP3 per section on the text. Today only picks texts with
@@ -130,7 +132,8 @@ export default async function SourcesPage() {
           </li>
         </ol>
         <pre className="overflow-x-auto rounded-md border border-[var(--line)] bg-[var(--surface)] p-3 text-xs text-[var(--ink)]">
-          {`npx tsx import/scripts/parse-shwayy.ts --pdf /path/to/Shwayy-An-Haali.pdf --out raw/shwayy-an-haali.json`}
+          {`npx tsx import/scripts/parse-shwayy.ts --pdf /path/to/Shwayy-An-Haali.pdf --out raw/shwayy-an-haali.json
+npx tsx import/scripts/parse-shwayy.ts --pdf /path/to/Shwayy-An-Haali.pdf --glossary-out raw/shwayy-glossary.json --glossary-only`}
         </pre>
       </div>
     </section>

@@ -6,6 +6,7 @@ import {
 } from "@/lib/import/bundle";
 
 export const SHWAYY_SOURCE_PREFIX = "shwayy-an-haali";
+export const SHWAYY_GLOSSARY_SOURCE = "shwayy-an-haali-glossary";
 
 export const SHWAYY_SPEAKERS = [
   { arabic: "هدى", english: "Hoda", city: "Lebanese" },
@@ -47,6 +48,12 @@ const SPEAKER_EN_INLINE_RE =
 const FOOTER_RE = /^(©|\|\s*\d+|\d+|\d+\s*\|.*)$/;
 const JUNK_LINE_RE = /visit our website/i;
 const TOC_RE = /^(\d+)\.\s+(.+?)\s+\.{3,}/;
+const GLOSSARY_AR = String.raw`[\u0600-\u06FFـ]+`;
+const GLOSSARY_TR = String.raw`-?[A-Za-zʔɣʈʂɧšɖžáàāăēīōūûêíóúü3][A-Za-z0-9ʔɣʈʂɧšɖžáàāăēīōūûêíóúü3'\-]*`;
+const GLOSSARY_HEAD_RE = new RegExp(
+  String.raw`(?:^|(?<=\s)|(?<=[♀M]))(?:[LS]\s+)?(${GLOSSARY_AR})(${GLOSSARY_TR})`,
+  "gu",
+);
 
 export type ShwayyAnswer = {
   speaker: string;
@@ -62,6 +69,12 @@ export type ShwayySection = {
 export type ShwayyEnglishHit = {
   speaker: string;
   translation: string;
+};
+
+export type ShwayyGlossaryEntry = {
+  arabic: string;
+  transliteration: string;
+  gloss: string;
 };
 
 function escapeRegExp(value: string): string {
@@ -92,6 +105,138 @@ export function canonicalSpeakerEn(name: string): string {
 function isComplete(section: ShwayySection): boolean {
   const last = section.answers.at(-1);
   return section.answers.length >= 10 && Boolean(last?.arabic.trim());
+}
+
+function parenDepthAt(line: string, index: number): number {
+  let depth = 0;
+  for (let i = 0; i < index; i += 1) {
+    const ch = line[i];
+    if (ch === "(") depth += 1;
+    else if (ch === ")") depth = Math.max(0, depth - 1);
+  }
+  return depth;
+}
+
+function stripLeadingParens(rest: string): string {
+  let next = rest.trim();
+  while (next.startsWith("(")) {
+    let depth = 0;
+    let cut = -1;
+    for (let j = 0; j < next.length; j += 1) {
+      const ch = next[j];
+      if (ch === "(") depth += 1;
+      else if (ch === ")") {
+        depth -= 1;
+        if (depth === 0) {
+          cut = j + 1;
+          break;
+        }
+      }
+    }
+    if (cut < 0) break;
+    next = next.slice(cut).trim();
+  }
+  return next.replace(/^\/\s*[LS]\b/, "").trim();
+}
+
+function isGlossaryJunkLine(line: string): boolean {
+  const trimmed = line.trim();
+  if (!trimmed) return true;
+  if (FOOTER_RE.test(trimmed) || JUNK_LINE_RE.test(trimmed)) return true;
+  if (trimmed.includes("©")) return true;
+  if (trimmed.startsWith("")) return true;
+  return false;
+}
+
+function glossScore(gloss: string): [number, number] {
+  const truncated = gloss.startsWith("(pl") ? 0 : 1;
+  return [truncated, gloss.length];
+}
+
+/** Parse per-section vocab callouts from layout `pdftotext` of the English body. */
+export function parseShwayyGlossary(raw: string): ShwayyGlossaryEntry[] {
+  const text = stripBidi(raw);
+  const byArabic = new Map<string, ShwayyGlossaryEntry>();
+
+  for (const rawLine of text.split(/\r?\n/)) {
+    if (isGlossaryJunkLine(rawLine)) continue;
+    const line = rawLine.trim();
+    const heads: RegExpExecArray[] = [];
+    GLOSSARY_HEAD_RE.lastIndex = 0;
+    let match: RegExpExecArray | null;
+    while ((match = GLOSSARY_HEAD_RE.exec(line)) !== null) {
+      if (parenDepthAt(line, match.index) > 0) continue;
+      heads.push(match);
+    }
+    for (let i = 0; i < heads.length; i += 1) {
+      const head = heads[i];
+      if (!head) continue;
+      const arabic = head[1]?.trim() ?? "";
+      const transliteration = head[2]?.trim() ?? "";
+      if (!arabic || !transliteration) continue;
+      const end = heads[i + 1]?.index ?? line.length;
+      let gloss = stripLeadingParens(line.slice(head.index + head[0].length, end));
+      gloss = gloss.replace(/\s{2,}.*/, "").trim();
+      if (gloss.length < 2 || !/[A-Za-z]/.test(gloss)) continue;
+      const entry = { arabic, transliteration, gloss };
+      const prev = byArabic.get(arabic);
+      if (
+        !prev ||
+        glossScore(gloss)[0] > glossScore(prev.gloss)[0] ||
+        (glossScore(gloss)[0] === glossScore(prev.gloss)[0] &&
+          glossScore(gloss)[1] > glossScore(prev.gloss)[1])
+      ) {
+        byArabic.set(arabic, entry);
+      }
+    }
+  }
+
+  return [...byArabic.values()];
+}
+
+export function buildShwayyGlossaryBundle(
+  glossaryRaw: string,
+): ImportBundle {
+  const entries = parseShwayyGlossary(glossaryRaw);
+  const items: ImportItem[] = entries.map((entry) => ({
+    type: "vocabulary",
+    arabic: entry.arabic,
+    transliteration: entry.transliteration,
+    glosses: [{ text: entry.gloss, lang: "en" }],
+    source: SHWAYY_GLOSSARY_SOURCE,
+    tags: ["shwayy", "glossary"],
+    notes: "From Shwayy section vocab callouts. Review before commit.",
+  }));
+
+  return {
+    version: IMPORT_BUNDLE_VERSION,
+    source: {
+      title: "Shwayy An Haali glossary",
+      notes:
+        "Lingualism per-section vocab. Personal copy. Do not commit this JSON. Review on /import; skip noisy particles.",
+    },
+    items,
+  };
+}
+
+export function assertShwayyGlossaryBundle(bundle: ImportBundle): void {
+  const parsed = parseImportBundle(JSON.stringify(bundle));
+  if (!parsed.ok) {
+    throw new Error(parsed.error);
+  }
+  if (parsed.bundle.items.length < 50) {
+    throw new Error(
+      `Expected at least 50 glossary items, got ${parsed.bundle.items.length}.`,
+    );
+  }
+  for (const item of parsed.bundle.items) {
+    if (item.type !== "vocabulary") {
+      throw new Error(`Expected vocabulary item, got ${item.type}.`);
+    }
+    if (!item.arabic?.trim()) {
+      throw new Error("Glossary item missing arabic.");
+    }
+  }
 }
 
 export function parseShwayyAppendix(raw: string): ShwayySection[] {

@@ -6,8 +6,15 @@ import {
   type ImportItem,
   type ImportItemType,
 } from "./bundle";
+import { planVocabEnrich } from "./enrich";
+import { mapImportItem } from "@/lib/corpus/map-bundle";
+import type { ExistingMatch } from "./match";
 
-export type PreviewMatchStatus = "new" | "exact_duplicate" | "invalid";
+export type PreviewMatchStatus =
+  | "new"
+  | "exact_duplicate"
+  | "enrichable"
+  | "invalid";
 
 export type PreviewRow = {
   index: number;
@@ -19,12 +26,13 @@ export type PreviewRow = {
   existingId?: string;
   existingHref?: string;
   type?: ImportItemType;
+  enrichFields?: string[];
 };
 
 export function buildPreviewRow(
   index: number,
   item: ImportItem,
-  existingId: string | null,
+  existing: ExistingMatch | null,
   stored?: ImportDecision,
 ): PreviewRow {
   const assessment = assessImportItem(item);
@@ -39,15 +47,30 @@ export function buildPreviewRow(
     };
   }
 
-  if (existingId) {
+  if (existing) {
+    const enrichFields = enrichableFields(item, existing);
+    if (enrichFields && enrichFields.length > 0) {
+      return {
+        index,
+        item,
+        matchStatus: "enrichable",
+        defaultDecision: "keep",
+        decision: stored ?? "keep",
+        existingId: existing.id,
+        existingHref: hrefForEntity(assessment.type, existing.id),
+        type: assessment.type,
+        enrichFields,
+      };
+    }
+
     return {
       index,
       item,
       matchStatus: "exact_duplicate",
       defaultDecision: "skip",
       decision: stored ?? "skip",
-      existingId,
-      existingHref: hrefForEntity(assessment.type, existingId),
+      existingId: existing.id,
+      existingHref: hrefForEntity(assessment.type, existing.id),
       type: assessment.type,
     };
   }
@@ -60,6 +83,20 @@ export function buildPreviewRow(
     decision: stored ?? "keep",
     type: assessment.type,
   };
+}
+
+function enrichableFields(
+  item: ImportItem,
+  existing: ExistingMatch,
+): string[] | null {
+  if (!existing.vocabulary || item.type !== "vocabulary") {
+    return null;
+  }
+  const mapped = mapImportItem(item);
+  if ("error" in mapped || mapped.type !== "vocabulary") {
+    return null;
+  }
+  return planVocabEnrich(existing.vocabulary, mapped.input).filledFields;
 }
 
 export function resolveDecision(

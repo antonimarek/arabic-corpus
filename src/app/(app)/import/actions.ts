@@ -5,6 +5,7 @@ import { redirect } from "next/navigation";
 
 import { mapImportItem } from "@/lib/corpus/map-bundle";
 import {
+  enrichVocabularyRecord,
   isWriteErr,
   writeExample,
   writeStructure,
@@ -202,15 +203,18 @@ export async function commitImportRun(
   const existing = await findExistingMatches(supabase, stamped.items);
   const counts: ImportRunCounts = {
     inserted: 0,
+    updated: 0,
     skipped: 0,
     failed: 0,
     created: [],
+    updatedItems: [],
     failures: [],
   };
 
   for (let index = 0; index < stamped.items.length; index += 1) {
     const item = stamped.items[index];
-    const row = buildPreviewRow(index, item, existing[index], stored[String(index)]);
+    const match = existing[index];
+    const row = buildPreviewRow(index, item, match, stored[String(index)]);
     if (row.decision === "skip") {
       counts.skipped += 1;
       continue;
@@ -220,6 +224,37 @@ export async function commitImportRun(
     if ("error" in mapped) {
       counts.failed += 1;
       counts.failures.push({ index, error: mapped.error });
+      continue;
+    }
+
+    if (match?.vocabulary && mapped.type === "vocabulary") {
+      const result = await enrichVocabularyRecord(
+        supabase,
+        userId,
+        match.vocabulary,
+        mapped.input,
+      );
+      if (isWriteErr(result)) {
+        counts.failed += 1;
+        counts.failures.push({ index, error: result.error });
+        continue;
+      }
+      if (!result.enriched) {
+        counts.skipped += 1;
+        continue;
+      }
+      counts.updated += 1;
+      counts.updatedItems.push({
+        type: mapped.type,
+        id: result.id,
+        label: itemLabel(item),
+      });
+      continue;
+    }
+
+    if (match) {
+      // Non-vocab exact match with keep: still skip insert to avoid duplicates.
+      counts.skipped += 1;
       continue;
     }
 

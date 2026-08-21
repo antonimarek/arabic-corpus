@@ -31,7 +31,7 @@ export default async function ImportPage() {
         <ol className="list-decimal space-y-1 pl-5 text-sm text-[var(--ink-muted)]">
           <li>Copy a prompt and attach your notes</li>
           <li>Set source and value, then paste or upload the JSON</li>
-          <li>Keep or skip rows, then commit</li>
+          <li>Keep, skip, or auto-update rows that fill missing fields, then commit</li>
         </ol>
       </header>
 

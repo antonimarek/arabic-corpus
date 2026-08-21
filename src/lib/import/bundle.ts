@@ -62,9 +62,11 @@ export type ImportRunStatus = "uploaded" | "committed" | "failed";
 
 export type ImportRunCounts = {
   inserted: number;
+  updated: number;
   skipped: number;
   failed: number;
   created: Array<{ type: ImportItemType; id: string; label: string }>;
+  updatedItems: Array<{ type: ImportItemType; id: string; label: string }>;
   failures: Array<{ index: number; error: string }>;
 };
 

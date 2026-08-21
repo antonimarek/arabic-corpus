@@ -5,6 +5,10 @@ import {
   existingWordError,
   type FormSlot,
 } from "@/lib/citation";
+import {
+  planVocabEnrich,
+  type ExistingVocabularyState,
+} from "@/lib/import/enrich";
 import { phraseSearchKey } from "@/lib/lookup-phrase";
 import { syncTags } from "@/lib/tags";
 import type { Database } from "@/types/database";
@@ -561,6 +565,99 @@ export async function writeText(
   }
 
   return { id: data.id };
+}
+
+export type EnrichResult =
+  | { id: string; enriched: boolean }
+  | WriteErr;
+
+/**
+ * Fill absent fields on an existing vocabulary row from an import.
+ * Does not overwrite non-empty scalars or citation forms.
+ */
+export async function enrichVocabularyRecord(
+  supabase: CorpusClient,
+  ownerId: string,
+  existing: ExistingVocabularyState,
+  input: VocabularyWriteInput,
+): Promise<EnrichResult> {
+  const plan = planVocabEnrich(existing, input);
+  if (!plan.hasChanges) {
+    return { id: existing.id, enriched: false };
+  }
+
+  const { patch } = plan;
+  const updates: {
+    transliteration?: string;
+    part_of_speech?: string;
+    notes?: string;
+    root?: string;
+  } = {};
+  if (patch.transliteration !== undefined) {
+    updates.transliteration = patch.transliteration;
+  }
+  if (patch.part_of_speech !== undefined) {
+    updates.part_of_speech = patch.part_of_speech;
+  }
+  if (patch.notes !== undefined) {
+    updates.notes = patch.notes;
+  }
+  if (patch.root !== undefined) {
+    updates.root = patch.root;
+  }
+
+  if (Object.keys(updates).length > 0) {
+    const { error } = await supabase
+      .from("vocabulary")
+      .update(updates)
+      .eq("id", existing.id);
+    if (error) {
+      return { error: error.message };
+    }
+  }
+
+  if (patch.sensesToAdd.length > 0) {
+    const { error: senseError } = await supabase
+      .from("vocabulary_senses")
+      .insert(
+        patch.sensesToAdd.map((sense) => ({
+          vocabulary_id: existing.id,
+          owner_id: ownerId,
+          gloss: sense.gloss,
+          lang: sense.lang,
+        })),
+      );
+    if (senseError) {
+      return { error: senseError.message };
+    }
+  }
+
+  if (patch.tags.length !== existing.tags.length) {
+    const tagResult = await syncTags(
+      supabase,
+      ownerId,
+      { kind: "vocabulary", entityId: existing.id },
+      patch.tags,
+    );
+    if (tagResult.error) {
+      return { error: tagResult.error };
+    }
+  }
+
+  if (patch.pairSlot && patch.pairArabic) {
+    const pairResult = await syncCitationForm(
+      supabase,
+      ownerId,
+      existing.id,
+      patch.pairSlot,
+      patch.pairArabic,
+    );
+    if ("error" in pairResult) {
+      return { error: pairResult.error };
+    }
+  }
+
+  return { id: existing.id, enriched: true };
 }
 
 export async function updateVocabularyRecord(

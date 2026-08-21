@@ -1,7 +1,15 @@
-import { phraseSearchKey } from "@/lib/lookup-phrase";
+import { citationArabic } from "@/lib/citation";
 import type { CorpusClient } from "@/lib/corpus/write";
+import type { ExistingVocabularyState } from "@/lib/import/enrich";
+import { phraseSearchKey } from "@/lib/lookup-phrase";
+import { notNull } from "@/lib/tags";
 
 import { matchArabic, type ImportItem } from "./bundle";
+
+export type ExistingMatch = {
+  id: string;
+  vocabulary?: ExistingVocabularyState;
+};
 
 function addKey(map: Map<string, number[]>, key: string, index: number) {
   const list = map.get(key);
@@ -15,8 +23,8 @@ function addKey(map: Map<string, number[]>, key: string, index: number) {
 export async function findExistingMatches(
   supabase: CorpusClient,
   items: ImportItem[],
-): Promise<(string | null)[]> {
-  const existing = items.map(() => null as string | null);
+): Promise<(ExistingMatch | null)[]> {
+  const existing = items.map(() => null as ExistingMatch | null);
 
   const vocabKeys = new Map<string, number[]>();
   const exampleKeys = new Map<string, number[]>();
@@ -69,9 +77,21 @@ export async function findExistingMatches(
       .in("name", [...structureNames.keys()]);
     for (const row of data ?? []) {
       for (const index of structureNames.get(row.name) ?? []) {
-        existing[index] = row.id;
+        existing[index] = { id: row.id };
       }
     }
+  }
+
+  const vocabMatchIds = [
+    ...new Set(
+      [...vocabKeys.values()]
+        .flat()
+        .map((index) => existing[index]?.id)
+        .filter(notNull),
+    ),
+  ];
+  if (vocabMatchIds.length > 0) {
+    await attachVocabularySnapshots(supabase, existing, vocabMatchIds);
   }
 
   return existing;
@@ -81,7 +101,7 @@ async function fillBySearchArabic(
   supabase: CorpusClient,
   table: "vocabulary" | "examples" | "texts" | "structures",
   keys: Map<string, number[]>,
-  existing: (string | null)[],
+  existing: (ExistingMatch | null)[],
 ) {
   if (keys.size === 0) return;
   const { data } = await supabase
@@ -92,7 +112,52 @@ async function fillBySearchArabic(
     const key = row.search_arabic;
     if (!key) continue;
     for (const index of keys.get(key) ?? []) {
-      existing[index] = row.id;
+      existing[index] = { id: row.id };
+    }
+  }
+}
+
+async function attachVocabularySnapshots(
+  supabase: CorpusClient,
+  existing: (ExistingMatch | null)[],
+  ids: string[],
+) {
+  const { data } = await supabase
+    .from("vocabulary")
+    .select(
+      "id, arabic, transliteration, part_of_speech, notes, root, vocabulary_senses(gloss, lang), vocabulary_forms(arabic, slot), vocabulary_tags(tags(name))",
+    )
+    .in("id", ids);
+
+  const byId = new Map(
+    (data ?? []).map((row) => {
+      const forms = row.vocabulary_forms ?? [];
+      const snapshot: ExistingVocabularyState = {
+        id: row.id,
+        arabic: row.arabic,
+        transliteration: row.transliteration,
+        part_of_speech: row.part_of_speech,
+        notes: row.notes,
+        root: row.root,
+        present: citationArabic(forms, "present_3ms"),
+        plural: citationArabic(forms, "plural"),
+        glosses: (row.vocabulary_senses ?? []).map((sense) => ({
+          gloss: sense.gloss,
+          lang: sense.lang || "en",
+        })),
+        tags: (row.vocabulary_tags ?? [])
+          .map((link) => link.tags?.name)
+          .filter(notNull),
+      };
+      return [row.id, snapshot] as const;
+    }),
+  );
+
+  for (const match of existing) {
+    if (!match) continue;
+    const snapshot = byId.get(match.id);
+    if (snapshot) {
+      match.vocabulary = snapshot;
     }
   }
 }

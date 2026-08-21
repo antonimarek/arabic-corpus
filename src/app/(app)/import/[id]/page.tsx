@@ -73,13 +73,15 @@ export default async function ImportRunPage({ params }: Props) {
       {committed && counts ? (
         <div className="flex flex-col gap-3 rounded-md border border-[var(--line)] p-4">
           <p className="text-sm text-[var(--ink)]">
-            Inserted {counts.inserted} · skipped {counts.skipped} · failed{" "}
-            {counts.failed}
+            Inserted {counts.inserted} · updated {counts.updated} · skipped{" "}
+            {counts.skipped} · failed {counts.failed}
           </p>
-          {counts.created.length > 0 ? (
+          {counts.created.length > 0 || counts.updatedItems.length > 0 ? (
             <ul className="flex flex-col gap-1">
-              {counts.created.slice(0, 8).map((created) => (
-                <li key={created.id}>
+              {[...counts.created, ...counts.updatedItems]
+                .slice(0, 8)
+                .map((created, i) => (
+                <li key={`${created.type}-${created.id}-${i}`}>
                   <Link
                     href={hrefForEntity(created.type, created.id)}
                     className="text-sm text-[var(--accent)] hover:underline"
@@ -119,9 +121,11 @@ export default async function ImportRunPage({ params }: Props) {
                     {row.item.type}
                     {row.matchStatus === "exact_duplicate"
                       ? " · already in corpus"
-                      : row.matchStatus === "invalid"
-                        ? " · invalid"
-                        : ""}
+                      : row.matchStatus === "enrichable"
+                        ? " · update existing"
+                        : row.matchStatus === "invalid"
+                          ? " · invalid"
+                          : ""}
                   </p>
                   <p
                     className="font-arabic text-lg text-[var(--ink)]"
@@ -132,6 +136,11 @@ export default async function ImportRunPage({ params }: Props) {
                   </p>
                   {subtitle ? (
                     <p className="text-sm text-[var(--ink-muted)]">{subtitle}</p>
+                  ) : null}
+                  {row.enrichFields && row.enrichFields.length > 0 ? (
+                    <p className="text-sm text-[var(--ink-muted)]">
+                      Will fill: {row.enrichFields.join(", ")}
+                    </p>
                   ) : null}
                   {warning ? (
                     <p className="text-sm text-[var(--ink-muted)]">{warning}</p>

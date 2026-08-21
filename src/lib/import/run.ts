@@ -23,5 +23,10 @@ export function readCounts(run: ImportRun): ImportRunCounts | null {
   }
   const raw = run.counts as Record<string, unknown>;
   if (typeof raw.inserted !== "number") return null;
-  return raw as ImportRunCounts;
+  const counts = raw as ImportRunCounts;
+  return {
+    ...counts,
+    updated: typeof counts.updated === "number" ? counts.updated : 0,
+    updatedItems: Array.isArray(counts.updatedItems) ? counts.updatedItems : [],
+  };
 }

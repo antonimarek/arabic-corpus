@@ -189,14 +189,21 @@ export async function runPatternDiscover(opts: {
 
   const samples = toWrite.slice(0, 12).map((draft) => {
     const glossById = new Map(vocab.map((v) => [v.id, v]));
+    const pairs =
+      draft.payload.pairs.length > 0
+        ? draft.payload.pairs.map((pair) => {
+            const base = glossById.get(pair.base_id);
+            const derived = glossById.get(pair.derived_id);
+            return `${base?.arabic ?? "?"} → ${derived?.arabic ?? "?"}`;
+          })
+        : draft.payload.member_ids.slice(0, 8).map((id) => {
+            const row = glossById.get(id);
+            return row?.arabic ?? "?";
+          });
     return {
       fingerprint: draft.fingerprint.slice(0, 10),
       confidence: draft.confidence,
-      pairs: draft.payload.pairs.map((pair) => {
-        const base = glossById.get(pair.base_id);
-        const derived = glossById.get(pair.derived_id);
-        return `${base?.arabic ?? "?"} → ${derived?.arabic ?? "?"}`;
-      }),
+      pairs,
       reasoning: draft.reasoning,
     };
   });

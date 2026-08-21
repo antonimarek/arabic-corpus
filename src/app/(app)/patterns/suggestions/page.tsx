@@ -65,7 +65,9 @@ export default async function PatternSuggestionsPage() {
                   <span className="text-xs text-[var(--ink-muted)]">
                     {[
                       row.arabic_sketch,
-                      `${payload.pairs.length} pair${payload.pairs.length === 1 ? "" : "s"}`,
+                      payload.pairs.length > 0
+                        ? `${payload.pairs.length} pair${payload.pairs.length === 1 ? "" : "s"}`
+                        : `${payload.member_ids.length} word${payload.member_ids.length === 1 ? "" : "s"}`,
                       row.reasoning,
                     ]
                       .filter(Boolean)

@@ -97,33 +97,68 @@ export default async function PatternSuggestionDetailPage({
 
       <section className="flex flex-col gap-4">
         <h2 className="text-sm text-[var(--ink-muted)]">Examples</h2>
-        <ul className="flex flex-col gap-4">
-          {payload.pairs.map((pair) => {
-            const base = byId.get(pair.base_id);
-            const derived = byId.get(pair.derived_id);
-            return (
-              <li
-                key={`${pair.base_id}-${pair.derived_id}`}
-                className="flex flex-col gap-1 border-b border-[var(--line)] pb-4"
-              >
-                <p
-                  className="font-arabic text-xl text-[var(--ink)]"
-                  lang="ar"
-                  dir="rtl"
+        {payload.pairs.length > 0 ? (
+          <ul className="flex flex-col gap-4">
+            {payload.pairs.map((pair) => {
+              const base = byId.get(pair.base_id);
+              const derived = byId.get(pair.derived_id);
+              return (
+                <li
+                  key={`${pair.base_id}-${pair.derived_id}`}
+                  className="flex flex-col gap-1 border-b border-[var(--line)] pb-4"
                 >
-                  {base?.arabic ?? "?"}
-                  <span className="mx-2 text-[var(--ink-muted)]" dir="ltr">
-                    →
-                  </span>
-                  {derived?.arabic ?? "?"}
-                </p>
-                <p className="text-sm text-[var(--ink-muted)]">
-                  {[base?.gloss, derived?.gloss].filter(Boolean).join(" → ")}
-                </p>
-              </li>
-            );
-          })}
-        </ul>
+                  <p
+                    className="font-arabic text-xl text-[var(--ink)]"
+                    lang="ar"
+                    dir="rtl"
+                  >
+                    {base?.arabic ?? "?"}
+                    <span className="mx-2 text-[var(--ink-muted)]" dir="ltr">
+                      →
+                    </span>
+                    {derived?.arabic ?? "?"}
+                  </p>
+                  <p className="text-sm text-[var(--ink-muted)]">
+                    {[base?.gloss, derived?.gloss].filter(Boolean).join(" → ")}
+                  </p>
+                </li>
+              );
+            })}
+          </ul>
+        ) : (
+          <>
+            <ul className="flex flex-col gap-3">
+              {memberIds
+                .map((memberId) => byId.get(memberId))
+                .filter(notNull)
+                .map((row) => (
+                  <li
+                    key={row.id}
+                    className="flex flex-col gap-1 border-b border-[var(--line)] pb-3"
+                  >
+                    <p
+                      className="font-arabic text-xl text-[var(--ink)]"
+                      lang="ar"
+                      dir="rtl"
+                    >
+                      {row.arabic}
+                    </p>
+                    {row.gloss ? (
+                      <p className="text-sm text-[var(--ink-muted)]">
+                        {row.gloss}
+                      </p>
+                    ) : null}
+                  </li>
+                ))}
+            </ul>
+            {memberIds.length > 0 ? (
+              <p className="text-sm text-[var(--ink-muted)]">
+                No Form I bases in vocabulary yet. Confirm links these as
+                derived examples of the move.
+              </p>
+            ) : null}
+          </>
+        )}
       </section>
 
       <section className="flex flex-col gap-2">
@@ -157,7 +192,7 @@ export default async function PatternSuggestionDetailPage({
         </section>
       )}
 
-      {memberIds.length > 0 ? (
+      {payload.pairs.length > 0 && memberIds.length > 0 ? (
         <section className="flex flex-col gap-2">
           <h2 className="text-sm text-[var(--ink-muted)]">Related words</h2>
           <ul className="flex flex-wrap gap-2">

@@ -53,8 +53,10 @@ export async function confirmPatternSuggestion(id: string) {
   }
 
   const payload = parseSuggestionPayload(suggestion.payload);
-  if (payload.pairs.length === 0) {
-    throw new Error("Suggestion has no example pairs.");
+  const hasPairs = payload.pairs.length > 0;
+  const hasMembers = payload.member_ids.length > 0;
+  if (!hasPairs && !hasMembers) {
+    throw new Error("Suggestion has no example words.");
   }
 
   const created = await writePattern(supabase, userId, {
@@ -70,24 +72,43 @@ export async function confirmPatternSuggestion(id: string) {
     throw new Error(created.error);
   }
 
-  for (const pair of payload.pairs) {
-    const baseResult = await linkPatternVocabulary(
-      supabase,
-      created.id,
-      pair.base_id,
-      "base",
-    );
-    if (baseResult.error) {
-      throw new Error(baseResult.error);
+  const linkedVocabIds = new Set<string>();
+
+  if (hasPairs) {
+    for (const pair of payload.pairs) {
+      const baseResult = await linkPatternVocabulary(
+        supabase,
+        created.id,
+        pair.base_id,
+        "base",
+      );
+      if (baseResult.error) {
+        throw new Error(baseResult.error);
+      }
+      const derivedResult = await linkPatternVocabulary(
+        supabase,
+        created.id,
+        pair.derived_id,
+        "derived",
+      );
+      if (derivedResult.error) {
+        throw new Error(derivedResult.error);
+      }
+      linkedVocabIds.add(pair.base_id);
+      linkedVocabIds.add(pair.derived_id);
     }
-    const derivedResult = await linkPatternVocabulary(
-      supabase,
-      created.id,
-      pair.derived_id,
-      "derived",
-    );
-    if (derivedResult.error) {
-      throw new Error(derivedResult.error);
+  } else {
+    for (const vocabularyId of payload.member_ids) {
+      const result = await linkPatternVocabulary(
+        supabase,
+        created.id,
+        vocabularyId,
+        "derived",
+      );
+      if (result.error) {
+        throw new Error(result.error);
+      }
+      linkedVocabIds.add(vocabularyId);
     }
   }
 
@@ -104,9 +125,8 @@ export async function confirmPatternSuggestion(id: string) {
   }
 
   revalidateSuggestion(id, created.id);
-  for (const pair of payload.pairs) {
-    revalidatePath(`/vocabulary/${pair.base_id}`);
-    revalidatePath(`/vocabulary/${pair.derived_id}`);
+  for (const vocabularyId of linkedVocabIds) {
+    revalidatePath(`/vocabulary/${vocabularyId}`);
   }
   redirect(`/patterns/${created.id}`);
 }

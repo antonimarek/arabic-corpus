@@ -22,6 +22,8 @@ export type DoublingSignals = {
   same_skeleton: boolean;
   compatible_shapes: boolean;
   same_root: boolean;
+  /** Form II-like words with no Form I base in vocab (orphan cluster). */
+  orphan_count?: number;
 };
 
 export type Confidence = "low" | "medium" | "high";
@@ -97,6 +99,25 @@ function reasonFrom(signals: DoublingSignals): string {
   return bits.join("; ") || "weak signals";
 }
 
+/** True when word has shadda on the middle radical (Form II surface). */
+function hasMiddleShadda(row: Analyzed): boolean {
+  const len = row.letters.length;
+  if (len < 3 || len > 4) return false;
+  if (row.shaddaIndexes.length === 0) return false;
+  const middle = Math.floor((len - 1) / 2);
+  return (
+    row.shaddaIndexes.includes(middle) ||
+    (len === 3 && row.shaddaIndexes.includes(1))
+  );
+}
+
+/** Stricter Form II surface for unpaired cluster: triliteral, one middle shadda. */
+function isOrphanFormIISurface(row: Analyzed): boolean {
+  if (row.letters.length !== 3) return false;
+  if (row.shaddaIndexes.length !== 1) return false;
+  return row.shaddaIndexes[0] === 1;
+}
+
 /**
  * True when derived looks like base with shadda on the middle radical.
  * Triliteral: shadda on index 1. Quad: shadda on index 1 or 2 (prefer middle).
@@ -111,14 +132,9 @@ function isMiddleDoublingPair(
   const baseHas = base.shaddaIndexes.length > 0;
   const derivedHas = derived.shaddaIndexes.length > 0;
   if (baseHas || !derivedHas) return null;
+  if (!hasMiddleShadda(derived)) return null;
 
   const len = derived.letters.length;
-  const middle = Math.floor((len - 1) / 2);
-  const middleDoubled = derived.shaddaIndexes.includes(middle);
-  if (!middleDoubled && !(len === 3 && derived.shaddaIndexes.includes(1))) {
-    return null;
-  }
-
   const sameRoot = Boolean(
     base.root && derived.root && rootsMatch(base.root, derived.root),
   );
@@ -282,10 +298,72 @@ export function draftsFromDoublingClusters(
   });
 }
 
+const MIN_ORPHAN_CLUSTER = 2;
+
+/**
+ * Form II-like words with middle shadda and no matching Form I base in vocab.
+ * One medium-confidence draft so the learner can confirm the move without pairs.
+ */
+export function orphanMiddleDoublingDraft(
+  vocab: DiscoverVocab[],
+  pairedIds: Set<string>,
+): SuggestionDraft | null {
+  const analyzed = vocab
+    .map(analyze)
+    .filter((row): row is Analyzed => row != null);
+
+  const orphans = analyzed.filter(
+    (row) => isOrphanFormIISurface(row) && !pairedIds.has(row.id),
+  );
+  if (orphans.length < MIN_ORPHAN_CLUSTER) return null;
+
+  const memberIds = orphans.map((row) => row.id).sort();
+  const signals: DoublingSignals & { pair_count: number } = {
+    middle_doubled: true,
+    same_skeleton: false,
+    compatible_shapes: true,
+    same_root: false,
+    pair_count: 0,
+    orphan_count: orphans.length,
+  };
+
+  return {
+    detector_id: MIDDLE_DOUBLING_DETECTOR_ID,
+    detector_version: MIDDLE_DOUBLING_DETECTOR_VERSION,
+    name: "Double middle",
+    arabic_sketch: "فَعَل → فَعَّل",
+    form_label: "II",
+    cue: "Shadda on the middle consonant",
+    meaning_shift:
+      "Often causes, intensifies, or changes who the action affects.",
+    confidence: "medium",
+    signals,
+    reasoning:
+      "Middle consonant doubled (shadda); no Form I base in vocabulary yet",
+    fingerprint: fingerprintForMembers(
+      MIDDLE_DOUBLING_DETECTOR_ID,
+      MIDDLE_DOUBLING_DETECTOR_VERSION,
+      "middle_doubling_orphans",
+      memberIds,
+    ),
+    source: "deterministic",
+    payload: {
+      pairs: [],
+      member_ids: memberIds,
+    },
+  };
+}
+
 export function discoverMiddleDoublingDrafts(
   vocab: DiscoverVocab[],
 ): SuggestionDraft[] {
   const pairs = findMiddleDoublingPairs(vocab);
   const clusters = clusterDoublingPairs(pairs);
-  return draftsFromDoublingClusters(clusters);
+  const drafts = draftsFromDoublingClusters(clusters);
+  const pairedIds = new Set(
+    pairs.flatMap((pair) => [pair.base.id, pair.derived.id]),
+  );
+  const orphan = orphanMiddleDoublingDraft(vocab, pairedIds);
+  if (orphan) drafts.push(orphan);
+  return drafts;
 }

@@ -1,5 +1,6 @@
 import {
   assessImportItem,
+  normalizeImportItem,
   vocabGlosses,
   type ImportItem,
 } from "@/lib/import/bundle";
@@ -20,33 +21,34 @@ export type MappedWrite =
   | { type: "text"; input: TextWriteInput };
 
 export function mapImportItem(item: ImportItem): MappedWrite | { error: string } {
-  const assessment = assessImportItem(item);
+  const normalized = normalizeImportItem(item);
+  const assessment = assessImportItem(normalized);
   if (!assessment.ok) {
     return { error: assessment.error };
   }
 
-  const tags = normalizeTagNames(item.tags ?? []);
-  const notes = blankToNull(item.notes);
-  const transliteration = blankToNull(item.transliteration);
-  const translation = blankToNull(item.translation);
+  const tags = normalizeTagNames(normalized.tags ?? []);
+  const notes = blankToNull(normalized.notes);
+  const transliteration = blankToNull(normalized.transliteration);
+  const translation = blankToNull(normalized.translation);
 
   if (assessment.type === "vocabulary") {
-    const slot = citationSlotForPos(item.part_of_speech);
+    const slot = citationSlotForPos(normalized.part_of_speech);
     return {
       type: "vocabulary",
       input: {
-        arabic: item.arabic!.trim(),
+        arabic: normalized.arabic!.trim(),
         transliteration,
-        part_of_speech: blankToNull(item.part_of_speech),
+        part_of_speech: blankToNull(normalized.part_of_speech),
         notes,
-        root: blankToNull(item.root),
+        root: blankToNull(normalized.root),
         pairArabic:
           slot === "plural"
-            ? blankToNull(item.plural)
+            ? blankToNull(normalized.plural)
             : slot === "present_3ms"
-              ? blankToNull(item.present)
+              ? blankToNull(normalized.present)
               : null,
-        senses: vocabGlosses(item).map((gloss) => ({
+        senses: vocabGlosses(normalized).map((gloss) => ({
           gloss: gloss.text,
           lang: gloss.lang || "en",
         })),
@@ -59,7 +61,7 @@ export function mapImportItem(item: ImportItem): MappedWrite | { error: string }
     return {
       type: "example",
       input: {
-        arabic: item.arabic!.trim(),
+        arabic: normalized.arabic!.trim(),
         translation,
         transliteration,
         notes,
@@ -72,11 +74,11 @@ export function mapImportItem(item: ImportItem): MappedWrite | { error: string }
     return {
       type: "structure",
       input: {
-        name: item.name!.trim(),
-        arabic_form: blankToNull(item.arabic_form),
+        name: normalized.name!.trim(),
+        arabic_form: blankToNull(normalized.arabic_form),
         transliteration,
-        meaning: blankToNull(item.meaning),
-        explanation: blankToNull(item.explanation),
+        meaning: blankToNull(normalized.meaning),
+        explanation: blankToNull(normalized.explanation),
         notes,
         tags,
       },
@@ -86,11 +88,11 @@ export function mapImportItem(item: ImportItem): MappedWrite | { error: string }
   return {
     type: "text",
     input: {
-      title: item.title!.trim(),
-      arabic: item.arabic!.trim(),
+      title: normalized.title!.trim(),
+      arabic: normalized.arabic!.trim(),
       translation,
-      source: blankToNull(item.source),
-      occurred_on: blankToNull(item.occurred_on),
+      source: blankToNull(normalized.source),
+      occurred_on: blankToNull(normalized.occurred_on),
       notes,
       tags,
     },

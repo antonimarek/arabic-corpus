@@ -52,6 +52,19 @@ describe("mapImportItem", () => {
     expect(noun.input.pairArabic).toBe("كتب");
   });
 
+  it("splits a combined verb citation before write", () => {
+    const mapped = mapImportItem({
+      type: "vocabulary",
+      arabic: "حرّك - يحرّك",
+      glosses: [{ text: "move", lang: "en" }],
+    });
+    expect("error" in mapped).toBe(false);
+    if ("error" in mapped || mapped.type !== "vocabulary") return;
+    expect(mapped.input.arabic).toBe("حرّك");
+    expect(mapped.input.part_of_speech).toBe("verb");
+    expect(mapped.input.pairArabic).toBe("يحرّك");
+  });
+
   it("maps example columns", () => {
     const mapped = mapImportItem({
       type: "example",

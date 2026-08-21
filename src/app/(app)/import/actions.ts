@@ -18,6 +18,13 @@ import {
   type ImportDecision,
   type ImportRunCounts,
 } from "@/lib/import/bundle";
+import {
+  applyImportProvenance,
+  resolveImportProvenance,
+  parseImportOrigin,
+  parseImportValue,
+  provenanceFromBundle,
+} from "@/lib/import/origin";
 import { findExistingMatches } from "@/lib/import/match";
 import { buildPreviewRow } from "@/lib/import/preview";
 import { readBundle, readDecisions } from "@/lib/import/run";
@@ -57,8 +64,17 @@ export async function createImportRun(
     return { error: parsed.error };
   }
 
-  if (parsed.bundle.source?.title?.trim()) {
-    sourceLabel = parsed.bundle.source.title.trim();
+  const touched = String(formData.get("origin_touched") ?? "") === "1";
+  const { origin, value } = resolveImportProvenance(
+    parsed.bundle,
+    String(formData.get("origin") ?? ""),
+    String(formData.get("value") ?? ""),
+    touched,
+  );
+  const bundle = applyImportProvenance(parsed.bundle, origin, value);
+
+  if (bundle.source?.title?.trim()) {
+    sourceLabel = bundle.source.title.trim();
   }
 
   const { data, error } = await supabase
@@ -66,7 +82,7 @@ export async function createImportRun(
     .insert({
       owner_id: userId,
       source_label: sourceLabel,
-      bundle: asJson(parsed.bundle),
+      bundle: asJson(bundle),
       decisions: asJson({}),
       status: "uploaded",
     })
@@ -122,6 +138,45 @@ export async function setImportRowDecision(
   return {};
 }
 
+export async function setImportProvenance(
+  runId: string,
+  _prev: ImportFormState,
+  formData: FormData,
+): Promise<ImportFormState> {
+  const origin = parseImportOrigin(String(formData.get("origin") ?? ""));
+  const value = parseImportValue(String(formData.get("value") ?? ""));
+  if (!origin || !value) {
+    return { error: "Pick a source and a value." };
+  }
+
+  const { supabase } = await requireUserId();
+  const { data: run, error: loadError } = await supabase
+    .from("import_runs")
+    .select("*")
+    .eq("id", runId)
+    .maybeSingle();
+
+  if (loadError || !run) {
+    return { error: loadError?.message ?? "Import run not found." };
+  }
+  if (run.status !== "uploaded") {
+    return { error: "This run is already committed." };
+  }
+
+  const bundle = applyImportProvenance(readBundle(run), origin, value);
+  const { error } = await supabase
+    .from("import_runs")
+    .update({ bundle: asJson(bundle) })
+    .eq("id", runId);
+
+  if (error) {
+    return { error: error.message };
+  }
+
+  revalidatePath(`/import/${runId}`);
+  return {};
+}
+
 export async function commitImportRun(
   runId: string,
   _prev: ImportFormState,
@@ -142,7 +197,9 @@ export async function commitImportRun(
 
   const bundle = readBundle(run);
   const stored = readDecisions(run);
-  const existing = await findExistingMatches(supabase, bundle.items);
+  const { origin, value } = provenanceFromBundle(bundle);
+  const stamped = applyImportProvenance(bundle, origin, value);
+  const existing = await findExistingMatches(supabase, stamped.items);
   const counts: ImportRunCounts = {
     inserted: 0,
     skipped: 0,
@@ -151,8 +208,8 @@ export async function commitImportRun(
     failures: [],
   };
 
-  for (let index = 0; index < bundle.items.length; index += 1) {
-    const item = bundle.items[index];
+  for (let index = 0; index < stamped.items.length; index += 1) {
+    const item = stamped.items[index];
     const row = buildPreviewRow(index, item, existing[index], stored[String(index)]);
     if (row.decision === "skip") {
       counts.skipped += 1;

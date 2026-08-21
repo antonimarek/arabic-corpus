@@ -214,6 +214,8 @@ export function buildShwayyGlossaryBundle(
       title: "Shwayy An Haali glossary",
       notes:
         "Lingualism per-section vocab. Personal copy. Do not commit this JSON. Review on /import; skip noisy particles.",
+      origin: "book",
+      value: "high",
     },
     items,
   };
@@ -471,6 +473,8 @@ export function buildShwayyBundle(input: {
     source: {
       title: "Shwayy An Haali",
       notes: "Lingualism Appendix C. Personal copy. Do not commit this JSON.",
+      origin: "book",
+      value: "high",
     },
     items,
   };

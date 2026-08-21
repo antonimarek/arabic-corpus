@@ -1,6 +1,7 @@
 import {
   importBundleSchema,
   importDecisionsSchema,
+  normalizeImportBundle,
   type ImportBundle,
   type ImportDecisions,
   type ImportRunCounts,
@@ -8,7 +9,7 @@ import {
 import type { ImportRun } from "@/types/database";
 
 export function readBundle(run: ImportRun): ImportBundle {
-  return importBundleSchema.parse(run.bundle);
+  return normalizeImportBundle(importBundleSchema.parse(run.bundle));
 }
 
 export function readDecisions(run: ImportRun): ImportDecisions {

@@ -1,6 +1,7 @@
 import Link from "next/link";
 
 import { IMPORT_BUNDLE_SCHEMA_TEXT } from "@/lib/import/bundle";
+import { ORIGIN_COPY, ORIGIN_DEFAULT_VALUE } from "@/lib/import/origin";
 import { IMPORT_PROMPTS } from "@/lib/import/prompts";
 import { requireUserId } from "@/lib/require-user";
 
@@ -29,7 +30,7 @@ export default async function ImportPage() {
         </p>
         <ol className="list-decimal space-y-1 pl-5 text-sm text-[var(--ink-muted)]">
           <li>Copy a prompt and attach your notes</li>
-          <li>Paste or upload the JSON</li>
+          <li>Set source and value, then paste or upload the JSON</li>
           <li>Keep or skip rows, then commit</li>
         </ol>
       </header>
@@ -50,6 +51,10 @@ export default async function ImportPage() {
                   <p className="text-sm text-[var(--ink-muted)]">
                     {prompt.summary}
                   </p>
+                  <p className="mt-1 text-xs text-[var(--ink-muted)]">
+                    {ORIGIN_COPY[prompt.origin].label} ·{" "}
+                    {ORIGIN_DEFAULT_VALUE[prompt.origin]}
+                  </p>
                 </div>
                 <CopyPromptButton text={prompt.text} />
               </div>
@@ -68,7 +73,7 @@ export default async function ImportPage() {
 
       <div className="flex flex-col gap-4">
         <h2 className="text-sm font-medium text-[var(--ink-muted)]">
-          2. Paste JSON
+          2. Source, then JSON
         </h2>
         <ImportIntakeForm />
       </div>

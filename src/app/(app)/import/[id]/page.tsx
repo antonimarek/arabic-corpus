@@ -2,10 +2,12 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 
 import {
+  citationWarning,
   hrefForEntity,
   itemLabel,
   itemSubtitle,
 } from "@/lib/import/bundle";
+import { provenanceFromBundle } from "@/lib/import/origin";
 import { findExistingMatches } from "@/lib/import/match";
 import { buildPreviewRow } from "@/lib/import/preview";
 import { requireUserId } from "@/lib/require-user";
@@ -13,6 +15,7 @@ import { requireUserId } from "@/lib/require-user";
 import { readBundle, readCounts, readDecisions } from "@/lib/import/run";
 import { CommitBar } from "../commit-bar";
 import { DecisionToggle } from "../decision-toggle";
+import { ProvenanceBar } from "../provenance-bar";
 
 type Props = {
   params: Promise<{ id: string }>;
@@ -40,6 +43,7 @@ export default async function ImportRunPage({ params }: Props) {
   );
   const keepCount = rows.filter((row) => row.decision === "keep").length;
   const committed = run.status === "committed";
+  const provenance = provenanceFromBundle(bundle);
 
   return (
     <section className="flex flex-col gap-8">
@@ -53,9 +57,18 @@ export default async function ImportRunPage({ params }: Props) {
           {run.source_label || "Import run"}
         </h1>
         <p className="text-sm text-[var(--ink-muted)]">
-          {rows.length} items · {run.status}
+          {rows.length} items · {run.status} · {provenance.origin} ·{" "}
+          {provenance.value}
         </p>
       </header>
+
+      {!committed ? (
+        <ProvenanceBar
+          runId={run.id}
+          origin={provenance.origin}
+          value={provenance.value}
+        />
+      ) : null}
 
       {committed && counts ? (
         <div className="flex flex-col gap-3 rounded-md border border-[var(--line)] p-4">
@@ -97,6 +110,7 @@ export default async function ImportRunPage({ params }: Props) {
       <ol className="flex flex-col divide-y divide-[var(--line)]">
         {rows.map((row) => {
           const subtitle = itemSubtitle(row.item);
+          const warning = citationWarning(row.item);
           return (
             <li key={row.index} className="flex flex-col gap-2 py-4">
               <div className="flex items-start justify-between gap-3">
@@ -118,6 +132,9 @@ export default async function ImportRunPage({ params }: Props) {
                   </p>
                   {subtitle ? (
                     <p className="text-sm text-[var(--ink-muted)]">{subtitle}</p>
+                  ) : null}
+                  {warning ? (
+                    <p className="text-sm text-[var(--ink-muted)]">{warning}</p>
                   ) : null}
                   {row.error ? (
                     <p className="text-sm text-[var(--danger)]">{row.error}</p>

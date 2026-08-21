@@ -1,3 +1,6 @@
+import { posKind } from "@/lib/citation";
+import { IMPORT_ORIGINS, IMPORT_VALUES } from "@/lib/import/origin";
+import { normalizeArabic } from "@/lib/import/normalize";
 import { z } from "zod";
 
 export const IMPORT_BUNDLE_VERSION = 1;
@@ -21,6 +24,8 @@ export type ImportGloss = {
 export type ImportBundleSource = {
   title?: string;
   notes?: string;
+  origin?: string;
+  value?: string;
 };
 
 export type ImportItem = {
@@ -95,6 +100,8 @@ export const importBundleSchema: z.ZodType<ImportBundle> = z.object({
     .object({
       title: z.string().optional(),
       notes: z.string().optional(),
+      origin: z.enum(IMPORT_ORIGINS).optional(),
+      value: z.enum(IMPORT_VALUES).optional(),
     })
     .optional(),
   items: z.array(itemSchema).min(1).max(IMPORT_BUNDLE_MAX_ITEMS),
@@ -151,12 +158,109 @@ export function parseImportBundle(raw: string): ParseImportBundleResult {
     };
   }
 
-  return { ok: true, bundle: result.data };
+  return { ok: true, bundle: normalizeImportBundle(result.data) };
 }
 
 export type ItemAssessment =
   | { ok: true; type: ImportItemType }
   | { ok: false; error: string };
+
+const ARABIC_LETTER_RE = /[\u0600-\u06FF]/;
+const CITATION_PAIR_SPLIT_RE = /\s*[-–—/|]\s*/u;
+
+export function splitArabicCitationPair(
+  arabic: string,
+): { head: string; pair: string } | null {
+  const parts = arabic
+    .trim()
+    .split(CITATION_PAIR_SPLIT_RE)
+    .map((part) => part.trim())
+    .filter(Boolean);
+  if (parts.length !== 2) return null;
+  const head = parts[0];
+  const pair = parts[1];
+  if (!head || !pair) return null;
+  if (head.includes(" ") || pair.includes(" ")) return null;
+  if (!ARABIC_LETTER_RE.test(head) || !ARABIC_LETTER_RE.test(pair)) return null;
+  if (head === pair) return null;
+  return { head, pair };
+}
+
+function looksLikePresentPair(head: string, pair: string): boolean {
+  const headKey = normalizeArabic(head) ?? "";
+  const pairKey = normalizeArabic(pair) ?? "";
+  if (!headKey || !pairKey) return false;
+  for (const prefix of ["ي", "ب"]) {
+    if (pairKey.startsWith(prefix) && pairKey.slice(prefix.length) === headKey) {
+      return true;
+    }
+  }
+  return false;
+}
+
+function explicitPosKind(item: ImportItem): ReturnType<typeof posKind> | null {
+  const raw = item.part_of_speech?.trim();
+  if (!raw) return null;
+  return posKind(raw);
+}
+
+export function vocabPairArabic(item: ImportItem): string | null {
+  const kind = posKind(item.part_of_speech);
+  if (kind === "verb") return item.present?.trim() || null;
+  if (kind === "noun") return item.plural?.trim() || null;
+  return item.present?.trim() || item.plural?.trim() || null;
+}
+
+export function citationWarning(item: ImportItem): string | null {
+  if (item.type !== "vocabulary") return null;
+  const kind = posKind(item.part_of_speech);
+  if (kind === "verb" && !item.present?.trim()) {
+    return "Missing present (he).";
+  }
+  if (kind === "noun" && !item.plural?.trim()) {
+    return "Missing plural.";
+  }
+  return null;
+}
+
+export function normalizeImportItem(item: ImportItem): ImportItem {
+  if (item.type !== "vocabulary") return item;
+
+  const next: ImportItem = { ...item };
+  const split = next.arabic ? splitArabicCitationPair(next.arabic) : null;
+  const kind = explicitPosKind(next);
+
+  if (split && kind !== "other") {
+    next.arabic = split.head;
+    if (kind === "verb" || next.present?.trim()) {
+      if (!next.present?.trim()) next.present = split.pair;
+      if (!next.part_of_speech?.trim()) next.part_of_speech = "verb";
+    } else if (kind === "noun" || next.plural?.trim()) {
+      if (!next.plural?.trim()) next.plural = split.pair;
+      if (!next.part_of_speech?.trim()) next.part_of_speech = "noun";
+    } else if (looksLikePresentPair(split.head, split.pair)) {
+      if (!next.present?.trim()) next.present = split.pair;
+      next.part_of_speech = "verb";
+    } else {
+      if (!next.plural?.trim()) next.plural = split.pair;
+      next.part_of_speech = "noun";
+    }
+  }
+
+  if (!next.part_of_speech?.trim()) {
+    if (next.present?.trim()) next.part_of_speech = "verb";
+    else if (next.plural?.trim()) next.part_of_speech = "noun";
+  }
+
+  return next;
+}
+
+export function normalizeImportBundle(bundle: ImportBundle): ImportBundle {
+  return {
+    ...bundle,
+    items: bundle.items.map(normalizeImportItem),
+  };
+}
 
 export function vocabGlosses(item: ImportItem): ImportGloss[] {
   const fromArray = (item.glosses ?? [])
@@ -225,7 +329,9 @@ export function matchArabic(item: ImportItem): string | null {
 
 export function itemLabel(item: ImportItem): string {
   if (item.type === "vocabulary") {
-    return item.arabic?.trim() || "vocabulary";
+    const head = item.arabic?.trim() || "vocabulary";
+    const pair = vocabPairArabic(item);
+    return pair ? `${head} - ${pair}` : head;
   }
   if (item.type === "example") {
     return item.arabic?.trim() || "example";
@@ -264,7 +370,7 @@ export function hrefForEntity(type: ImportItemType, id: string): string {
 
 export const IMPORT_BUNDLE_SCHEMA_TEXT = `{
   "version": ${IMPORT_BUNDLE_VERSION},
-  "source": { "title": "optional", "notes": "optional" },
+  "source": { "title": "optional", "notes": "optional", "origin": "lesson | native | book | generated", "value": "high | mid | low" },
   "items": [
     {
       "type": "vocabulary | example | structure | text",
@@ -274,10 +380,10 @@ export const IMPORT_BUNDLE_SCHEMA_TEXT = `{
       "notes": "optional",
       "tags": ["optional"],
       "glosses": [{ "text": "required for vocabulary", "lang": "en" }],
-      "part_of_speech": "vocabulary only",
+      "part_of_speech": "verb | noun | other, required for vocabulary",
       "root": "vocabulary only",
-      "present": "verb present (he), vocabulary only",
-      "plural": "noun plural, vocabulary only",
+      "present": "required for verbs: present (he)",
+      "plural": "required for nouns: plural",
       "name": "required for structure",
       "arabic_form": "structure",
       "meaning": "structure",

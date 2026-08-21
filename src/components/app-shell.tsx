@@ -51,12 +51,14 @@ export function AppShell({ children, buildInfo }: AppShellProps) {
     return () => document.removeEventListener("pointerdown", onPointerDown);
   }, []);
 
-  const manualActive =
-    pathname === "/manual" || pathname.startsWith("/manual/");
+  const menuClass =
+    "absolute right-0 z-20 mt-2 min-w-44 rounded-[var(--radius-md)] border border-[var(--line)] bg-[var(--surface-raised)] py-1 shadow-[var(--shadow-soft)]";
+  const menuItemClass =
+    "block px-3 py-3 text-sm text-[var(--ink)] hover:bg-[var(--surface-hover)]";
 
   return (
-    <div className="mx-auto flex min-h-full w-full max-w-3xl flex-col px-4 pb-10 pt-4 sm:px-6 sm:pt-8">
-      <header className="mb-8 flex items-start justify-between gap-4">
+    <div className="mx-auto flex min-h-full w-full max-w-3xl flex-col px-4 pb-10 pt-5 sm:px-6 sm:pt-8">
+      <header className="mb-6 flex items-start justify-between gap-4 sm:mb-8">
         <div className="min-w-0">
           <Link href="/" className="block">
             <span
@@ -66,43 +68,30 @@ export function AppShell({ children, buildInfo }: AppShellProps) {
             >
               عربي
             </span>
-            <span className="mt-1 block text-xs tracking-wide text-[var(--ink-muted)]">
+            <span className="mt-1.5 block text-xs tracking-wide text-[var(--ink-muted)]">
               Levantine corpus
             </span>
           </Link>
         </div>
         <div className="flex items-center gap-2">
-          <Link
-            href="/manual"
-            className={`min-h-11 rounded-md px-3 py-2 text-sm ${
-              manualActive
-                ? "text-[var(--ink)]"
-                : "text-[var(--ink-muted)] hover:text-[var(--ink)]"
-            }`}
-          >
-            Manual
-          </Link>
           <div className="relative" ref={addRef}>
             <button
               type="button"
               onClick={() => setAddOpen((open) => !open)}
-              className="min-h-11 rounded-md border border-[var(--line)] bg-[var(--surface)] px-4 py-2 text-sm text-[var(--ink)]"
+              className="ui-btn-primary min-h-11 px-4"
               aria-expanded={addOpen}
               aria-haspopup="menu"
             >
               Add
             </button>
             {addOpen ? (
-              <div
-                role="menu"
-                className="absolute right-0 z-20 mt-2 min-w-44 rounded-md border border-[var(--line)] bg-[var(--surface)] py-1"
-              >
+              <div role="menu" className={menuClass}>
                 {ADD_ITEMS.map((item) => (
                   <Link
                     key={item.href}
                     href={item.href}
                     role="menuitem"
-                    className="block px-3 py-3 text-sm text-[var(--ink)] hover:bg-[var(--surface-hover)]"
+                    className={menuItemClass}
                     onClick={() => setAddOpen(false)}
                   >
                     {item.label}
@@ -115,7 +104,7 @@ export function AppShell({ children, buildInfo }: AppShellProps) {
             <button
               type="button"
               onClick={() => setMoreOpen((open) => !open)}
-              className="min-h-11 min-w-11 rounded-md px-2 text-sm text-[var(--ink-muted)] hover:text-[var(--ink)]"
+              className="min-h-11 min-w-11 rounded-[var(--radius-md)] px-2 text-sm text-[var(--ink-muted)] hover:bg-[var(--surface-hover)] hover:text-[var(--ink)]"
               aria-expanded={moreOpen}
               aria-haspopup="menu"
               aria-label="More"
@@ -123,14 +112,11 @@ export function AppShell({ children, buildInfo }: AppShellProps) {
               ···
             </button>
             {moreOpen ? (
-              <div
-                role="menu"
-                className="absolute right-0 z-20 mt-2 min-w-44 rounded-md border border-[var(--line)] bg-[var(--surface)] py-1"
-              >
+              <div role="menu" className={menuClass}>
                 <Link
                   href="/manual"
                   role="menuitem"
-                  className="block px-3 py-3 text-sm text-[var(--ink)] hover:bg-[var(--surface-hover)]"
+                  className={menuItemClass}
                   onClick={() => setMoreOpen(false)}
                 >
                   Manual
@@ -138,7 +124,7 @@ export function AppShell({ children, buildInfo }: AppShellProps) {
                 <Link
                   href="/manual/sources"
                   role="menuitem"
-                  className="block px-3 py-3 text-sm text-[var(--ink)] hover:bg-[var(--surface-hover)]"
+                  className={menuItemClass}
                   onClick={() => setMoreOpen(false)}
                 >
                   Sources
@@ -146,7 +132,7 @@ export function AppShell({ children, buildInfo }: AppShellProps) {
                 <Link
                   href="/admin"
                   role="menuitem"
-                  className="block px-3 py-3 text-sm text-[var(--ink)] hover:bg-[var(--surface-hover)]"
+                  className={menuItemClass}
                   onClick={() => setMoreOpen(false)}
                 >
                   Admin
@@ -167,7 +153,7 @@ export function AppShell({ children, buildInfo }: AppShellProps) {
       </header>
 
       <nav
-        className="mb-8 flex gap-1 overflow-x-auto border-b border-[var(--line)] pb-px"
+        className="mb-8 flex gap-1 overflow-x-auto pb-1"
         aria-label="Main"
       >
         {NAV.map((item) => {
@@ -179,10 +165,10 @@ export function AppShell({ children, buildInfo }: AppShellProps) {
             <Link
               key={item.href}
               href={item.href}
-              className={`shrink-0 border-b-2 px-3 py-3 text-sm transition-colors ${
+              className={`shrink-0 rounded-[var(--radius-sm)] px-3 py-2.5 text-sm transition-colors ${
                 active
-                  ? "border-[var(--accent)] text-[var(--ink)]"
-                  : "border-transparent text-[var(--ink-muted)] hover:text-[var(--ink)]"
+                  ? "bg-[var(--accent-soft)] font-medium text-[var(--ink)]"
+                  : "text-[var(--ink-muted)] hover:bg-[var(--surface-hover)] hover:text-[var(--ink)]"
               }`}
             >
               {item.label}

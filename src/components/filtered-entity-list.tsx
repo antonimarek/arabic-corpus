@@ -36,11 +36,8 @@ export function FilteredEntityList({ rows }: { rows: EntityListRow[] }) {
           <button
             type="button"
             onClick={() => setActiveTag(null)}
-            className={`rounded-md px-2.5 py-1.5 text-xs ${
-              activeTag == null
-                ? "bg-[var(--accent)] text-white"
-                : "border border-[var(--line)] text-[var(--ink-muted)]"
-            }`}
+            className="ui-chip"
+            data-active={activeTag == null}
           >
             All
           </button>
@@ -51,11 +48,8 @@ export function FilteredEntityList({ rows }: { rows: EntityListRow[] }) {
               onClick={() =>
                 setActiveTag((current) => (current === tag ? null : tag))
               }
-              className={`rounded-md px-2.5 py-1.5 text-xs ${
-                activeTag === tag
-                  ? "bg-[var(--accent)] text-white"
-                  : "border border-[var(--line)] text-[var(--ink-muted)]"
-              }`}
+              className="ui-chip"
+              data-active={activeTag === tag}
             >
               {tag}
             </button>
@@ -68,13 +62,10 @@ export function FilteredEntityList({ rows }: { rows: EntityListRow[] }) {
           No rows with this tag.
         </p>
       ) : (
-        <ul className="flex flex-col divide-y divide-[var(--line)]">
+        <ul className="flex flex-col gap-2">
           {visible.map((row) => (
             <li key={row.id}>
-              <Link
-                href={row.href}
-                className="flex flex-col gap-1.5 py-4 hover:opacity-80"
-              >
+              <Link href={row.href} className="ui-row">
                 {row.title ? (
                   <span className="text-[15px] font-medium text-[var(--ink)]">
                     {row.title}

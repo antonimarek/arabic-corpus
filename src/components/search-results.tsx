@@ -11,17 +11,14 @@ const LAYER_LABEL: Record<MatchLayer, string> = {
 
 export function SearchResults({ hits }: { hits: SearchHit[] }) {
   return (
-    <ul className="flex flex-col divide-y divide-[var(--line)]">
+    <ul className="flex flex-col gap-2">
       {hits.map((hit) => (
         <li key={`${hit.type}:${hit.id}`}>
-          <Link
-            href={hrefForHit(hit)}
-            className="flex flex-col gap-2 py-4 hover:opacity-80"
-          >
+          <Link href={hrefForHit(hit)} className="ui-row gap-2">
             <div className="flex flex-wrap items-center gap-2">
               <TypePill type={hit.type} />
               {hit.matchLayer ? (
-                <span className="rounded px-1.5 py-0.5 text-[11px] uppercase tracking-wide text-[var(--ink-muted)] ring-1 ring-[var(--line)]">
+                <span className="rounded-[var(--radius-sm)] px-1.5 py-0.5 text-[11px] uppercase tracking-wide text-[var(--ink-muted)] ring-1 ring-[var(--line)]">
                   {LAYER_LABEL[hit.matchLayer]}
                 </span>
               ) : null}

@@ -21,7 +21,7 @@ export function LoginForm() {
           name="email"
           required
           autoComplete="email"
-          className="rounded-md border border-[var(--line)] bg-[var(--surface)] px-3 py-2.5 text-[15px] outline-none focus:border-[var(--accent)]"
+          className="ui-input"
           placeholder="you@example.com"
         />
       </label>
@@ -32,7 +32,7 @@ export function LoginForm() {
           name="password"
           required
           autoComplete="current-password"
-          className="rounded-md border border-[var(--line)] bg-[var(--surface)] px-3 py-2.5 text-[15px] outline-none focus:border-[var(--accent)]"
+          className="ui-input"
         />
       </label>
       {state.error ? (
@@ -43,7 +43,7 @@ export function LoginForm() {
       <button
         type="submit"
         disabled={pending}
-        className="rounded-md bg-[var(--accent)] px-4 py-2.5 text-sm font-medium text-white disabled:opacity-60"
+        className="ui-btn-primary min-h-11"
       >
         {pending ? "Signing in…" : "Sign in"}
       </button>

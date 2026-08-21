@@ -193,7 +193,7 @@ export function ArabicSelectionMenu({
         <div
           ref={menuRef}
           data-selection-menu
-          className="fixed z-30 min-w-44 max-w-[min(18rem,calc(100vw-16px))] rounded-md border border-[var(--line)] bg-[var(--surface)] py-1 text-start text-sm"
+          className="fixed z-30 min-w-44 max-w-[min(18rem,calc(100vw-16px))] rounded-[var(--radius-md)] border border-[var(--line)] bg-[var(--surface-raised)] py-1 text-start text-sm shadow-[var(--shadow-soft)]"
           style={{
             top: menu.top,
             left: menu.left,

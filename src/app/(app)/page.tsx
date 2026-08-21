@@ -64,7 +64,7 @@ export default async function SearchHomePage({ searchParams }: SearchHomeProps) 
           autoCapitalize="off"
           autoCorrect="off"
           placeholder="مبارح · shu 3am · how do I say…"
-          className="w-full rounded-md border border-[var(--line)] bg-[var(--surface)] px-4 py-3.5 text-base outline-none focus:border-[var(--accent)]"
+          className="ui-input px-4 py-3.5 text-base"
         />
       </form>
 
@@ -81,44 +81,47 @@ export default async function SearchHomePage({ searchParams }: SearchHomeProps) 
           <SentenceCapture />
           <div className="flex flex-wrap gap-x-4 gap-y-2 text-sm">
             <span className="text-[var(--ink-muted)]">More</span>
-            <Link href="/texts/new" className="text-[var(--accent)] hover:underline">
+            <Link
+              href="/texts/new"
+              className="text-[var(--ink-muted)] hover:text-[var(--accent)]"
+            >
               Text
             </Link>
             <Link
               href="/vocabulary/new"
-              className="text-[var(--accent)] hover:underline"
+              className="text-[var(--ink-muted)] hover:text-[var(--accent)]"
             >
               Vocab
             </Link>
             <Link
               href="/structures/new"
-              className="text-[var(--accent)] hover:underline"
+              className="text-[var(--ink-muted)] hover:text-[var(--accent)]"
             >
               Structure
             </Link>
             <Link
               href="/examples/new"
-              className="text-[var(--accent)] hover:underline"
+              className="text-[var(--ink-muted)] hover:text-[var(--accent)]"
             >
               Example
             </Link>
-            <Link href="/manual/sources" className="text-[var(--accent)] hover:underline">
+            <Link
+              href="/manual/sources"
+              className="text-[var(--ink-muted)] hover:text-[var(--accent)]"
+            >
               Sources
             </Link>
           </div>
 
           {recentExamples.length > 0 ? (
-            <div className="flex flex-col gap-2">
+            <div className="flex flex-col gap-3">
               <h2 className="text-sm font-medium text-[var(--ink-muted)]">
                 Recent examples
               </h2>
-              <ul className="flex flex-col divide-y divide-[var(--line)]">
+              <ul className="flex flex-col gap-2">
                 {recentExamples.map((example) => (
                   <li key={example.id}>
-                    <Link
-                      href={`/examples/${example.id}`}
-                      className="flex flex-col gap-1 py-3 hover:opacity-80"
-                    >
+                    <Link href={`/examples/${example.id}`} className="ui-row">
                       <span
                         className="font-arabic text-lg leading-relaxed text-[var(--ink)]"
                         lang="ar"

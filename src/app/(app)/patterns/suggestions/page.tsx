@@ -45,14 +45,14 @@ export default async function PatternSuggestionsPage() {
           machine after you add more words.
         </p>
       ) : (
-        <ul className="divide-y divide-[var(--line)] border-t border-[var(--line)]">
+        <ul className="flex flex-col gap-2">
           {rows.map((row) => {
             const payload = parseSuggestionPayload(row.payload);
             return (
               <li key={row.id}>
                 <Link
                   href={`/patterns/suggestions/${row.id}`}
-                  className="flex flex-col gap-1 py-4 hover:bg-[var(--surface-hover)]"
+                  className="ui-row gap-1"
                 >
                   <span className="flex items-baseline justify-between gap-3">
                     <span className="text-[15px] font-medium text-[var(--ink)]">

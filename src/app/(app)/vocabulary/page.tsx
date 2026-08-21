@@ -29,12 +29,11 @@ export default async function VocabularyPage() {
 
   return (
     <section className="flex flex-col gap-6">
-      <div className="flex items-baseline justify-between gap-4">
-        <h1 className="text-xl font-medium text-[var(--ink)]">Vocabulary</h1>
-        <Link
-          href="/vocabulary/new"
-          className="text-sm text-[var(--accent)] hover:underline"
-        >
+      <div className="flex items-center justify-between gap-4">
+        <h1 className="text-2xl font-medium tracking-tight text-[var(--ink)]">
+          Vocabulary
+        </h1>
+        <Link href="/vocabulary/new" className="ui-btn-new">
           New word
         </Link>
       </div>

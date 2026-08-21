@@ -23,7 +23,7 @@ export function ContinueLastText() {
       <h2 className="text-sm font-medium text-[var(--ink-muted)]">Continue</h2>
       <Link
         href={`/texts/${last.id}`}
-        className="text-[15px] text-[var(--accent)] hover:underline"
+        className="text-[15px] text-[var(--ink)] hover:text-[var(--accent)]"
       >
         {last.title}
       </Link>

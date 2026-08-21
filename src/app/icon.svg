@@ -1,8 +1,8 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" role="img" aria-label="Levantine corpus">
   <style>
-    .mark { fill: #8fafa8; }
+    .mark { fill: #e8a07a; }
     @media (prefers-color-scheme: light) {
-      .mark { fill: #2f4f4a; }
+      .mark { fill: #c2410c; }
     }
   </style>
   <path

@@ -1,12 +1,12 @@
 import type { Metadata } from "next";
-import { Noto_Naskh_Arabic, Source_Sans_3 } from "next/font/google";
+import { Instrument_Sans, Noto_Naskh_Arabic } from "next/font/google";
 
 import { getSiteUrl } from "@/lib/env";
 
 import "./globals.css";
 
-const sourceSans = Source_Sans_3({
-  variable: "--font-source-sans",
+const instrumentSans = Instrument_Sans({
+  variable: "--font-instrument-sans",
   subsets: ["latin", "latin-ext"],
   display: "swap",
 });
@@ -27,7 +27,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
     <html
       lang="en"
-      className={`${sourceSans.variable} ${notoNaskh.variable} h-full antialiased`}
+      className={`${instrumentSans.variable} ${notoNaskh.variable} h-full antialiased`}
     >
       <body className="min-h-full flex flex-col">{children}</body>
     </html>

@@ -41,7 +41,7 @@ export function TodayHome({
   if (!ranked.ok) {
     const firstText = candidates[0];
     return (
-      <section className="flex flex-col gap-2">
+      <section className="ui-panel flex flex-col gap-2 p-4 sm:p-5">
         <h2 className="text-sm font-medium text-[var(--ink-muted)]">Today</h2>
         <p className="text-[15px] text-[var(--ink)]">
           Add audio to a text. Today starts with a voice note.
@@ -61,7 +61,7 @@ export function TodayHome({
     : `/today?m=${budget}&text=${ranked.text.id}`;
 
   return (
-    <section className="flex flex-col gap-3">
+    <section className="ui-panel flex flex-col gap-3 p-4 sm:p-5">
       <h2 className="text-sm font-medium text-[var(--ink-muted)]">Today</h2>
       <div className="flex flex-wrap gap-2">
         {SESSION_BUDGETS.map((value) => (
@@ -70,10 +70,10 @@ export function TodayHome({
             type="button"
             aria-pressed={budget === value}
             onClick={() => pickBudget(value)}
-            className={`min-h-11 rounded-md px-3 py-2 text-sm ${
+            className={`min-h-11 rounded-[var(--radius-sm)] px-3 py-2 text-sm transition-colors ${
               budget === value
-                ? "bg-[var(--accent)] text-white"
-                : "border border-[var(--line)] text-[var(--ink)]"
+                ? "bg-[var(--accent-soft)] font-medium text-[var(--accent)]"
+                : "border border-[var(--line)] text-[var(--ink)] hover:border-[color-mix(in_srgb,var(--accent)_28%,var(--line))]"
             }`}
           >
             {value} min
@@ -81,10 +81,7 @@ export function TodayHome({
         ))}
       </div>
       <p className="text-[15px] text-[var(--ink)]">{ranked.reason}</p>
-      <Link
-        href={startHref}
-        className="self-start rounded-md bg-[var(--accent)] px-4 py-2.5 text-sm font-medium text-white"
-      >
+      <Link href={startHref} className="ui-btn-primary self-start">
         Start · {ranked.text.title}
       </Link>
     </section>

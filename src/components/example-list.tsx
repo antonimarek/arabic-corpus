@@ -24,12 +24,12 @@ export function ExampleList({
   }
 
   return (
-    <ul className="flex flex-col divide-y divide-[var(--line)]">
+    <ul className="flex flex-col gap-2">
       {examples.map((example) => (
-        <li key={example.id} className="py-3.5">
+        <li key={example.id} className="ui-row">
           <Link
             href={`/examples/${example.id}`}
-            className="flex flex-col gap-1.5 hover:opacity-80"
+            className="flex flex-col gap-1.5 hover:opacity-90"
           >
             <span
               className="font-arabic text-lg leading-relaxed text-[var(--ink)]"
@@ -57,12 +57,12 @@ export function ExampleList({
             example.sourceHref ? (
               <Link
                 href={example.sourceHref}
-                className="mt-1 inline-block text-xs text-[var(--accent)] hover:underline"
+                className="mt-0.5 inline-block text-xs text-[var(--accent)] hover:underline"
               >
                 {example.sourceTitle}
               </Link>
             ) : (
-              <span className="mt-1 block text-xs text-[var(--ink-muted)]">
+              <span className="mt-0.5 block text-xs text-[var(--ink-muted)]">
                 from {example.sourceTitle}
               </span>
             )

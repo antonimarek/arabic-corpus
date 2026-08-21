@@ -340,7 +340,7 @@ export function TextLineReader({
   return (
     <div className="flex flex-col gap-5">
       {audio ? (
-        <div className="flex flex-col gap-2 rounded-md border border-[var(--line)] bg-[var(--surface)] px-3 py-3">
+        <div className="ui-panel flex flex-col gap-2 px-3 py-3">
           <audio
             ref={audioRef}
             src={audio.url}
@@ -498,7 +498,7 @@ export function TextLineReader({
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             placeholder="Filter lines…"
-            className="rounded-md border border-[var(--line)] bg-[var(--surface)] px-3 py-2 text-sm outline-none focus:border-[var(--accent)]"
+            className="ui-input text-sm"
           />
         </label>
       ) : null}
@@ -624,7 +624,7 @@ export function TextLineReader({
                       +
                     </button>
                     {menuOpen ? (
-                      <div className="absolute end-0 top-full z-20 mt-1 w-48 rounded-md border border-[var(--line)] bg-[var(--surface)] py-1 text-start text-sm">
+                      <div className="absolute end-0 top-full z-20 mt-1 w-48 rounded-[var(--radius-md)] border border-[var(--line)] bg-[var(--surface-raised)] py-1 text-start text-sm shadow-[var(--shadow-soft)]">
                         <button
                           type="button"
                           className="block w-full px-3 py-1.5 text-left hover:bg-[color-mix(in_srgb,var(--ink)_6%,transparent)]"

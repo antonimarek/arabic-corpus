@@ -35,8 +35,10 @@ export default async function PatternsPage() {
     <section className="flex flex-col gap-6">
       <div className="flex flex-col gap-2">
         <div className="flex items-baseline justify-between gap-4">
-          <h1 className="text-xl font-medium text-[var(--ink)]">Patterns</h1>
-          <div className="flex flex-wrap gap-3 text-sm">
+          <h1 className="text-2xl font-medium tracking-tight text-[var(--ink)]">
+            Patterns
+          </h1>
+          <div className="flex flex-wrap items-center gap-3 text-sm">
             {pending > 0 ? (
               <Link
                 href="/patterns/suggestions"
@@ -52,10 +54,7 @@ export default async function PatternsPage() {
                 Suggestions
               </Link>
             )}
-            <Link
-              href="/patterns/new"
-              className="text-[var(--accent)] hover:underline"
-            >
+            <Link href="/patterns/new" className="ui-btn-new">
               Connect words
             </Link>
           </div>
@@ -73,7 +72,7 @@ export default async function PatternsPage() {
           words by hand.
         </p>
       ) : (
-        <ul className="divide-y divide-[var(--line)] border-t border-[var(--line)]">
+        <ul className="flex flex-col gap-2">
           {rows.map((row) => {
             const count = row.pattern_vocabulary?.length ?? 0;
             const mastery = isMasteryState(row.mastery_state)
@@ -81,10 +80,7 @@ export default async function PatternsPage() {
               : row.mastery_state;
             return (
               <li key={row.id}>
-                <Link
-                  href={`/patterns/${row.id}`}
-                  className="flex flex-col gap-1 py-4 hover:bg-[var(--surface-hover)]"
-                >
+                <Link href={`/patterns/${row.id}`} className="ui-row gap-1">
                   <span className="flex items-baseline justify-between gap-3">
                     <span className="text-[15px] font-medium text-[var(--ink)]">
                       {row.name}

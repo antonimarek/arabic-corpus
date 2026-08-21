@@ -23,14 +23,6 @@ const KIND_LABEL: Record<PosKind, string> = {
   other: "Other",
 };
 
-function chipClass(active: boolean): string {
-  return `rounded-md px-2.5 py-1.5 text-xs ${
-    active
-      ? "bg-[var(--accent)] text-white"
-      : "border border-[var(--line)] text-[var(--ink-muted)]"
-  }`;
-}
-
 export function VocabularyList({ rows }: { rows: VocabularyListRow[] }) {
   const router = useRouter();
   const pathname = usePathname();
@@ -87,7 +79,8 @@ export function VocabularyList({ rows }: { rows: VocabularyListRow[] }) {
           <button
             type="button"
             onClick={() => replaceParams({ kind: null })}
-            className={chipClass(kind == null)}
+            className="ui-chip"
+            data-active={kind == null}
           >
             All
           </button>
@@ -98,7 +91,8 @@ export function VocabularyList({ rows }: { rows: VocabularyListRow[] }) {
               onClick={() =>
                 replaceParams({ kind: kind === value ? null : value })
               }
-              className={chipClass(kind === value)}
+              className="ui-chip"
+              data-active={kind === value}
             >
               {KIND_LABEL[value]}
             </button>
@@ -111,7 +105,8 @@ export function VocabularyList({ rows }: { rows: VocabularyListRow[] }) {
           <button
             type="button"
             onClick={() => replaceParams({ tag: null })}
-            className={chipClass(tag == null)}
+            className="ui-chip"
+            data-active={tag == null}
           >
             All
           </button>
@@ -120,7 +115,8 @@ export function VocabularyList({ rows }: { rows: VocabularyListRow[] }) {
               key={name}
               type="button"
               onClick={() => replaceParams({ tag: tag === name ? null : name })}
-              className={chipClass(tag === name)}
+              className="ui-chip"
+              data-active={tag === name}
             >
               {name}
             </button>
@@ -134,7 +130,7 @@ export function VocabularyList({ rows }: { rows: VocabularyListRow[] }) {
           onClick={() => replaceParams({ sort: "newest" })}
           className={
             sort === "newest"
-              ? "text-[var(--ink)]"
+              ? "font-medium text-[var(--ink)]"
               : "text-[var(--ink-muted)]"
           }
         >
@@ -145,7 +141,7 @@ export function VocabularyList({ rows }: { rows: VocabularyListRow[] }) {
           onClick={() => replaceParams({ sort: "oldest" })}
           className={
             sort === "oldest"
-              ? "text-[var(--ink)]"
+              ? "font-medium text-[var(--ink)]"
               : "text-[var(--ink-muted)]"
           }
         >
@@ -158,15 +154,12 @@ export function VocabularyList({ rows }: { rows: VocabularyListRow[] }) {
           {vocabularyEmptyMessage(kind, tag)}
         </p>
       ) : (
-        <ul className="flex flex-col divide-y divide-[var(--line)]">
+        <ul className="flex flex-col gap-2">
           {visible.map((row) => {
             const subtitle = vocabularyRowSubtitle(row, kind != null);
             return (
               <li key={row.id}>
-                <Link
-                  href={row.href}
-                  className="flex flex-col gap-1.5 py-4 hover:opacity-80"
-                >
+                <Link href={row.href} className="ui-row">
                   <span
                     className="font-arabic line-clamp-2 text-lg leading-relaxed text-[var(--ink)]"
                     lang="ar"

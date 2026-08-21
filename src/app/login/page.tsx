@@ -31,7 +31,9 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
           {errorMessage}
         </p>
       ) : null}
-      <LoginForm />
+      <div className="ui-panel p-5 sm:p-6">
+        <LoginForm />
+      </div>
     </main>
   );
 }

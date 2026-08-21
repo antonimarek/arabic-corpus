@@ -41,10 +41,5 @@ export function signalLabels(signals: unknown): string[] {
   if (typeof s.pair_count === "number") {
     labels.push(`${s.pair_count} example pair${s.pair_count === 1 ? "" : "s"}`);
   }
-  if (typeof s.orphan_count === "number" && s.orphan_count > 0) {
-    labels.push(
-      `${s.orphan_count} Form II-like word${s.orphan_count === 1 ? "" : "s"} without Form I base`,
-    );
-  }
   return labels;
 }

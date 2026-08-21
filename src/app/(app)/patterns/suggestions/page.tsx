@@ -33,16 +33,17 @@ export default async function PatternSuggestionsPage() {
         </p>
         <h1 className="text-xl font-medium text-[var(--ink)]">Suggestions</h1>
         <p className="text-sm text-[var(--ink-muted)]">
-          Deterministic candidates from your vocabulary. Confirm what looks
-          real. Dismiss noise. Not AI notes.
+          Deterministic pair-based candidates from your vocabulary. A
+          suggestion needs at least two related word pairs sharing the same
+          move. Confirm what looks real. Dismiss noise. Not AI notes.
         </p>
       </header>
 
       {!rows || rows.length === 0 ? (
         <p className="text-[15px] text-[var(--ink-muted)]">
           No pending suggestions. Run{" "}
-          <code className="text-xs">npm run discover:patterns</code> on your
-          machine after you add more words.
+          <code className="text-xs">npm run discover:patterns</code> after you
+          have at least two base→derived pairs for the same move in vocabulary.
         </p>
       ) : (
         <ul className="flex flex-col gap-2">
@@ -65,9 +66,7 @@ export default async function PatternSuggestionsPage() {
                   <span className="text-xs text-[var(--ink-muted)]">
                     {[
                       row.arabic_sketch,
-                      payload.pairs.length > 0
-                        ? `${payload.pairs.length} pair${payload.pairs.length === 1 ? "" : "s"}`
-                        : `${payload.member_ids.length} word${payload.member_ids.length === 1 ? "" : "s"}`,
+                      `${payload.pairs.length} pair${payload.pairs.length === 1 ? "" : "s"}`,
                       row.reasoning,
                     ]
                       .filter(Boolean)

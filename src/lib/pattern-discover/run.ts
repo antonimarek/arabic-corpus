@@ -1,10 +1,12 @@
 import { createClient } from "@supabase/supabase-js";
 
 import {
-  discoverMiddleDoublingDrafts,
+  MIDDLE_DOUBLING_DETECTOR_ID,
+  discoverMiddleDoublingWithStats,
   type DiscoverVocab,
   type SuggestionDraft,
 } from "@/lib/pattern-discover/middle-doubling";
+import { parseSuggestionPayload } from "@/lib/pattern-discover/payload";
 import { firstGloss } from "@/lib/arabic-links";
 import {
   getSupabaseServiceRoleKey,
@@ -15,11 +17,14 @@ import type { Database, Json } from "@/types/database";
 export type DiscoverRunResult = {
   ownerId: string;
   scanned: number;
+  pairsFound: number;
+  unpairedFormIiLike: number;
   drafts: number;
   inserted: number;
   updated: number;
   skippedLinked: number;
   skippedExisting: number;
+  dismissedOrphans: number;
   samples: {
     fingerprint: string;
     confidence: string;
@@ -60,16 +65,16 @@ export async function resolveOwnerId(opts: {
   return user.id;
 }
 
-function pairAlreadyLinked(
-  linked: Set<string>,
-  baseId: string,
-  derivedId: string,
-): boolean {
-  // Same pattern if both members already sit on any shared pattern — skip for v1
-  // if either side already has pattern links covering both via fingerprint skip below.
-  void linked;
-  void baseId;
-  void derivedId;
+function isOrphanEraSuggestion(row: {
+  detector_id: string;
+  payload: unknown;
+  fingerprint: string;
+}): boolean {
+  if (row.detector_id !== MIDDLE_DOUBLING_DETECTOR_ID) return false;
+  const payload = parseSuggestionPayload(row.payload);
+  if (payload.pairs.length === 0) return true;
+  // Pre-v2 orphan drafts used transform key middle_doubling_orphans in fingerprint input;
+  // empty pairs already covers them. Also dismiss v1 single-pair noise? Plan: empty pairs only.
   return false;
 }
 
@@ -115,14 +120,41 @@ export async function runPatternDiscover(opts: {
 
   const { data: existingSuggestions } = await supabase
     .from("pattern_suggestions")
-    .select("fingerprint, status")
+    .select("id, fingerprint, status, detector_id, payload")
     .eq("owner_id", ownerId);
 
+  let dismissedOrphans = 0;
+  const orphanIds = (existingSuggestions ?? [])
+    .filter(
+      (row) =>
+        row.status === "pending" &&
+        isOrphanEraSuggestion({
+          detector_id: row.detector_id,
+          payload: row.payload,
+          fingerprint: row.fingerprint,
+        }),
+    )
+    .map((row) => row.id);
+
+  if (orphanIds.length > 0 && !opts.dryRun) {
+    const { error: dismissError } = await supabase
+      .from("pattern_suggestions")
+      .update({ status: "dismissed" })
+      .in("id", orphanIds)
+      .eq("owner_id", ownerId);
+    if (dismissError) throw new Error(dismissError.message);
+    dismissedOrphans = orphanIds.length;
+  } else if (opts.dryRun) {
+    dismissedOrphans = orphanIds.length;
+  }
+
   const existingFingerprints = new Set(
-    (existingSuggestions ?? []).map((row) => row.fingerprint),
+    (existingSuggestions ?? [])
+      .filter((row) => !orphanIds.includes(row.id))
+      .map((row) => row.fingerprint),
   );
 
-  const drafts = discoverMiddleDoublingDrafts(vocab);
+  const { drafts, stats } = discoverMiddleDoublingWithStats(vocab);
   let skippedLinked = 0;
   let skippedExisting = 0;
   let inserted = 0;
@@ -146,17 +178,17 @@ export async function runPatternDiscover(opts: {
       skippedLinked += 1;
       continue;
     }
-    // Also skip if every pair is already co-linked on some pattern
-    const pairsCovered = draft.payload.pairs.every((pair) =>
-      [...patternMembers.values()].some(
-        (set) => set.has(pair.base_id) && set.has(pair.derived_id),
-      ),
-    );
-    if (pairsCovered && draft.payload.pairs.length > 0) {
+    const pairsCovered =
+      draft.payload.pairs.length > 0 &&
+      draft.payload.pairs.every((pair) =>
+        [...patternMembers.values()].some(
+          (set) => set.has(pair.base_id) && set.has(pair.derived_id),
+        ),
+      );
+    if (pairsCovered) {
       skippedLinked += 1;
       continue;
     }
-    void pairAlreadyLinked;
     toWrite.push(draft);
   }
 
@@ -189,21 +221,14 @@ export async function runPatternDiscover(opts: {
 
   const samples = toWrite.slice(0, 12).map((draft) => {
     const glossById = new Map(vocab.map((v) => [v.id, v]));
-    const pairs =
-      draft.payload.pairs.length > 0
-        ? draft.payload.pairs.map((pair) => {
-            const base = glossById.get(pair.base_id);
-            const derived = glossById.get(pair.derived_id);
-            return `${base?.arabic ?? "?"} → ${derived?.arabic ?? "?"}`;
-          })
-        : draft.payload.member_ids.slice(0, 8).map((id) => {
-            const row = glossById.get(id);
-            return row?.arabic ?? "?";
-          });
     return {
       fingerprint: draft.fingerprint.slice(0, 10),
       confidence: draft.confidence,
-      pairs,
+      pairs: draft.payload.pairs.map((pair) => {
+        const base = glossById.get(pair.base_id);
+        const derived = glossById.get(pair.derived_id);
+        return `${base?.arabic ?? "?"} → ${derived?.arabic ?? "?"}`;
+      }),
       reasoning: draft.reasoning,
     };
   });
@@ -211,11 +236,14 @@ export async function runPatternDiscover(opts: {
   return {
     ownerId,
     scanned: vocab.length,
+    pairsFound: stats.pairsFound,
+    unpairedFormIiLike: stats.unpairedFormIiLike,
     drafts: drafts.length,
     inserted: opts.dryRun ? 0 : inserted,
     updated,
     skippedLinked,
     skippedExisting,
+    dismissedOrphans,
     samples,
   };
 }

@@ -2,7 +2,7 @@
 
 Web app for storing and searching Levantine Arabic texts, examples, vocabulary, structures, and morphological patterns. The database is the source of truth. An LLM layer is optional and not required.
 
-**Patterns** are word-formation moves (double middle, denominal verb, and so on). They hang off vocabulary and roots. You create a pattern by connecting word pairs you already know, then naming the move — or by reviewing Suggestions from `npm run discover:patterns` (deterministic middle-doubling candidates; you confirm). **Structures** stay chunks and idioms (`عم + participle`, `بدي…`). Do not mix the two.
+**Patterns** are word-formation moves (double middle, denominal verb, and so on). They hang off vocabulary and roots. You create a pattern by connecting word pairs you already know, then naming the move — or by reviewing Suggestions from `npm run discover:patterns` (pair-first: both sides of a relationship must exist in vocabulary, and at least two independent pairs sharing the same move are required before a suggestion). **Structures** stay chunks and idioms (`عم + participle`, `بدي…`). Do not mix the two.
 
 ## Stack
 

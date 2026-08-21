@@ -1,6 +1,6 @@
 #!/usr/bin/env npx tsx
 /**
- * Deterministic pattern candidate discovery (middle doubling v1).
+ * Deterministic pattern candidate discovery (middle doubling v2, pair-first).
  *
  * Usage:
  *   npm run discover:patterns -- --owner-email you@example.com
@@ -68,22 +68,38 @@ async function main() {
     dryRun,
   });
 
-  console.log("--- pattern discover (middle_doubling v1) ---");
-  console.log(`owner:            ${result.ownerId}`);
-  console.log(`vocab scanned:    ${result.scanned}`);
-  console.log(`drafts found:     ${result.drafts}`);
-  console.log(`skipped linked:   ${result.skippedLinked}`);
-  console.log(`skipped existing: ${result.skippedExisting}`);
+  console.log("--- pattern discover (middle_doubling v2, pair-first) ---");
+  console.log(`owner:                 ${result.ownerId}`);
+  console.log(`vocab scanned:         ${result.scanned}`);
+  console.log(`pairs found:           ${result.pairsFound}`);
+  console.log(`form_ii_like_unpaired: ${result.unpairedFormIiLike}`);
+  console.log(`drafts (suggestions):  ${result.drafts}`);
+  console.log(`skipped linked:        ${result.skippedLinked}`);
+  console.log(`skipped existing:      ${result.skippedExisting}`);
   console.log(
     dryRun
-      ? `would insert:     ${result.drafts - result.skippedLinked - result.skippedExisting}`
-      : `inserted/upserted:${result.inserted}`,
+      ? `would dismiss orphans: ${result.dismissedOrphans}`
+      : `dismissed orphans:     ${result.dismissedOrphans}`,
+  );
+  console.log(
+    dryRun
+      ? `would insert:          ${result.drafts - result.skippedLinked - result.skippedExisting}`
+      : `inserted/upserted:     ${result.inserted}`,
   );
   if (result.samples.length > 0) {
     console.log("\nSamples:");
     for (const sample of result.samples) {
       console.log(
         `  [${sample.confidence}] ${sample.pairs.join(" · ")} — ${sample.reasoning}`,
+      );
+    }
+  } else if (result.pairsFound < 2) {
+    console.log(
+      "\nNot enough evidence to suggest a pattern (≥2 independent pairs required).",
+    );
+    if (result.unpairedFormIiLike > 0) {
+      console.log(
+        `${result.unpairedFormIiLike} Form II-like word(s) in vocab without a Form I base pair — diagnostic only, not a suggestion.`,
       );
     }
   } else {

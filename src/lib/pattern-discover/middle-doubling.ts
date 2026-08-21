@@ -4,7 +4,10 @@ import { normalizeArabic } from "@/lib/import/normalize";
 import { rootsMatch } from "@/lib/option-filter";
 
 export const MIDDLE_DOUBLING_DETECTOR_ID = "middle_doubling";
-export const MIDDLE_DOUBLING_DETECTOR_VERSION = "1";
+export const MIDDLE_DOUBLING_DETECTOR_VERSION = "2";
+
+/** Minimum independent pairs sharing this transform before a suggestion. */
+export const MIN_INDEPENDENT_PAIRS = 2;
 
 const SHADDA = "\u0651";
 /** Strip harakat but keep letters + shadda for analysis. */
@@ -22,8 +25,6 @@ export type DoublingSignals = {
   same_skeleton: boolean;
   compatible_shapes: boolean;
   same_root: boolean;
-  /** Form II-like words with no Form I base in vocab (orphan cluster). */
-  orphan_count?: number;
 };
 
 export type Confidence = "low" | "medium" | "high";
@@ -53,6 +54,11 @@ export type SuggestionDraft = {
     pairs: { base_id: string; derived_id: string }[];
     member_ids: string[];
   };
+};
+
+export type DiscoverStats = {
+  pairsFound: number;
+  unpairedFormIiLike: number;
 };
 
 type Analyzed = DiscoverVocab & {
@@ -99,20 +105,27 @@ function reasonFrom(signals: DoublingSignals): string {
   return bits.join("; ") || "weak signals";
 }
 
-/** True when word has shadda on the middle radical (Form II surface). */
-function hasMiddleShadda(row: Analyzed): boolean {
-  const len = row.letters.length;
-  if (len < 3 || len > 4) return false;
-  if (row.shaddaIndexes.length === 0) return false;
-  const middle = Math.floor((len - 1) / 2);
-  return (
-    row.shaddaIndexes.includes(middle) ||
-    (len === 3 && row.shaddaIndexes.includes(1))
-  );
+/** Normalized letter skeletons that look Form-II-like but are not verb Form II. */
+const DENIED_SKELETONS = new Set(["اول", "جوا", "برا"]);
+
+/**
+ * Reject common Levantine non-Form-II shadda surfaces.
+ * Final ا with middle shadda (جوّا، برّا), multi-shadda nouns, and known non-verbs.
+ */
+export function isDeniedDerivedSurface(row: Analyzed): boolean {
+  if (row.shaddaIndexes.length > 1) return true;
+  if (DENIED_SKELETONS.has(row.letters)) return true;
+  const last = row.letters[row.letters.length - 1];
+  if (last === "ا" && row.shaddaIndexes.length === 1) return true;
+  return false;
 }
 
-/** Stricter Form II surface for unpaired cluster: triliteral, one middle shadda. */
-function isOrphanFormIISurface(row: Analyzed): boolean {
+/**
+ * Candidate Form II surface: triliteral, exactly one shadda on radical index 1.
+ * Used for pair matching and unpaired diagnostics — not for suggestions alone.
+ */
+export function isFormIiLikeSurface(row: Analyzed): boolean {
+  if (isDeniedDerivedSurface(row)) return false;
   if (row.letters.length !== 3) return false;
   if (row.shaddaIndexes.length !== 1) return false;
   return row.shaddaIndexes[0] === 1;
@@ -120,7 +133,7 @@ function isOrphanFormIISurface(row: Analyzed): boolean {
 
 /**
  * True when derived looks like base with shadda on the middle radical.
- * Triliteral: shadda on index 1. Quad: shadda on index 1 or 2 (prefer middle).
+ * Both words must already be in vocabulary (caller groups by skeleton).
  */
 function isMiddleDoublingPair(
   base: Analyzed,
@@ -130,9 +143,8 @@ function isMiddleDoublingPair(
   if (base.id === derived.id) return null;
 
   const baseHas = base.shaddaIndexes.length > 0;
-  const derivedHas = derived.shaddaIndexes.length > 0;
-  if (baseHas || !derivedHas) return null;
-  if (!hasMiddleShadda(derived)) return null;
+  if (baseHas) return null;
+  if (!isFormIiLikeSurface(derived)) return null;
 
   const len = derived.letters.length;
   const sameRoot = Boolean(
@@ -146,9 +158,7 @@ function isMiddleDoublingPair(
     same_root: sameRoot,
   };
 
-  if (scoreConfidence(signals) === "low" && !signals.compatible_shapes) {
-    return null;
-  }
+  if (scoreConfidence(signals) === "low") return null;
 
   return signals;
 }
@@ -198,40 +208,17 @@ export function findMiddleDoublingPairs(
   return out;
 }
 
-/** Connected components of pairs sharing vocabulary ids. */
-export function clusterDoublingPairs(
+/** Count Form-II-like surfaces that are not the derived side of any pair. */
+export function countUnpairedFormIiLike(
+  vocab: DiscoverVocab[],
   pairs: DoublingPairCandidate[],
-): DoublingPairCandidate[][] {
-  const parent = new Map<string, string>();
-  function find(id: string): string {
-    const p = parent.get(id) ?? id;
-    if (p !== id) {
-      const root = find(p);
-      parent.set(id, root);
-      return root;
-    }
-    return id;
-  }
-  function union(a: string, b: string) {
-    const ra = find(a);
-    const rb = find(b);
-    if (ra !== rb) parent.set(ra, rb);
-  }
-
-  for (const pair of pairs) {
-    parent.set(pair.base.id, find(pair.base.id));
-    parent.set(pair.derived.id, find(pair.derived.id));
-    union(pair.base.id, pair.derived.id);
-  }
-
-  const clusters = new Map<string, DoublingPairCandidate[]>();
-  for (const pair of pairs) {
-    const root = find(pair.base.id);
-    const list = clusters.get(root) ?? [];
-    list.push(pair);
-    clusters.set(root, list);
-  }
-  return [...clusters.values()];
+): number {
+  const pairedDerived = new Set(pairs.map((pair) => pair.derived.id));
+  return vocab
+    .map(analyze)
+    .filter((row): row is Analyzed => row != null)
+    .filter((row) => isFormIiLikeSurface(row) && !pairedDerived.has(row.id))
+    .length;
 }
 
 export function fingerprintForMembers(
@@ -246,87 +233,23 @@ export function fingerprintForMembers(
     .digest("hex");
 }
 
-export function draftsFromDoublingClusters(
-  clusters: DoublingPairCandidate[][],
-): SuggestionDraft[] {
-  return clusters.map((cluster) => {
-    const memberIds = [
-      ...new Set(
-        cluster.flatMap((pair) => [pair.base.id, pair.derived.id]),
-      ),
-    ].sort();
-    const confidences = cluster.map((p) => p.confidence);
-    const confidence: Confidence = confidences.includes("high")
-      ? "high"
-      : confidences.includes("medium")
-        ? "medium"
-        : "low";
-    const signals = {
-      middle_doubled: cluster.every((p) => p.signals.middle_doubled),
-      same_skeleton: cluster.every((p) => p.signals.same_skeleton),
-      compatible_shapes: cluster.some((p) => p.signals.compatible_shapes),
-      same_root: cluster.some((p) => p.signals.same_root),
-      pair_count: cluster.length,
-    };
-    return {
-      detector_id: MIDDLE_DOUBLING_DETECTOR_ID,
-      detector_version: MIDDLE_DOUBLING_DETECTOR_VERSION,
-      name: "Double middle",
-      arabic_sketch: "فَعَل → فَعَّل",
-      form_label: "II",
-      cue: "Shadda on the middle consonant",
-      meaning_shift:
-        "Often causes, intensifies, or changes who the action affects.",
-      confidence,
-      signals,
-      reasoning: cluster[0]?.reasoning ?? reasonFrom(signals),
-      fingerprint: fingerprintForMembers(
-        MIDDLE_DOUBLING_DETECTOR_ID,
-        MIDDLE_DOUBLING_DETECTOR_VERSION,
-        "middle_doubling",
-        memberIds,
-      ),
-      source: "deterministic",
-      payload: {
-        pairs: cluster.map((pair) => ({
-          base_id: pair.base.id,
-          derived_id: pair.derived.id,
-        })),
-        member_ids: memberIds,
-      },
-    };
-  });
-}
-
-const MIN_ORPHAN_CLUSTER = 2;
-
-/**
- * Form II-like words with middle shadda and no matching Form I base in vocab.
- * One medium-confidence draft so the learner can confirm the move without pairs.
- */
-export function orphanMiddleDoublingDraft(
-  vocab: DiscoverVocab[],
-  pairedIds: Set<string>,
-): SuggestionDraft | null {
-  const analyzed = vocab
-    .map(analyze)
-    .filter((row): row is Analyzed => row != null);
-
-  const orphans = analyzed.filter(
-    (row) => isOrphanFormIISurface(row) && !pairedIds.has(row.id),
-  );
-  if (orphans.length < MIN_ORPHAN_CLUSTER) return null;
-
-  const memberIds = orphans.map((row) => row.id).sort();
-  const signals: DoublingSignals & { pair_count: number } = {
-    middle_doubled: true,
-    same_skeleton: false,
-    compatible_shapes: true,
-    same_root: false,
-    pair_count: 0,
-    orphan_count: orphans.length,
+function draftFromPairs(pairs: DoublingPairCandidate[]): SuggestionDraft {
+  const memberIds = [
+    ...new Set(pairs.flatMap((pair) => [pair.base.id, pair.derived.id])),
+  ].sort();
+  const confidences = pairs.map((p) => p.confidence);
+  const confidence: Confidence = confidences.includes("high")
+    ? "high"
+    : confidences.includes("medium")
+      ? "medium"
+      : "low";
+  const signals = {
+    middle_doubled: pairs.every((p) => p.signals.middle_doubled),
+    same_skeleton: pairs.every((p) => p.signals.same_skeleton),
+    compatible_shapes: pairs.some((p) => p.signals.compatible_shapes),
+    same_root: pairs.some((p) => p.signals.same_root),
+    pair_count: pairs.length,
   };
-
   return {
     detector_id: MIDDLE_DOUBLING_DETECTOR_ID,
     detector_version: MIDDLE_DOUBLING_DETECTOR_VERSION,
@@ -336,34 +259,51 @@ export function orphanMiddleDoublingDraft(
     cue: "Shadda on the middle consonant",
     meaning_shift:
       "Often causes, intensifies, or changes who the action affects.",
-    confidence: "medium",
+    confidence,
     signals,
-    reasoning:
-      "Middle consonant doubled (shadda); no Form I base in vocabulary yet",
+    reasoning: `${pairs.length} independent pairs; ${pairs[0]?.reasoning ?? reasonFrom(signals)}`,
     fingerprint: fingerprintForMembers(
       MIDDLE_DOUBLING_DETECTOR_ID,
       MIDDLE_DOUBLING_DETECTOR_VERSION,
-      "middle_doubling_orphans",
+      "middle_doubling",
       memberIds,
     ),
     source: "deterministic",
     payload: {
-      pairs: [],
+      pairs: pairs.map((pair) => ({
+        base_id: pair.base.id,
+        derived_id: pair.derived.id,
+      })),
       member_ids: memberIds,
     },
   };
 }
 
+/**
+ * Pair-first discovery: suggest only when ≥2 independent vocabulary relationships
+ * share the middle-doubling transform. Surface Form-II resemblance alone never
+ * creates a suggestion.
+ */
 export function discoverMiddleDoublingDrafts(
   vocab: DiscoverVocab[],
 ): SuggestionDraft[] {
   const pairs = findMiddleDoublingPairs(vocab);
-  const clusters = clusterDoublingPairs(pairs);
-  const drafts = draftsFromDoublingClusters(clusters);
-  const pairedIds = new Set(
-    pairs.flatMap((pair) => [pair.base.id, pair.derived.id]),
-  );
-  const orphan = orphanMiddleDoublingDraft(vocab, pairedIds);
-  if (orphan) drafts.push(orphan);
-  return drafts;
+  if (pairs.length < MIN_INDEPENDENT_PAIRS) return [];
+  return [draftFromPairs(pairs)];
+}
+
+export function discoverMiddleDoublingWithStats(vocab: DiscoverVocab[]): {
+  drafts: SuggestionDraft[];
+  stats: DiscoverStats;
+} {
+  const pairs = findMiddleDoublingPairs(vocab);
+  const drafts =
+    pairs.length >= MIN_INDEPENDENT_PAIRS ? [draftFromPairs(pairs)] : [];
+  return {
+    drafts,
+    stats: {
+      pairsFound: pairs.length,
+      unpairedFormIiLike: countUnpairedFormIiLike(vocab, pairs),
+    },
+  };
 }

@@ -49,9 +49,10 @@ export default function ManualPage() {
       <div className="flex flex-col gap-2 rounded-md border border-[var(--line)] p-4">
         <h2 className="font-medium text-[var(--ink)]">Discover patterns</h2>
         <p className="text-sm text-[var(--ink-muted)]">
-          Batch script finds middle-doubling candidates in your vocabulary. You
-          review them under Patterns → Suggestions. Confirm does not copy
-          machine wording into your notes.
+          Batch script finds middle-doubling <em>relationships</em> in your
+          vocabulary (both sides of a pair must exist). It suggests a pattern
+          only when at least two independent pairs share the same move. Review
+          under Patterns → Suggestions.
         </p>
         <pre className="overflow-x-auto rounded-md border border-[var(--line)] bg-[var(--surface)] p-3 text-xs text-[var(--ink)]">
           {`npm run discover:patterns -- --owner-email you@example.com

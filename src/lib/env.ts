@@ -66,6 +66,14 @@ function isLocalhostUrl(url: string): boolean {
   }
 }
 
+export function getSupabaseServiceRoleKey(): string {
+  const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
+  if (!key) {
+    throw new Error("Missing SUPABASE_SERVICE_ROLE_KEY (CLI / batch only)");
+  }
+  return key;
+}
+
 export function getEmbeddingApiKey(): string | null {
   return (
     process.env.OPENAI_API_KEY ??

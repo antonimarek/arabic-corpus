@@ -12,6 +12,7 @@ import {
 import { emptyToNull } from "@/lib/form";
 import {
   parseMasteryState,
+  parsePatternPairs,
   parsePatternRole,
 } from "@/lib/patterns";
 import { requireUserId } from "@/lib/require-user";
@@ -32,15 +33,46 @@ function formInput(formData: FormData, name: string) {
   };
 }
 
-function revalidatePatternPaths(patternId?: string, vocabularyId?: string) {
+function revalidatePatternPaths(patternId?: string, vocabularyIds?: string[]) {
   revalidatePath("/patterns");
   revalidatePath("/");
   if (patternId) {
     revalidatePath(`/patterns/${patternId}`);
   }
-  if (vocabularyId) {
+  for (const vocabularyId of vocabularyIds ?? []) {
     revalidatePath(`/vocabulary/${vocabularyId}`);
   }
+}
+
+async function linkPairs(
+  supabase: Awaited<ReturnType<typeof requireUserId>>["supabase"],
+  patternId: string,
+  pairs: { baseId: string; derivedId: string }[],
+): Promise<{ error?: string; vocabularyIds: string[] }> {
+  const vocabularyIds = new Set<string>();
+  for (const pair of pairs) {
+    vocabularyIds.add(pair.baseId);
+    vocabularyIds.add(pair.derivedId);
+    const baseResult = await linkPatternVocabulary(
+      supabase,
+      patternId,
+      pair.baseId,
+      "base",
+    );
+    if (baseResult.error) {
+      return { error: baseResult.error, vocabularyIds: [...vocabularyIds] };
+    }
+    const derivedResult = await linkPatternVocabulary(
+      supabase,
+      patternId,
+      pair.derivedId,
+      "derived",
+    );
+    if (derivedResult.error) {
+      return { error: derivedResult.error, vocabularyIds: [...vocabularyIds] };
+    }
+  }
+  return { vocabularyIds: [...vocabularyIds] };
 }
 
 export async function createPattern(
@@ -52,27 +84,42 @@ export async function createPattern(
     return { error: "Name is required." };
   }
 
+  const { pairs, error: pairError } = parsePatternPairs(formData);
+  if (pairError) {
+    return { error: pairError };
+  }
+  if (pairs.length === 0) {
+    return {
+      error: "Add at least one example pair of words you already know.",
+    };
+  }
+
   const { supabase, userId } = await requireUserId();
   const result = await writePattern(supabase, userId, formInput(formData, name));
   if ("error" in result) {
     return { error: result.error };
   }
 
-  const seedVocabularyId = emptyToNull(formData.get("seed_vocabulary_id"));
-  if (seedVocabularyId) {
-    const role = parsePatternRole(formData.get("seed_role"), "base");
-    const linkResult = await linkPatternVocabulary(
-      supabase,
-      result.id,
-      seedVocabularyId,
-      role,
-    );
-    if (linkResult.error) {
-      return { error: linkResult.error };
-    }
+  const linkResult = await linkPairs(supabase, result.id, pairs);
+  if (linkResult.error) {
+    return { error: linkResult.error };
   }
 
-  revalidatePatternPaths(result.id, seedVocabularyId ?? undefined);
+  const suggestionId = emptyToNull(formData.get("suggestion_id"));
+  if (suggestionId) {
+    await supabase
+      .from("pattern_suggestions")
+      .update({
+        status: "confirmed",
+        confirmed_pattern_id: result.id,
+      })
+      .eq("id", suggestionId)
+      .eq("owner_id", userId);
+    revalidatePath("/patterns/suggestions");
+    revalidatePath(`/patterns/suggestions/${suggestionId}`);
+  }
+
+  revalidatePatternPaths(result.id, linkResult.vocabularyIds);
   redirect(`/patterns/${result.id}`);
 }
 
@@ -86,6 +133,11 @@ export async function updatePattern(
     return { error: "Name is required." };
   }
 
+  const { pairs, error: pairError } = parsePatternPairs(formData);
+  if (pairError) {
+    return { error: pairError };
+  }
+
   const { supabase } = await requireUserId();
   const result = await updatePatternRecord(
     supabase,
@@ -96,7 +148,16 @@ export async function updatePattern(
     return { error: result.error };
   }
 
-  revalidatePatternPaths(id);
+  let vocabularyIds: string[] = [];
+  if (pairs.length > 0) {
+    const linkResult = await linkPairs(supabase, id, pairs);
+    if (linkResult.error) {
+      return { error: linkResult.error };
+    }
+    vocabularyIds = linkResult.vocabularyIds;
+  }
+
+  revalidatePatternPaths(id, vocabularyIds);
   redirect(`/patterns/${id}`);
 }
 
@@ -142,7 +203,7 @@ export async function linkVocabularyToPattern(
   if (result.error) {
     throw new Error(result.error);
   }
-  revalidatePatternPaths(patternId, vocabularyId);
+  revalidatePatternPaths(patternId, [vocabularyId]);
 }
 
 export async function unlinkVocabularyFromPattern(
@@ -158,7 +219,7 @@ export async function unlinkVocabularyFromPattern(
   if (result.error) {
     throw new Error(result.error);
   }
-  revalidatePatternPaths(patternId, vocabularyId);
+  revalidatePatternPaths(patternId, [vocabularyId]);
 }
 
 export async function linkPatternFromVocabulary(
@@ -180,6 +241,6 @@ export async function linkPatternFromVocabulary(
   if (result.error) {
     throw new Error(result.error);
   }
-  revalidatePatternPaths(patternId, vocabularyId);
+  revalidatePatternPaths(patternId, [vocabularyId]);
   redirect(`/vocabulary/${vocabularyId}`);
 }

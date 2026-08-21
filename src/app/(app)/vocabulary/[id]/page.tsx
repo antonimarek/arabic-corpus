@@ -301,7 +301,7 @@ export default async function VocabularyDetailPage({
               href={`/patterns/new?vocabulary=${vocabulary.id}`}
               className="text-[var(--accent)] hover:underline"
             >
-              New pattern
+              Connect into a pattern
             </Link>
             <Link
               href={`/vocabulary/${vocabulary.id}/link-pattern`}
@@ -311,6 +311,10 @@ export default async function VocabularyDetailPage({
             </Link>
           </div>
         </div>
+
+        <p className="mb-4 text-sm text-[var(--ink-muted)]">
+          Patterns = moves inside words. Structures = how you build phrases.
+        </p>
 
         {vocabulary.root ? (
           <p className="mb-4 text-sm text-[var(--ink-muted)]">
@@ -324,7 +328,7 @@ export default async function VocabularyDetailPage({
           </p>
         ) : (
           <p className="mb-4 text-sm text-[var(--ink-muted)]">
-            Add a root on edit to see same-root siblings. You can still link
+            Add a root on edit to see same-root siblings. You can still connect
             patterns.
           </p>
         )}

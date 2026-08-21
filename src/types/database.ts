@@ -307,6 +307,83 @@ export type Database = {
           },
         ];
       };
+      pattern_suggestions: {
+        Row: {
+          id: string;
+          owner_id: string;
+          status: string;
+          detector_id: string;
+          detector_version: string;
+          name: string;
+          arabic_sketch: string | null;
+          form_label: string | null;
+          cue: string | null;
+          meaning_shift: string | null;
+          ai_interpretation: string | null;
+          confidence: string;
+          signals: Json;
+          reasoning: string | null;
+          fingerprint: string;
+          source: string;
+          payload: Json;
+          confirmed_pattern_id: string | null;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          owner_id: string;
+          status?: string;
+          detector_id: string;
+          detector_version: string;
+          name: string;
+          arabic_sketch?: string | null;
+          form_label?: string | null;
+          cue?: string | null;
+          meaning_shift?: string | null;
+          ai_interpretation?: string | null;
+          confidence?: string;
+          signals?: Json;
+          reasoning?: string | null;
+          fingerprint: string;
+          source?: string;
+          payload?: Json;
+          confirmed_pattern_id?: string | null;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: {
+          id?: string;
+          owner_id?: string;
+          status?: string;
+          detector_id?: string;
+          detector_version?: string;
+          name?: string;
+          arabic_sketch?: string | null;
+          form_label?: string | null;
+          cue?: string | null;
+          meaning_shift?: string | null;
+          ai_interpretation?: string | null;
+          confidence?: string;
+          signals?: Json;
+          reasoning?: string | null;
+          fingerprint?: string;
+          source?: string;
+          payload?: Json;
+          confirmed_pattern_id?: string | null;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "pattern_suggestions_confirmed_pattern_id_fkey";
+            columns: ["confirmed_pattern_id"];
+            isOneToOne: false;
+            referencedRelation: "morph_patterns";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
       structures: {
         Row: {
           id: string;
@@ -719,6 +796,8 @@ export type MorphPattern =
   Database["public"]["Tables"]["morph_patterns"]["Row"];
 export type PatternVocabulary =
   Database["public"]["Tables"]["pattern_vocabulary"]["Row"];
+export type PatternSuggestion =
+  Database["public"]["Tables"]["pattern_suggestions"]["Row"];
 export type Tag = Database["public"]["Tables"]["tags"]["Row"];
 export type ImportRun = Database["public"]["Tables"]["import_runs"]["Row"];
 export type ReviewItem = Database["public"]["Tables"]["review_items"]["Row"];

@@ -869,7 +869,7 @@ export async function writePattern(
       meaning_shift: input.meaning_shift ?? null,
       cue: input.cue ?? null,
       notes: input.notes ?? null,
-      mastery_state: input.mastery_state ?? "noticed",
+      mastery_state: input.mastery_state ?? "encountered",
     })
     .select("id")
     .single();
@@ -895,7 +895,7 @@ export async function updatePatternRecord(
       meaning_shift: input.meaning_shift ?? null,
       cue: input.cue ?? null,
       notes: input.notes ?? null,
-      mastery_state: input.mastery_state ?? "noticed",
+      mastery_state: input.mastery_state ?? "encountered",
     })
     .eq("id", id);
 

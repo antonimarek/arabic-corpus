@@ -23,14 +23,20 @@ export default async function StructuresPage() {
 
   return (
     <section className="flex flex-col gap-6">
-      <div className="flex items-baseline justify-between gap-4">
-        <h1 className="text-xl font-medium text-[var(--ink)]">Structures</h1>
-        <Link
-          href="/structures/new"
-          className="text-sm text-[var(--accent)] hover:underline"
-        >
-          New structure
-        </Link>
+      <div className="flex flex-col gap-2">
+        <div className="flex items-baseline justify-between gap-4">
+          <h1 className="text-xl font-medium text-[var(--ink)]">Structures</h1>
+          <Link
+            href="/structures/new"
+            className="text-sm text-[var(--accent)] hover:underline"
+          >
+            New structure
+          </Link>
+        </div>
+        <p className="text-sm text-[var(--ink-muted)]">
+          Phrase frames and chunks (بدي + فعل, عم + …). Word-formation moves
+          live under Patterns.
+        </p>
       </div>
 
       {!rows || rows.length === 0 ? (

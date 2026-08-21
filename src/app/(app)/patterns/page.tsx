@@ -1,19 +1,25 @@
 import Link from "next/link";
 
 import { createClient } from "@/lib/supabase/server";
-import {
-  isMasteryState,
-  MASTERY_LABEL,
-} from "@/lib/patterns";
+import { isMasteryState, MASTERY_LABEL } from "@/lib/patterns";
 
 export default async function PatternsPage() {
   const supabase = await createClient();
-  const { data: rows, error } = await supabase
-    .from("morph_patterns")
-    .select(
-      "id, name, arabic_sketch, form_label, mastery_state, updated_at, pattern_vocabulary(vocabulary_id)",
-    )
-    .order("updated_at", { ascending: false });
+  const [
+    { data: rows, error },
+    { count: pendingCount },
+  ] = await Promise.all([
+    supabase
+      .from("morph_patterns")
+      .select(
+        "id, name, arabic_sketch, form_label, mastery_state, updated_at, pattern_vocabulary(vocabulary_id)",
+      )
+      .order("updated_at", { ascending: false }),
+    supabase
+      .from("pattern_suggestions")
+      .select("id", { count: "exact", head: true })
+      .eq("status", "pending"),
+  ]);
 
   if (error) {
     return (
@@ -23,22 +29,48 @@ export default async function PatternsPage() {
     );
   }
 
+  const pending = pendingCount ?? 0;
+
   return (
     <section className="flex flex-col gap-6">
-      <div className="flex items-baseline justify-between gap-4">
-        <h1 className="text-xl font-medium text-[var(--ink)]">Patterns</h1>
-        <Link
-          href="/patterns/new"
-          className="text-sm text-[var(--accent)] hover:underline"
-        >
-          New pattern
-        </Link>
+      <div className="flex flex-col gap-2">
+        <div className="flex items-baseline justify-between gap-4">
+          <h1 className="text-xl font-medium text-[var(--ink)]">Patterns</h1>
+          <div className="flex flex-wrap gap-3 text-sm">
+            {pending > 0 ? (
+              <Link
+                href="/patterns/suggestions"
+                className="text-[var(--accent)] hover:underline"
+              >
+                Suggestions ({pending})
+              </Link>
+            ) : (
+              <Link
+                href="/patterns/suggestions"
+                className="text-[var(--ink-muted)] hover:underline"
+              >
+                Suggestions
+              </Link>
+            )}
+            <Link
+              href="/patterns/new"
+              className="text-[var(--accent)] hover:underline"
+            >
+              Connect words
+            </Link>
+          </div>
+        </div>
+        <p className="text-sm text-[var(--ink-muted)]">
+          Moves inside words (علم → علّم). Review suggestions from your lexicon,
+          or connect pairs yourself. Not phrase frames — those live under
+          Structures.
+        </p>
       </div>
 
       {!rows || rows.length === 0 ? (
         <p className="text-[15px] text-[var(--ink-muted)]">
-          Patterns grow from words you already know. Name a move you keep
-          seeing, then link examples.
+          No confirmed patterns yet. Run discover on your machine, or connect
+          words by hand.
         </p>
       ) : (
         <ul className="divide-y divide-[var(--line)] border-t border-[var(--line)]">

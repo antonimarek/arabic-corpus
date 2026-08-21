@@ -23,7 +23,7 @@ export default async function ImportPage() {
         <p className="text-sm text-[var(--ink-muted)]">
           Copy a prompt into any chat. Paste the JSON here. Review, then commit.
           Shwayy and other source rules live on{" "}
-          <Link href="/sources" className="text-[var(--accent)] hover:underline">
+          <Link href="/manual/sources" className="text-[var(--accent)] hover:underline">
             Sources
           </Link>
           .

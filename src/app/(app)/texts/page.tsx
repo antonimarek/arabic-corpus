@@ -37,7 +37,7 @@ export default async function TextsPage() {
         <p className="text-[15px] text-[var(--ink-muted)]">
           No texts yet. Import a Shwayy section, or paste a short scene with
           audio. See{" "}
-          <Link href="/sources" className="text-[var(--accent)] hover:underline">
+          <Link href="/manual/sources" className="text-[var(--accent)] hover:underline">
             Sources
           </Link>
           .

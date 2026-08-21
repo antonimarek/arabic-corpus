@@ -10,7 +10,8 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "import": "tsx import/scripts/import-run.ts",
-    "parse:shwayy": "tsx import/scripts/parse-shwayy.ts"
+    "parse:shwayy": "tsx import/scripts/parse-shwayy.ts",
+    "discover:patterns": "tsx import/scripts/discover-patterns.ts"
   },
   "dependencies": {
     "@supabase/ssr": "^0.12.4",

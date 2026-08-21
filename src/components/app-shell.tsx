@@ -5,6 +5,7 @@ import { usePathname } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 
 import { signOut } from "@/app/login/actions";
+import type { BuildInfo } from "@/lib/build-info";
 
 const NAV = [
   { href: "/", label: "Search" },
@@ -13,19 +14,23 @@ const NAV = [
   { href: "/vocabulary", label: "Vocabulary" },
   { href: "/patterns", label: "Patterns" },
   { href: "/structures", label: "Structures" },
-  { href: "/sources", label: "Sources" },
 ] as const;
 
 const ADD_ITEMS = [
   { href: "/texts/new", label: "Text" },
   { href: "/examples/new", label: "Example" },
   { href: "/vocabulary/new", label: "Vocabulary" },
-  { href: "/patterns/new", label: "Pattern" },
+  { href: "/patterns/new", label: "Connect pattern" },
   { href: "/structures/new", label: "Structure" },
   { href: "/import", label: "Import" },
 ] as const;
 
-export function AppShell({ children }: { children: React.ReactNode }) {
+type AppShellProps = {
+  children: React.ReactNode;
+  buildInfo: BuildInfo;
+};
+
+export function AppShell({ children, buildInfo }: AppShellProps) {
   const pathname = usePathname();
   const [addOpen, setAddOpen] = useState(false);
   const [moreOpen, setMoreOpen] = useState(false);
@@ -46,6 +51,9 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     return () => document.removeEventListener("pointerdown", onPointerDown);
   }, []);
 
+  const manualActive =
+    pathname === "/manual" || pathname.startsWith("/manual/");
+
   return (
     <div className="mx-auto flex min-h-full w-full max-w-3xl flex-col px-4 pb-10 pt-4 sm:px-6 sm:pt-8">
       <header className="mb-8 flex items-start justify-between gap-4">
@@ -64,6 +72,16 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           </Link>
         </div>
         <div className="flex items-center gap-2">
+          <Link
+            href="/manual"
+            className={`min-h-11 rounded-md px-3 py-2 text-sm ${
+              manualActive
+                ? "text-[var(--ink)]"
+                : "text-[var(--ink-muted)] hover:text-[var(--ink)]"
+            }`}
+          >
+            Manual
+          </Link>
           <div className="relative" ref={addRef}>
             <button
               type="button"
@@ -109,6 +127,22 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                 role="menu"
                 className="absolute right-0 z-20 mt-2 min-w-44 rounded-md border border-[var(--line)] bg-[var(--surface)] py-1"
               >
+                <Link
+                  href="/manual"
+                  role="menuitem"
+                  className="block px-3 py-3 text-sm text-[var(--ink)] hover:bg-[var(--surface-hover)]"
+                  onClick={() => setMoreOpen(false)}
+                >
+                  Manual
+                </Link>
+                <Link
+                  href="/manual/sources"
+                  role="menuitem"
+                  className="block px-3 py-3 text-sm text-[var(--ink)] hover:bg-[var(--surface-hover)]"
+                  onClick={() => setMoreOpen(false)}
+                >
+                  Sources
+                </Link>
                 <Link
                   href="/admin"
                   role="menuitem"
@@ -158,6 +192,15 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       </nav>
 
       <div className="flex-1">{children}</div>
+
+      <footer className="mt-10 border-t border-[var(--line)] pt-4">
+        <p
+          className="text-[11px] tracking-wide text-[var(--ink-muted)]"
+          title={buildInfo.detail}
+        >
+          Build {buildInfo.label}
+        </p>
+      </footer>
     </div>
   );
 }

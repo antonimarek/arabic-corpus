@@ -93,7 +93,7 @@ export default async function PatternDetailPage({
   const pairs = inductivePairs(members);
   const mastery = isMasteryState(pattern.mastery_state)
     ? pattern.mastery_state
-    : "noticed";
+    : "encountered";
 
   const examplesMap = new Map<
     string,

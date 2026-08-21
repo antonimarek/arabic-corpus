@@ -102,7 +102,7 @@ export default async function SearchHomePage({ searchParams }: SearchHomeProps) 
             >
               Example
             </Link>
-            <Link href="/sources" className="text-[var(--accent)] hover:underline">
+            <Link href="/manual/sources" className="text-[var(--accent)] hover:underline">
               Sources
             </Link>
           </div>

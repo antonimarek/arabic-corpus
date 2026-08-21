@@ -148,7 +148,12 @@ export function applyImportProvenance<T extends ProvenanceBundle>(
   bundle: T,
   origin: ImportOrigin,
   value: ImportValue,
-): T {
+): T & {
+  source: NonNullable<ProvenanceBundle["source"]> & {
+    origin: ImportOrigin;
+    value: ImportValue;
+  };
+} {
   return {
     ...bundle,
     source: {
@@ -157,6 +162,11 @@ export function applyImportProvenance<T extends ProvenanceBundle>(
       value,
     },
     items: bundle.items.map((item) => stampItemProvenance(item, origin, value)),
+  } as T & {
+    source: NonNullable<ProvenanceBundle["source"]> & {
+      origin: ImportOrigin;
+      value: ImportValue;
+    };
   };
 }
 

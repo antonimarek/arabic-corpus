@@ -8,6 +8,7 @@ import {
   clearAiStudyPlan,
   saveAiStudyPlan,
 } from "@/app/(app)/texts/ai-study-plan-actions";
+import { MarkdownContent } from "@/components/markdown-content";
 import { parseAiProduceCold } from "@/lib/ai-study-plan-parse";
 import { exampleNewHref } from "@/lib/example-links";
 
@@ -124,10 +125,10 @@ export function LessonAiStudyPlan({
             ) : null}
           </div>
         </div>
-      ) : (
+      ) : initialContent ? (
         <>
-          <div className="max-h-[32rem] overflow-y-auto whitespace-pre-wrap rounded-md border border-[var(--line)] bg-[var(--background)] p-3 text-sm leading-relaxed text-[var(--ink)]">
-            {initialContent}
+          <div className="max-h-[32rem] overflow-y-auto rounded-md border border-[var(--line)] bg-[var(--background)] p-4">
+            <MarkdownContent content={initialContent} />
           </div>
           {produceItems.length > 0 ? (
             <div className="flex flex-col gap-3">
@@ -164,7 +165,7 @@ export function LessonAiStudyPlan({
             </div>
           ) : null}
         </>
-      )}
+      ) : null}
 
       {error ? (
         <p className="text-sm text-[var(--danger)]" role="alert">

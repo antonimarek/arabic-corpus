@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useState, type ReactNode } from "react";
 
 import { MixedScriptText } from "@/components/mixed-script-text";
+import { exampleNewHref } from "@/lib/example-links";
 import {
   lineNumberHref,
   parseTimestampLabel,
@@ -143,6 +144,15 @@ function RecallCardItem({
           {cueEn}
         </p>
       ) : null}
+      <Link
+        href={exampleNewHref(textId, targetAr, {
+          translation: cueEn,
+          sourceLine: lineNumber ?? undefined,
+        })}
+        className="mt-2 inline-block text-sm text-[var(--accent)] hover:underline"
+      >
+        Add as example
+      </Link>
     </li>
   );
 }

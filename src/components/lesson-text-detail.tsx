@@ -3,6 +3,7 @@
 import { useRouter, useSearchParams } from "next/navigation";
 import { useCallback, useEffect, useMemo } from "react";
 
+import { LessonAiStudyPlan } from "@/components/lesson-ai-study-plan";
 import { LessonDialogueReader } from "@/components/lesson-dialogue-reader";
 import { LessonExportActions } from "@/components/lesson-export-actions";
 import { LessonStudyPack } from "@/components/lesson-study-pack";
@@ -91,12 +92,23 @@ export function LessonTextDetail({ text }: LessonTextDetailProps) {
       />
 
       {activeTab === "study" ? (
-        <LessonStudyPack
-          textId={text.id}
-          studyPack={text.studyPack}
-          lineStartsMs={text.audioLineStartsMs}
-          audioController={audioController}
-        />
+        <>
+          <LessonAiStudyPlan
+            textId={text.id}
+            initialContent={text.aiStudyPlan}
+          />
+          <div className="border-t border-[var(--line)] pt-6">
+            <h2 className="mb-4 text-sm text-[var(--ink-muted)]">
+              From transcript (automatic)
+            </h2>
+            <LessonStudyPack
+              textId={text.id}
+              studyPack={text.studyPack}
+              lineStartsMs={text.audioLineStartsMs}
+              audioController={audioController}
+            />
+          </div>
+        </>
       ) : (
         <LessonDialogueReader
           textId={text.id}

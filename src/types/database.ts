@@ -23,6 +23,7 @@ export type Database = {
           audio_duration_ms: number | null;
           audio_line_starts_ms: number[] | null;
           study_pack: Json | null;
+          ai_study_plan: string | null;
           search_arabic?: string | null;
           search_latin?: string | null;
           embedding?: string | null;
@@ -42,6 +43,7 @@ export type Database = {
           audio_duration_ms?: number | null;
           audio_line_starts_ms?: number[] | null;
           study_pack?: Json | null;
+          ai_study_plan?: string | null;
           embedding?: string | null;
           created_at?: string;
           updated_at?: string;
@@ -59,6 +61,7 @@ export type Database = {
           audio_duration_ms?: number | null;
           audio_line_starts_ms?: number[] | null;
           study_pack?: Json | null;
+          ai_study_plan?: string | null;
           embedding?: string | null;
           created_at?: string;
           updated_at?: string;

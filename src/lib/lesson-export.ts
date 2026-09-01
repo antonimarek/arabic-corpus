@@ -86,6 +86,7 @@ export const AI_REVIEW_OUTPUT_SCHEMA = `## Your task
 Read the lesson transcript and heuristic study candidates below. Produce a **practical between-lesson plan** for a Levantine Arabic learner.
 
 ### Rules
+- Write **all explanations, weekly tasks, and notes in English**. Arabic phrases stay in Arabic script. Cues use **Cue (English)** only.
 - Prefer **colloquial Levantine** forms from the transcript. Do not normalize to MSA unless the tutor did.
 - Do **not** invent Arabic words or phrases not supported by the transcript.
 - Mark uncertain items with \`[verify]\` — the transcript may be wrong.

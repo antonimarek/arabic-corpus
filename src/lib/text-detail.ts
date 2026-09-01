@@ -33,6 +33,7 @@ export type TextDetailPayload = {
   audioLineStartsMs: number[] | null;
   audioUrl: string | null;
   studyPack: StudyPack | null;
+  aiStudyPlan: string | null;
   tags: string[];
   links: ArabicLink[];
   knownLinks: ArabicLink[];
@@ -159,6 +160,7 @@ export async function fetchTextDetail(
     audioLineStartsMs: text.audio_line_starts_ms ?? null,
     audioUrl: await signedTextAudioUrl(supabase, text.audio_path),
     studyPack: parseStudyPack(text.study_pack),
+    aiStudyPlan: text.ai_study_plan ?? null,
     tags,
     links: [...linkMap.values()],
     knownLinks,

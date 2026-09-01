@@ -29,6 +29,7 @@ type ExampleFormProps =
       defaultTextId?: string;
       defaultSourceLine?: string;
       defaultArabic?: string;
+      defaultTranslation?: string;
       defaultVocabularyIds?: string[];
       defaultStructureIds?: string[];
     }
@@ -67,6 +68,11 @@ export function ExampleForm(props: ExampleFormProps) {
       ? (example?.arabic ?? "")
       : (props.defaultArabic ?? "");
 
+  const defaultTranslation =
+    props.mode === "edit"
+      ? (example?.translation ?? "")
+      : (props.defaultTranslation ?? "");
+
   const selectedVocabularyIds =
     props.mode === "edit"
       ? props.selectedVocabularyIds
@@ -102,7 +108,7 @@ export function ExampleForm(props: ExampleFormProps) {
         <textarea
           name="translation"
           rows={2}
-          defaultValue={example?.translation ?? ""}
+          defaultValue={defaultTranslation}
           className="rounded-md border border-[var(--line)] bg-[var(--surface)] px-3 py-2.5 text-[15px] outline-none focus:border-[var(--accent)]"
         />
       </label>

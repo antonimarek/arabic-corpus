@@ -4,6 +4,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { useCallback, useEffect, useMemo } from "react";
 
 import { LessonDialogueReader } from "@/components/lesson-dialogue-reader";
+import { LessonExportActions } from "@/components/lesson-export-actions";
 import { LessonStudyPack } from "@/components/lesson-study-pack";
 import { LessonTextTabs, type LessonTextTab } from "@/components/lesson-text-tabs";
 import { TextAudioPlayer } from "@/components/text-audio-player";
@@ -78,6 +79,16 @@ export function LessonTextDetail({ text }: LessonTextDetailProps) {
       ) : null}
 
       <LessonTextTabs activeTab={activeTab} onTabChange={setTab} />
+
+      <LessonExportActions
+        arabic={text.arabic}
+        studyPack={text.studyPack}
+        title={text.title}
+        source={text.source}
+        occurredOn={text.occurred_on}
+        textId={text.id}
+        lineStartsMs={text.audioLineStartsMs}
+      />
 
       {activeTab === "study" ? (
         <LessonStudyPack

@@ -136,6 +136,7 @@ Open a lesson text. You land on the **Study** tab by default.
 | Tab / feature | Lesson use |
 | --- | --- |
 | **Study** | Recall cards, corrections, contrasts, confusion moments, grammar threads |
+| **Export** | Copy dialogue, study pack, or AI review bundle (markdown + prompt for ChatGPT/Claude) |
 | **Dialogue** | Full transcript with Tutor/You labels; Arabic and English in separate blocks |
 | **Audio** | Shared player above tabs; Play on cards; timestamp links jump to Dialogue |
 | **Line markers** | Pre-set from import; refine manually if a boundary feels off |

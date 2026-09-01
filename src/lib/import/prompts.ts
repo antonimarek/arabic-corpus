@@ -81,7 +81,12 @@ Example output:
 ${JSON.stringify(PROMPT_EXAMPLE_BUNDLE, null, 2)}`;
 
 export type ImportPrompt = {
-  id: "messy-notes" | "vocab-list" | "examples" | "scene-clip";
+  id:
+    | "lesson-transcript"
+    | "messy-notes"
+    | "vocab-list"
+    | "examples"
+    | "scene-clip";
   title: string;
   summary: string;
   origin: ImportOrigin;
@@ -89,6 +94,22 @@ export type ImportPrompt = {
 };
 
 export const IMPORT_PROMPTS: ImportPrompt[] = [
+  {
+    id: "lesson-transcript",
+    title: "Lesson transcript",
+    summary:
+      "Corpus lesson dialogue plus study hints → vocabulary, examples, structures (review before commit).",
+    origin: "lesson",
+    text: `${RULES}
+
+Task: The user will attach a lesson export from the corpus app (dialogue with Tutor/You turns, optional heuristic study pack). Extract high-value corpus items only:
+- Prioritize production gaps, tutor corrections, contrast pairs, and natural chunks — not every word said.
+- Cap roughly: 5–10 vocabulary, 3–8 examples, 2–4 structures. Drop filler and English meta-talk.
+- Use source.title from the lesson heading in the export. Set source.origin to lesson and source.value to high.
+- Do not invent rows not supported by the transcript. Put [verify] in notes when Arabic may be wrong.
+- Patterns are not ImportBundle items — skip word-formation pattern rows.
+Return one ImportBundle.`,
+  },
   {
     id: "messy-notes",
     title: "Messy notes",

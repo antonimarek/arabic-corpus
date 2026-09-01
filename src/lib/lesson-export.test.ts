@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 import {
   aiReviewBundle,
   buildLessonExport,
+  corpusImportBundle,
   dialogueToMarkdown,
 } from "@/lib/lesson-export";
 import { buildStudyPack } from "@/lib/transcribe/study-pack";
@@ -52,6 +53,23 @@ describe("buildLessonExport", () => {
     expect(md).toContain("## Confusion moments");
   });
 
+  it("builds corpus import bundle with instructions and study hints", () => {
+    const pack = buildStudyPack("lesson-1", [
+      turn({ role: "TUTOR", text: "اليوم الجاي means next time.", timestampLabel: "1:00" }),
+    ]);
+    const md = buildLessonExport(
+      "corpus-import",
+      arabic,
+      pack,
+      { title: "Lesson — example" },
+    );
+
+    expect(md).toContain("Lesson transcript");
+    expect(md).toContain("## Dialogue");
+    expect(md).toContain("Study hints");
+    expect(md).toContain("patterns");
+  });
+
   it("builds ai review bundle with prompt and candidates", () => {
     const pack = buildStudyPack("lesson-1", [
       turn({ role: "TUTOR", text: "اليوم الجاي means next time.", timestampLabel: "1:00" }),
@@ -68,6 +86,17 @@ describe("buildLessonExport", () => {
     expect(md).toContain("Heuristic study candidates");
     expect(md).toContain("## Produce cold");
     expect(md).toContain("## This week");
+  });
+});
+
+describe("corpusImportBundle", () => {
+  it("places dialogue before study hints", () => {
+    const pack = buildStudyPack("lesson-1", []);
+    const md = corpusImportBundle(arabic, pack, { title: "T" });
+    const dialogueIndex = md.indexOf("## Dialogue");
+    const hintsIndex = md.indexOf("Study hints");
+    expect(dialogueIndex).toBeGreaterThan(-1);
+    expect(hintsIndex).toBeGreaterThan(dialogueIndex);
   });
 });
 

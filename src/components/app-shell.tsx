@@ -104,12 +104,11 @@ export function AppShell({ children, buildInfo }: AppShellProps) {
             <button
               type="button"
               onClick={() => setMoreOpen((open) => !open)}
-              className="min-h-11 min-w-11 rounded-[var(--radius-md)] px-2 text-sm text-[var(--ink-muted)] hover:bg-[var(--surface-hover)] hover:text-[var(--ink)]"
+              className="min-h-11 rounded-[var(--radius-md)] border border-[var(--line)] bg-[var(--surface)] px-4 text-sm font-medium text-[var(--ink)] hover:bg-[var(--surface-hover)]"
               aria-expanded={moreOpen}
               aria-haspopup="menu"
-              aria-label="More"
             >
-              ···
+              More
             </button>
             {moreOpen ? (
               <div role="menu" className={menuClass}>

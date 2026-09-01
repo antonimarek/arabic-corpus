@@ -38,6 +38,11 @@ const ACTIONS: Array<{
     label: "Copy for AI review",
     hint: "Prompt + transcript + candidates for ChatGPT or Claude",
   },
+  {
+    kind: "corpus-import",
+    label: "Copy for import",
+    hint: "Dialogue + study hints for Import → Lesson transcript prompt",
+  },
 ];
 
 async function copyText(value: string): Promise<boolean> {
@@ -86,8 +91,8 @@ export function LessonExportActions({
       <div>
         <h2 className="text-sm text-[var(--ink-muted)]">Export</h2>
         <p className="mt-1 text-xs text-[var(--ink-muted)]">
-          Copy markdown for notes or paste into an AI chat for a cleaner study
-          plan.
+          Copy markdown for notes, a study plan, or corpus import (vocabulary,
+          examples, structures).
         </p>
       </div>
       <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap">

@@ -127,6 +127,39 @@ The student studies between lessons with active recall, listening, and short spe
 ${AI_REVIEW_OUTPUT_SCHEMA}`;
 }
 
+export const CORPUS_IMPORT_INSTRUCTION = `Attach this to a chat after copying the **Lesson transcript** prompt from Import in the corpus app.
+
+Steps:
+1. Import → copy **Lesson transcript** prompt
+2. Paste the prompt, then paste this lesson export
+3. Copy the JSON response (no markdown fences)
+4. Import → paste JSON → review → commit
+
+Return vocabulary, examples, and structures only — not patterns.`;
+
+export function corpusImportBundle(
+  arabic: string,
+  studyPack: StudyPack,
+  meta: LessonExportMeta,
+  lineStartsMs?: number[] | null,
+): string {
+  const sections = [
+    CORPUS_IMPORT_INSTRUCTION,
+    "",
+    "---",
+    "",
+    dialogueToMarkdown(arabic, meta, lineStartsMs).trimEnd(),
+    "",
+    "---",
+    "",
+    "# Study hints (auto-extracted — prioritize gaps and corrections over new words)",
+    "",
+    studyPackToMarkdown(studyPack).trimEnd(),
+  ];
+
+  return sections.join("\n");
+}
+
 export function aiReviewBundle(
   arabic: string,
   studyPack: StudyPack,
@@ -158,7 +191,11 @@ export function aiReviewBundle(
   return sections.join("\n");
 }
 
-export type LessonExportKind = "dialogue" | "study-pack" | "ai-review";
+export type LessonExportKind =
+  | "dialogue"
+  | "study-pack"
+  | "ai-review"
+  | "corpus-import";
 
 export function buildLessonExport(
   kind: LessonExportKind,
@@ -174,5 +211,7 @@ export function buildLessonExport(
       return studyPackToMarkdown(studyPack);
     case "ai-review":
       return aiReviewBundle(arabic, studyPack, meta, lineStartsMs);
+    case "corpus-import":
+      return corpusImportBundle(arabic, studyPack, meta, lineStartsMs);
   }
 }

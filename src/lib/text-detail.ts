@@ -2,6 +2,7 @@ import { firstGloss, structureLink, vocabularyLink } from "@/lib/arabic-links";
 import { signedTextAudioUrl } from "@/lib/audio-storage";
 import type { ArabicLink } from "@/lib/highlight-arabic";
 import { notNull } from "@/lib/tags";
+import type { StudyPack } from "@/lib/transcribe/study-pack";
 import type { CorpusClient } from "@/lib/corpus/write";
 
 export const textQueryKey = (id: string) => ["text", id] as const;
@@ -30,6 +31,7 @@ export type TextDetailPayload = {
   audioDurationMs: number | null;
   audioLineStartsMs: number[] | null;
   audioUrl: string | null;
+  studyPack: StudyPack | null;
   tags: string[];
   links: ArabicLink[];
   knownLinks: ArabicLink[];
@@ -74,6 +76,13 @@ const TEXT_DETAIL_SELECT = `
     example_structures(structures(id, name, arabic_form, meaning))
   )
 `;
+
+function parseStudyPack(value: unknown): StudyPack | null {
+  if (!value || typeof value !== "object") return null;
+  const pack = value as StudyPack;
+  if (!Array.isArray(pack.weeklyPlan)) return null;
+  return pack;
+}
 
 export async function fetchTextDetail(
   supabase: CorpusClient,
@@ -151,6 +160,7 @@ export async function fetchTextDetail(
     audioDurationMs: text.audio_duration_ms ?? null,
     audioLineStartsMs: text.audio_line_starts_ms ?? null,
     audioUrl: await signedTextAudioUrl(supabase, text.audio_path),
+    studyPack: parseStudyPack(text.study_pack),
     tags,
     links: [...linkMap.values()],
     knownLinks,

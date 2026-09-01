@@ -11,7 +11,11 @@
     "test:watch": "vitest",
     "import": "tsx import/scripts/import-run.ts",
     "parse:shwayy": "tsx import/scripts/parse-shwayy.ts",
-    "discover:patterns": "tsx import/scripts/discover-patterns.ts"
+    "discover:patterns": "tsx import/scripts/discover-patterns.ts",
+    "transcribe:benchmark": "tsx import/scripts/transcribe-benchmark.ts",
+    "transcribe:lesson": "tsx import/scripts/transcribe-lesson.ts",
+    "transcribe:align": "tsx import/scripts/align-lesson.ts",
+    "import:lesson": "tsx import/scripts/import-lesson.ts"
   },
   "dependencies": {
     "@supabase/ssr": "^0.12.4",

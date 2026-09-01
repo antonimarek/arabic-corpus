@@ -8,6 +8,7 @@ import { deleteText } from "@/app/(app)/texts/actions";
 import { ConfirmDelete } from "@/components/confirm-delete";
 import { ExampleList } from "@/components/example-list";
 import { FocusTargetStrip } from "@/components/focus-target-strip";
+import { LessonStudyPack } from "@/components/lesson-study-pack";
 import { TextAudioField } from "@/components/text-audio-field";
 import { TextLineReader } from "@/components/text-line-reader";
 import { writeLastText } from "@/lib/prefs";
@@ -92,6 +93,14 @@ export function TextDetailClient({
             : null
         }
       />
+
+      {text.studyPack ? (
+        <LessonStudyPack
+          textId={text.id}
+          studyPack={text.studyPack}
+          lineStartsMs={text.audioLineStartsMs}
+        />
+      ) : null}
 
       {text.notes ? (
         <div className="border-t border-[var(--line)] pt-6">

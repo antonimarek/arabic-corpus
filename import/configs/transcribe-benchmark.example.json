@@ -1,0 +1,12 @@
+{
+  "models": [
+    "openai/gpt-transcribe",
+    "deepgram/nova-3",
+    "x-ai/grok-stt-1.0"
+  ],
+  "prompt": "This is a one-to-one Levantine Arabic lesson with frequent English explanations. Transcribe speech exactly as spoken. Do not translate Arabic into English. Keep Arabic in Arabic script and English in English. Preserve code-switching within a sentence. Prefer colloquial Levantine forms over Modern Standard Arabic. Mark uncertain words as [unclear] rather than inventing text.",
+  "defaultStartSeconds": 900,
+  "defaultDurationSeconds": 300,
+  "chunkSeconds": 120,
+  "chunkOverlapSeconds": 3
+}

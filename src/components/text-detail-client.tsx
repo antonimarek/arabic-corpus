@@ -8,7 +8,7 @@ import { deleteText } from "@/app/(app)/texts/actions";
 import { ConfirmDelete } from "@/components/confirm-delete";
 import { ExampleList } from "@/components/example-list";
 import { FocusTargetStrip } from "@/components/focus-target-strip";
-import { LessonStudyPack } from "@/components/lesson-study-pack";
+import { LessonTextDetail } from "@/components/lesson-text-detail";
 import { TextAudioField } from "@/components/text-audio-field";
 import { TextLineReader } from "@/components/text-line-reader";
 import { writeLastText } from "@/lib/prefs";
@@ -37,6 +37,7 @@ export function TextDetailClient({
   }, [initialData, queryClient, textId]);
 
   const text = data ?? initialData;
+  const isLesson = text.tags.includes("lesson") && text.studyPack != null;
 
   useEffect(() => {
     writeLastText({ id: text.id, title: text.title });
@@ -72,35 +73,31 @@ export function TextDetailClient({
 
       <TextAudioField textId={text.id} hasAudio={Boolean(text.audioPath)} />
 
-      <TextLineReader
-        textId={text.id}
-        arabic={text.arabic}
-        translation={text.translation}
-        links={text.links}
-        knownLinks={text.knownLinks}
-        examples={text.examples.map((example) => ({
-          id: example.id,
-          arabic: example.arabic,
-          sourceLine: example.source_line,
-        }))}
-        audio={
-          text.audioUrl
-            ? {
-                url: text.audioUrl,
-                durationMs: text.audioDurationMs,
-                lineStarts: text.audioLineStartsMs,
-              }
-            : null
-        }
-      />
-
-      {text.studyPack ? (
-        <LessonStudyPack
+      {isLesson ? (
+        <LessonTextDetail text={text} />
+      ) : (
+        <TextLineReader
           textId={text.id}
-          studyPack={text.studyPack}
-          lineStartsMs={text.audioLineStartsMs}
+          arabic={text.arabic}
+          translation={text.translation}
+          links={text.links}
+          knownLinks={text.knownLinks}
+          examples={text.examples.map((example) => ({
+            id: example.id,
+            arabic: example.arabic,
+            sourceLine: example.source_line,
+          }))}
+          audio={
+            text.audioUrl
+              ? {
+                  url: text.audioUrl,
+                  durationMs: text.audioDurationMs,
+                  lineStarts: text.audioLineStartsMs,
+                }
+              : null
+          }
         />
-      ) : null}
+      )}
 
       {text.notes ? (
         <div className="border-t border-[var(--line)] pt-6">

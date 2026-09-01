@@ -74,6 +74,6 @@ export function buildCorpusNotes(params: {
   ];
   if (params.model) parts.push(`STT model: ${params.model}`);
   if (params.fathomUrl) parts.push(`Fathom: ${params.fathomUrl}`);
-  parts.push("Study pack is available in the text reader when imported.");
+  parts.push("Study pack is available in the Study tab when imported.");
   return parts.join("\n");
 }

@@ -1,5 +1,7 @@
 import { notFound } from "next/navigation";
 
+import { Suspense } from "react";
+
 import { TextDetailClient } from "@/components/text-detail-client";
 import { fetchTextDetail } from "@/lib/text-detail";
 import { createClient } from "@/lib/supabase/server";
@@ -32,5 +34,9 @@ export default async function TextDetailPage({ params }: TextPageProps) {
     );
   }
 
-  return <TextDetailClient textId={id} initialData={initialData} />;
+  return (
+    <Suspense fallback={<p className="text-sm text-[var(--ink-muted)]">Loading…</p>}>
+      <TextDetailClient textId={id} initialData={initialData} />
+    </Suspense>
+  );
 }

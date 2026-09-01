@@ -1,31 +1,92 @@
 import type { DialogueTurn } from "./align";
+import {
+  extractArabicRuns,
+  longestArabicRun,
+  longestLatinRun,
+} from "@/lib/mixed-script";
 
-const ARABIC_RE = /[\u0600-\u06FF]/;
 const WHAT_MEANS_RE = /what means|how (?:do you|to) say|i don'?t recognize/i;
 const CORRECTION_RE = /أحسنت|not work|don'?t use|instead of|you can say|always for/i;
 
-export type StudyPack = {
-  lesson: string;
-  generatedAt: string;
-  recallPhrases: Array<{ timestamp: string; arabic: string; context: string }>;
-  confusionMoments: Array<{ timestamp: string; student: string; tutor?: string }>;
-  grammarThreads: Array<{ topic: string; timestamps: string[]; sample: string }>;
-  weeklyPlan: string[];
+export type RecallCard = {
+  cueEn: string;
+  targetAr: string;
+  timestamp: string;
+  lineNumber: number | null;
 };
 
-function arabicSnippets(text: string, limit = 3): string[] {
-  const parts = text.split(/(?<=[.!?؟])\s+/u);
-  return parts
-    .map((part) => part.trim())
-    .filter((part) => ARABIC_RE.test(part) && part.length >= 8)
-    .slice(0, limit);
+export type CorrectionCard = {
+  youSaid: string;
+  tutorSaid: string;
+  timestamp: string;
+  lineNumber: number | null;
+};
+
+export type ContrastCard = {
+  a: string;
+  b: string;
+  note: string;
+  timestamps: string[];
+};
+
+export type ConfusionMoment = {
+  timestamp: string;
+  student: string;
+  tutor?: string;
+  lineNumber: number | null;
+};
+
+export type GrammarThread = {
+  topic: string;
+  timestamps: string[];
+  sample: string;
+};
+
+/** @deprecated v1 field — kept for read fallback */
+export type LegacyRecallPhrase = {
+  timestamp: string;
+  arabic: string;
+  context: string;
+};
+
+export type StudyPackV2 = {
+  version: 2;
+  lesson: string;
+  generatedAt: string;
+  weeklyPlan: string[];
+  recallCards: RecallCard[];
+  corrections: CorrectionCard[];
+  contrasts: ContrastCard[];
+  confusionMoments: ConfusionMoment[];
+  grammarThreads: GrammarThread[];
+  recallPhrases?: LegacyRecallPhrase[];
+};
+
+export type StudyPackV1 = {
+  version?: 1;
+  lesson: string;
+  generatedAt: string;
+  weeklyPlan: string[];
+  recallPhrases: LegacyRecallPhrase[];
+  confusionMoments: Array<{
+    timestamp: string;
+    student: string;
+    tutor?: string;
+  }>;
+  grammarThreads: GrammarThread[];
+};
+
+export type StudyPack = StudyPackV2 | StudyPackV1;
+
+export function isStudyPackV2(pack: StudyPack): pack is StudyPackV2 {
+  return pack.version === 2;
 }
 
-function uniqueByArabic<T extends { arabic: string }>(items: T[]): T[] {
+function uniqueByKey<T>(items: T[], keyFn: (item: T) => string): T[] {
   const seen = new Set<string>();
   const out: T[] = [];
   for (const item of items) {
-    const key = item.arabic.replace(/\s+/g, " ").trim();
+    const key = keyFn(item);
     if (!key || seen.has(key)) continue;
     seen.add(key);
     out.push(item);
@@ -33,22 +94,105 @@ function uniqueByArabic<T extends { arabic: string }>(items: T[]): T[] {
   return out;
 }
 
-export function buildStudyPack(lesson: string, turns: DialogueTurn[]): StudyPack {
-  const recallPhrases: StudyPack["recallPhrases"] = [];
-  const confusionMoments: StudyPack["confusionMoments"] = [];
+type LineIndex = {
+  timestampToLine: Map<string, number>;
+};
+
+function buildLineIndex(mergedTimestamps: string[]): LineIndex {
+  const timestampToLine = new Map<string, number>();
+  mergedTimestamps.forEach((label, index) => {
+    timestampToLine.set(label, index + 1);
+  });
+  return { timestampToLine };
+}
+
+function lineForTurn(index: LineIndex, timestamp: string): number | null {
+  return index.timestampToLine.get(timestamp) ?? null;
+}
+
+const CONTRAST_PATTERNS: Array<{
+  pattern: RegExp;
+  note: string;
+  forms: [RegExp, RegExp];
+}> = [
+  {
+    pattern: /اليوم الجاي|اللي بعده/i,
+    note: "اليوم الجاي vs اللي بعده (future vs past)",
+    forms: [/اليوم الجاي/u, /اللي بعده/u],
+  },
+  {
+    pattern: /كل يوم|كل اليوم/i,
+    note: "كل يوم vs كل اليوم",
+    forms: [/كل يوم/u, /كل اليوم/u],
+  },
+  {
+    pattern: /فهمت|بفهم/i,
+    note: "فهمت vs بفهم (momentary vs ongoing)",
+    forms: [/فهمت/u, /بفهم/u],
+  },
+];
+
+export function buildStudyPack(
+  lesson: string,
+  turns: DialogueTurn[],
+  mergedTimestamps?: string[],
+): StudyPackV2 {
+  const lineIndex = buildLineIndex(
+    mergedTimestamps ??
+      turns.map((turn) => turn.timestampLabel),
+  );
+
+  const recallCards: RecallCard[] = [];
+  const corrections: CorrectionCard[] = [];
+  const contrasts: ContrastCard[] = [];
+  const confusionMoments: ConfusionMoment[] = [];
   const grammarBuckets = new Map<string, { timestamps: string[]; sample: string }>();
 
   for (let i = 0; i < turns.length; i += 1) {
     const turn = turns[i];
+
     if (turn.role === "TUTOR") {
-      for (const snippet of arabicSnippets(turn.text)) {
-        if (CORRECTION_RE.test(turn.text) || turn.text.length > 40) {
-          recallPhrases.push({
-            timestamp: turn.timestampLabel,
-            arabic: snippet,
-            context: turn.text.slice(0, 180),
-          });
-        }
+      const targetAr = longestArabicRun(turn.text);
+      const cueEn = longestLatinRun(turn.text);
+
+      if (
+        targetAr.length >= 8 &&
+        (CORRECTION_RE.test(turn.text) || turn.text.length > 40)
+      ) {
+        recallCards.push({
+          cueEn: cueEn || "Say in Arabic",
+          targetAr,
+          timestamp: turn.timestampLabel,
+          lineNumber: lineForTurn(lineIndex, turn.timestampLabel),
+        });
+      }
+
+      const prev = turns[i - 1];
+      if (
+        prev?.role === "STUDENT" &&
+        CORRECTION_RE.test(turn.text) &&
+        prev.text.trim().length > 0
+      ) {
+        corrections.push({
+          youSaid: prev.text.trim(),
+          tutorSaid: turn.text.trim(),
+          timestamp: turn.timestampLabel,
+          lineNumber: lineForTurn(lineIndex, turn.timestampLabel),
+        });
+      }
+
+      for (const contrast of CONTRAST_PATTERNS) {
+        if (!contrast.pattern.test(turn.text)) continue;
+        const arabicRuns = extractArabicRuns(turn.text);
+        const a = arabicRuns.find((run) => contrast.forms[0].test(run));
+        const b = arabicRuns.find((run) => contrast.forms[1].test(run));
+        if (!a || !b) continue;
+        contrasts.push({
+          a,
+          b,
+          note: contrast.note,
+          timestamps: [turn.timestampLabel],
+        });
       }
 
       const grammarTopics: Array<[RegExp, string]> = [
@@ -77,7 +221,11 @@ export function buildStudyPack(lesson: string, turns: DialogueTurn[]): StudyPack
       confusionMoments.push({
         timestamp: turn.timestampLabel,
         student: turn.text.slice(0, 200),
-        tutor: turns[i + 1]?.role === "TUTOR" ? turns[i + 1].text.slice(0, 200) : undefined,
+        tutor:
+          turns[i + 1]?.role === "TUTOR"
+            ? turns[i + 1].text.slice(0, 200)
+            : undefined,
+        lineNumber: lineForTurn(lineIndex, turn.timestampLabel),
       });
     }
   }
@@ -89,19 +237,38 @@ export function buildStudyPack(lesson: string, turns: DialogueTurn[]): StudyPack
   }));
 
   return {
+    version: 2,
     lesson,
     generatedAt: new Date().toISOString(),
-    recallPhrases: uniqueByArabic(recallPhrases).slice(0, 12),
+    recallCards: uniqueByKey(recallCards, (card) => card.targetAr).slice(0, 7),
+    corrections: uniqueByKey(
+      corrections,
+      (card) => `${card.youSaid}|${card.tutorSaid}`,
+    ).slice(0, 7),
+    contrasts: uniqueByKey(contrasts, (card) => `${card.a}|${card.b}`).slice(0, 5),
     confusionMoments: confusionMoments.slice(0, 10),
     grammarThreads,
     weeklyPlan: [
-      "Day 1 (lesson day): skim lesson_study_pack.md only — no heavy study.",
-      "Day 2 (~15 min): active recall — cover English side, say Arabic for 5 recall phrases.",
-      "Day 4 (~20 min): listening — replay 3 marked timestamps in corpus text reader.",
+      "Day 1 (lesson day): skim the Study tab only — no heavy study.",
+      "Day 2 (~15 min): active recall — cover the English cue, say Arabic for 5 cards.",
+      "Day 4 (~20 min): listening — replay 3 marked timestamps in Dialogue.",
       "Day 6 (~15 min): output — 3 min Arabic monologue on your week, record yourself.",
       "Before next lesson: review confusion moments; pick 3 items to ask tutor.",
     ],
   };
+}
+
+export function normalizeStudyPack(value: unknown): StudyPack | null {
+  if (!value || typeof value !== "object") return null;
+  const pack = value as StudyPack;
+  if (!Array.isArray(pack.weeklyPlan)) return null;
+  if (pack.version === 2 && Array.isArray((pack as StudyPackV2).recallCards)) {
+    return pack as StudyPackV2;
+  }
+  if (Array.isArray((pack as StudyPackV1).recallPhrases)) {
+    return { version: 1, ...(pack as StudyPackV1) };
+  }
+  return null;
 }
 
 export function studyPackToMarkdown(pack: StudyPack): string {
@@ -114,18 +281,36 @@ export function studyPackToMarkdown(pack: StudyPack): string {
     "",
     ...pack.weeklyPlan.map((step) => `- ${step}`),
     "",
-    "## Active recall phrases",
-    "",
-    "Cover the English cue. Say the Arabic aloud. Check audio at timestamp in corpus.",
-    "",
   ];
 
-  if (pack.recallPhrases.length === 0) {
-    lines.push("_No phrases extracted — review lesson_dialogue.md manually._", "");
+  if (isStudyPackV2(pack)) {
+    lines.push("## Recall cards", "");
+    for (const item of pack.recallCards) {
+      lines.push(`### [${item.timestamp}]`);
+      lines.push(`- **Cue:** ${item.cueEn}`);
+      lines.push(`- **Arabic:** ${item.targetAr}`);
+      lines.push("");
+    }
+
+    lines.push("## Corrections", "");
+    for (const item of pack.corrections) {
+      lines.push(`### [${item.timestamp}]`);
+      lines.push(`- **You:** ${item.youSaid}`);
+      lines.push(`- **Tutor:** ${item.tutorSaid}`);
+      lines.push("");
+    }
+
+    lines.push("## Contrasts", "");
+    for (const item of pack.contrasts) {
+      lines.push(`### ${item.note}`);
+      lines.push(`- **A:** ${item.a}`);
+      lines.push(`- **B:** ${item.b}`);
+      lines.push("");
+    }
   } else {
+    lines.push("## Active recall phrases", "");
     for (const item of pack.recallPhrases) {
       lines.push(`### [${item.timestamp}]`);
-      lines.push("");
       lines.push(`- **Arabic:** ${item.arabic}`);
       lines.push(`- **Context:** ${item.context}`);
       lines.push("");
@@ -133,15 +318,11 @@ export function studyPackToMarkdown(pack: StudyPack): string {
   }
 
   lines.push("## Confusion moments (priority review)", "");
-  if (pack.confusionMoments.length === 0) {
-    lines.push("_None auto-detected._", "");
-  } else {
-    for (const item of pack.confusionMoments) {
-      lines.push(`### [${item.timestamp}]`);
-      lines.push(`- **You:** ${item.student}`);
-      if (item.tutor) lines.push(`- **Tutor:** ${item.tutor}`);
-      lines.push("");
-    }
+  for (const item of pack.confusionMoments) {
+    lines.push(`### [${item.timestamp}]`);
+    lines.push(`- **You:** ${item.student}`);
+    if (item.tutor) lines.push(`- **Tutor:** ${item.tutor}`);
+    lines.push("");
   }
 
   lines.push("## Grammar threads from this lesson", "");
@@ -151,13 +332,6 @@ export function studyPackToMarkdown(pack: StudyPack): string {
     lines.push(`- Sample: ${thread.sample}`);
     lines.push("");
   }
-
-  lines.push("## Rules");
-  lines.push("");
-  lines.push("- Do not treat the transcript as perfect — verify Arabic against audio.");
-  lines.push("- Prefer **active recall** over re-reading.");
-  lines.push("- Add only 5–10 Anki cards per lesson, from items you actually struggled with.");
-  lines.push("- Promote stable phrases to corpus **examples** after you can say them cold.");
 
   return lines.join("\n");
 }

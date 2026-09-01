@@ -140,7 +140,11 @@ async function main() {
   const merged = mergeTurnsByRole(dialogue.turns);
   const arabic = buildCorpusArabicText(merged);
   const lineStarts = corpusLineStartsMs(merged);
-  const studyPack = buildStudyPack(lesson, dialogue.turns);
+  const studyPack = buildStudyPack(
+    lesson,
+    dialogue.turns,
+    merged.map((line) => line.timestampLabel),
+  );
   const studyPackPath = path.join(lessonDir, "lesson_study_pack.md");
   await writeFile(studyPackPath, `${studyPackToMarkdown(studyPack)}\n`);
 

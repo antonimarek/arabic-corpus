@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 import {
   lineNumberForTimestamp,
   parseTimestampLabel,
+  timestampLineHref,
 } from "@/lib/study-pack-nav";
 
 describe("parseTimestampLabel", () => {
@@ -29,5 +30,13 @@ describe("lineNumberForTimestamp", () => {
 
   it("returns null when line starts are missing", () => {
     expect(lineNumberForTimestamp("1:30", null)).toBeNull();
+  });
+});
+
+describe("timestampLineHref", () => {
+  it("links to dialogue tab with line anchor", () => {
+    expect(timestampLineHref("text-id", "1:30", [0, 60_000, 120_000])).toBe(
+      "/texts/text-id?tab=dialogue#line-2",
+    );
   });
 });

@@ -131,13 +131,19 @@ In corpus, lines with `source: fathom_fallback` in `lesson_review_queue.csv` des
 
 ## Using the corpus app
 
-| Feature | Lesson use |
+Open a lesson text. You land on the **Study** tab by default.
+
+| Tab / feature | Lesson use |
 | --- | --- |
-| **Text + audio** | Jump to tutor corrections; shadow short lines |
+| **Study** | Recall cards, corrections, contrasts, confusion moments, grammar threads |
+| **Dialogue** | Full transcript with Tutor/You labels; Arabic and English in separate blocks |
+| **Audio** | Shared player above tabs; Play on cards; timestamp links jump to Dialogue |
 | **Line markers** | Pre-set from import; refine manually if a boundary feels off |
 | **Examples** | Save corrected sentences from the lesson |
 | **Vocabulary** | Add only words you failed to produce |
 | **Patterns** | Later — when you notice repeated moves (`كبّر`, ordinals, etc.) |
+
+Study pack v2 stores structured cards in `texts.study_pack` (recall cards with English cue + Arabic target, corrections, contrasts).
 
 ## Commands (this lesson)
 
@@ -145,8 +151,8 @@ In corpus, lines with `source: fathom_fallback` in `lesson_review_queue.csv` des
 # Example lesson id:
 npm run import:lesson -- --lesson lesson-2026-08-31 --owner-email you@example.com
 
-# Re-generate study pack only:
-npm run import:lesson -- --lesson lesson-2026-08-31 --owner-email you@example.com --dry-run
+# Re-generate study pack (v2 JSON) on an existing import:
+npm run import:lesson -- --lesson lesson-2026-08-31 --update-study-pack
 ```
 
 ## What comes next (not built yet)

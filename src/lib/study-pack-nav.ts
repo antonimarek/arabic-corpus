@@ -1,5 +1,5 @@
 import { lineAtTimeMs, normalizeLineStarts } from "@/lib/audio";
-import { lineHref } from "@/lib/text-lines";
+import { lineAnchorId, lineHref } from "@/lib/text-lines";
 
 /** Parse [m:ss] or [h:mm:ss] timestamp labels to milliseconds. */
 export function parseTimestampLabel(label: string): number | null {
@@ -32,8 +32,23 @@ export function timestampLineHref(
   textId: string,
   timestampLabel: string,
   lineStartsMs: number[] | null,
+  options?: { dialogueTab?: boolean },
 ): string | null {
   const lineNumber = lineNumberForTimestamp(timestampLabel, lineStartsMs);
   if (lineNumber == null) return null;
-  return lineHref(textId, lineNumber);
+  const base = `/texts/${textId}`;
+  const query = options?.dialogueTab !== false ? "?tab=dialogue" : "";
+  return `${base}${query}#${lineAnchorId(lineNumber)}`;
+}
+
+export function lineNumberHref(
+  textId: string,
+  lineNumber: number,
+  options?: { dialogueTab?: boolean },
+): string {
+  const hash = lineAnchorId(lineNumber);
+  if (options?.dialogueTab === false) {
+    return `${lineHref(textId, lineNumber)}`;
+  }
+  return `/texts/${textId}?tab=dialogue#${hash}`;
 }

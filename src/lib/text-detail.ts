@@ -3,6 +3,7 @@ import { signedTextAudioUrl } from "@/lib/audio-storage";
 import type { ArabicLink } from "@/lib/highlight-arabic";
 import { notNull } from "@/lib/tags";
 import type { StudyPack } from "@/lib/transcribe/study-pack";
+import { normalizeStudyPack } from "@/lib/transcribe/study-pack";
 import type { CorpusClient } from "@/lib/corpus/write";
 
 export const textQueryKey = (id: string) => ["text", id] as const;
@@ -78,10 +79,7 @@ const TEXT_DETAIL_SELECT = `
 `;
 
 function parseStudyPack(value: unknown): StudyPack | null {
-  if (!value || typeof value !== "object") return null;
-  const pack = value as StudyPack;
-  if (!Array.isArray(pack.weeklyPlan)) return null;
-  return pack;
+  return normalizeStudyPack(value);
 }
 
 export async function fetchTextDetail(

@@ -77,9 +77,9 @@ Writes:
 npm run import:lesson -- --lesson lesson-2026-08-31 --owner-email you@example.com
 ```
 
-Creates a **text** with merged dialogue lines, synced audio (compressed if needed), line-start markers, and an in-app **Study pack** section (stored as `study_pack` JSON on the text). Also writes `lesson_study_pack.md` locally.
+Creates a **text** with merged dialogue lines, synced audio (compressed if needed), line-start markers, and an in-app **Study** tab (structured `study_pack` v2 JSON on the text). Also writes `lesson_study_pack.md` locally.
 
-To refresh study pack on an already-imported lesson:
+To refresh study pack on an already-imported lesson (regenerates v2 recall cards, corrections, contrasts):
 
 ```bash
 npm run import:lesson -- --lesson lesson-2026-08-31 --update-study-pack

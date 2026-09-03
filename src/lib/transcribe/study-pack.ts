@@ -59,6 +59,8 @@ export type StudyPackV2 = {
   contrasts: ContrastCard[];
   confusionMoments: ConfusionMoment[];
   grammarThreads: GrammarThread[];
+  /** Same role/line structure as corpus arabic, but Fathom wording only. */
+  fathomArabic?: string;
   recallPhrases?: LegacyRecallPhrase[];
 };
 
@@ -136,6 +138,7 @@ export function buildStudyPack(
   lesson: string,
   turns: DialogueTurn[],
   mergedTimestamps?: string[],
+  options?: { fathomArabic?: string },
 ): StudyPackV2 {
   const lineIndex = buildLineIndex(
     mergedTimestamps ??
@@ -248,6 +251,7 @@ export function buildStudyPack(
     contrasts: uniqueByKey(contrasts, (card) => `${card.a}|${card.b}`).slice(0, 5),
     confusionMoments: confusionMoments.slice(0, 10),
     grammarThreads,
+    fathomArabic: options?.fathomArabic,
     weeklyPlan: [
       "Day 1 (lesson day): skim the Study tab only — no heavy study.",
       "Day 2 (~15 min): active recall — cover the English cue, say Arabic for 5 cards.",

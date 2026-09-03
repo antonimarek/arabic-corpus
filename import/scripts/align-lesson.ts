@@ -98,7 +98,7 @@ async function main() {
   await writeFile(mdPath, `${dialogueToMarkdown(turns)}\n`);
 
   const csvLines = [
-    "start_seconds,end_seconds,role,speaker,source,text,fathom_text",
+    "start_seconds,end_seconds,role,speaker,source,similarity,text,fathom_text,stt_text",
     ...turns.map((turn) =>
       [
         turn.startSeconds,
@@ -106,8 +106,10 @@ async function main() {
         turn.role,
         csvEscape(turn.speaker),
         turn.source,
+        turn.similarity.toFixed(3),
         csvEscape(turn.text),
         csvEscape(turn.fathomText),
+        csvEscape(turn.sttText),
       ].join(","),
     ),
   ];
@@ -117,7 +119,7 @@ async function main() {
   console.log(`JSON:     ${jsonPath}`);
   console.log(`Review:   ${reviewPath}`);
   console.log(
-    `Turns: ${stats.turnCount} (${stats.tutorTurns} tutor, ${stats.studentTurns} student, ${stats.fathomFallbackTurns} fathom fallback)`,
+    `Turns: ${stats.turnCount} (${stats.tutorTurns} tutor, ${stats.studentTurns} student, ${stats.sttTurns} stt, ${stats.mixedTurns} mixed, ${stats.fathomFallbackTurns} fathom fallback)`,
   );
 }
 

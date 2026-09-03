@@ -75,6 +75,7 @@ Options:
   --occurred-on      ISO date (default: lesson id date if parseable)
   --dry-run          Build study pack + preview only
   --update-study-pack  Update study_pack on existing text (from corpus_import.json)
+  --update-dialogue    Rewrite arabic + line markers + study pack on existing text
 `);
   process.exit(1);
 }
@@ -123,6 +124,7 @@ async function main() {
 
   const dryRun = args.includes("--dry-run");
   const updateStudyPackOnly = args.includes("--update-study-pack");
+  const updateDialogue = args.includes("--update-dialogue");
   const lessonDir = path.join(process.cwd(), "import/processed/lessons", lesson);
   const dialoguePath = path.join(lessonDir, "lesson_dialogue.json");
   const manifestPath = path.join(lessonDir, "lesson_manifest.json");
@@ -138,12 +140,15 @@ async function main() {
     : {};
 
   const merged = mergeTurnsByRole(dialogue.turns);
+  const fathomMerged = mergeTurnsByRole(dialogue.turns, { textField: "fathomText" });
   const arabic = buildCorpusArabicText(merged);
+  const fathomArabic = buildCorpusArabicText(fathomMerged);
   const lineStarts = corpusLineStartsMs(merged);
   const studyPack = buildStudyPack(
     lesson,
     dialogue.turns,
     merged.map((line) => line.timestampLabel),
+    { fathomArabic },
   );
   const studyPackPath = path.join(lessonDir, "lesson_study_pack.md");
   await writeFile(studyPackPath, `${studyPackToMarkdown(studyPack)}\n`);
@@ -184,7 +189,7 @@ async function main() {
       })
     : null;
 
-  if (updateStudyPackOnly) {
+  if (updateStudyPackOnly || updateDialogue) {
     const textId = argValue(args, "--text-id") ?? existingImport?.textId;
     if (!textId) {
       console.error("Missing text id. Pass --text-id or import the lesson first.");
@@ -198,16 +203,28 @@ async function main() {
       { auth: { persistSession: false, autoRefreshToken: false } },
     );
 
+    const patch = updateDialogue
+      ? {
+          arabic,
+          audio_line_starts_ms: lineStarts,
+          study_pack: studyPack,
+        }
+      : { study_pack: studyPack };
+
     const { error } = await supabase
       .from("texts")
-      .update({ study_pack: studyPack })
+      .update(patch)
       .eq("id", textId);
     if (error) {
       console.error(error.message);
       process.exit(1);
     }
 
-    console.log(`Updated study pack on text id: ${textId}`);
+    console.log(
+      updateDialogue
+        ? `Updated dialogue + study pack on text id: ${textId}`
+        : `Updated study pack on text id: ${textId}`,
+    );
     console.log(`Open: /texts/${textId}`);
     return;
   }

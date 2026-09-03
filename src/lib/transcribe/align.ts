@@ -14,8 +14,10 @@ export type DialogueTurn = {
   role: "TUTOR" | "STUDENT";
   speaker: string;
   text: string;
+  sttText: string;
   fathomText: string;
   source: "stt" | "fathom_fallback" | "mixed";
+  similarity: number;
   url?: string;
 };
 
@@ -123,6 +125,99 @@ function hasArabic(text: string): boolean {
   return /[\u0600-\u06FF]/.test(text);
 }
 
+const TOKEN_RE = /[\u0600-\u06FFA-Za-z0-9]+/gu;
+
+export function tokenizeForSimilarity(text: string): Set<string> {
+  const tokens = new Set<string>();
+  for (const match of text.toLowerCase().matchAll(TOKEN_RE)) {
+    const token = match[0];
+    if (token.length > 0) tokens.add(token);
+  }
+  return tokens;
+}
+
+/** Jaccard similarity over alphanumeric / Arabic tokens. */
+export function turnTextSimilarity(a: string, b: string): number {
+  const left = tokenizeForSimilarity(a);
+  const right = tokenizeForSimilarity(b);
+  if (left.size === 0 && right.size === 0) return 1;
+  if (left.size === 0 || right.size === 0) return 0;
+  let intersection = 0;
+  for (const token of left) {
+    if (right.has(token)) intersection += 1;
+  }
+  const union = left.size + right.size - intersection;
+  return union === 0 ? 0 : intersection / union;
+}
+
+export function chooseTurnText(params: {
+  sttText: string;
+  fathomText: string;
+  durationSeconds: number;
+}): { text: string; source: DialogueTurn["source"]; similarity: number } {
+  const sttText = params.sttText.trim();
+  const fathomText = params.fathomText.trim();
+  const similarity = turnTextSimilarity(sttText, fathomText);
+  const duration = Math.max(0, params.durationSeconds);
+  const lengthRatio =
+    fathomText.length === 0
+      ? sttText.length > 0
+        ? Number.POSITIVE_INFINITY
+        : 1
+      : sttText.length / fathomText.length;
+
+  if (!sttText) {
+    return { text: fathomText, source: "fathom_fallback", similarity };
+  }
+
+  const sttHasArabic = hasArabic(sttText);
+  const fathomHasArabic = hasArabic(fathomText);
+
+  // STT uniquely carries Arabic script — keep it even when English labels disagree.
+  if (sttHasArabic && !fathomHasArabic) {
+    return {
+      text: sttText,
+      source: similarity < 0.22 ? "mixed" : "stt",
+      similarity,
+    };
+  }
+
+  if (
+    fathomHasArabic &&
+    !sttHasArabic &&
+    sttText.length < fathomText.length * 0.5
+  ) {
+    return { text: fathomText, source: "fathom_fallback", similarity };
+  }
+
+  // Rapid turns: Fathom speaker windows are more trustworthy than character-ratio STT slices.
+  if (duration <= 6 && similarity < 0.28 && fathomText.length > 0) {
+    return { text: fathomText, source: "fathom_fallback", similarity };
+  }
+
+  if (
+    similarity < 0.18 &&
+    fathomText.length >= 8 &&
+    (lengthRatio > 2.5 || lengthRatio < 0.35)
+  ) {
+    return { text: fathomText, source: "fathom_fallback", similarity };
+  }
+
+  if (similarity < 0.12 && fathomText.length >= 8) {
+    return { text: fathomText, source: "fathom_fallback", similarity };
+  }
+
+  if (sttText.length < 8 && fathomText.length > sttText.length) {
+    return { text: fathomText, source: "fathom_fallback", similarity };
+  }
+
+  return {
+    text: sttText,
+    source: similarity < 0.25 ? "mixed" : "stt",
+    similarity,
+  };
+}
+
 export function alignDialogue(params: {
   fathomSegments: FathomSegment[];
   sttChunks: SttChunk[];
@@ -141,19 +236,11 @@ export function alignDialogue(params: {
       segment.endSeconds,
     );
     const fathomText = segment.text.trim();
-    let text = sttText;
-    let source: DialogueTurn["source"] = "stt";
-
-    if (!text) {
-      text = fathomText;
-      source = "fathom_fallback";
-    } else if (hasArabic(fathomText) && !hasArabic(sttText) && sttText.length < fathomText.length * 0.5) {
-      text = fathomText;
-      source = "fathom_fallback";
-    } else if (text.length < 8 && fathomText.length > text.length) {
-      text = fathomText;
-      source = "fathom_fallback";
-    }
+    const chosen = chooseTurnText({
+      sttText,
+      fathomText,
+      durationSeconds: segment.endSeconds - segment.timestampSeconds,
+    });
 
     return {
       startSeconds: segment.timestampSeconds,
@@ -161,9 +248,11 @@ export function alignDialogue(params: {
       timestampLabel: formatTimestamp(segment.timestampSeconds),
       role: normalizeSpeaker(segment.speaker, tutorNames),
       speaker: segment.speaker,
-      text,
+      text: chosen.text,
+      sttText,
       fathomText,
-      source,
+      source: chosen.source,
+      similarity: chosen.similarity,
       url: segment.url,
     };
   });
@@ -177,10 +266,13 @@ export function dialogueToMarkdown(turns: DialogueTurn[]): string {
 
 export function dialogueStats(turns: DialogueTurn[]) {
   const fallback = turns.filter((turn) => turn.source === "fathom_fallback").length;
+  const mixed = turns.filter((turn) => turn.source === "mixed").length;
   return {
     turnCount: turns.length,
     tutorTurns: turns.filter((turn) => turn.role === "TUTOR").length,
     studentTurns: turns.filter((turn) => turn.role === "STUDENT").length,
     fathomFallbackTurns: fallback,
+    mixedTurns: mixed,
+    sttTurns: turns.filter((turn) => turn.source === "stt").length,
   };
 }

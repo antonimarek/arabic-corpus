@@ -65,10 +65,10 @@ After `transcribe:lesson`, map speaker-labelled Fathom timestamps onto the STT t
 npm run transcribe:align -- --lesson lesson-2026-08-31
 ```
 
-Writes:
+Roles always come from Fathom. Words prefer STT when the time-window slice matches the Fathom utterance; short / mismatched windows fall back to Fathom text. Writes:
 
-- `lesson_dialogue.md` — `TUTOR` / `STUDENT` turns with STT wording
-- `lesson_dialogue.json` — structured turns + stats
+- `lesson_dialogue.md` — `TUTOR` / `STUDENT` turns with chosen wording
+- `lesson_dialogue.json` — structured turns + stats (`stt` / `mixed` / `fathom_fallback`)
 - `lesson_review_queue.csv` — side-by-side STT vs Fathom for review
 
 ### Import to corpus + study pack
@@ -77,12 +77,18 @@ Writes:
 npm run import:lesson -- --lesson lesson-2026-08-31 --owner-email you@example.com
 ```
 
-Creates a **text** with merged dialogue lines, synced audio (compressed if needed), line-start markers, and an in-app **Study** tab (structured `study_pack` v2 JSON on the text). Also writes `lesson_study_pack.md` locally.
+Creates a **text** with merged dialogue lines, synced audio (compressed if needed), line-start markers, and an in-app **Study** tab (structured `study_pack` v2 JSON on the text). Also stores `fathomArabic` for a Dialogue tab toggle (**Speakers (Fathom)** vs **Aligned (STT)**). Writes `lesson_study_pack.md` locally.
 
 To refresh study pack on an already-imported lesson (regenerates v2 recall cards, corrections, contrasts):
 
 ```bash
 npm run import:lesson -- --lesson lesson-2026-08-31 --update-study-pack
+```
+
+To rewrite dialogue arabic + line markers + study pack after a better align:
+
+```bash
+npm run import:lesson -- --lesson lesson-2026-08-31 --update-dialogue
 ```
 
 Study workflow: `import/docs/lesson-study-workflow.md`.

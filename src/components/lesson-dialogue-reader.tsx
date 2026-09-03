@@ -26,9 +26,13 @@ export type LineExampleRef = {
   sourceLine: number | null;
 };
 
+type DialogueWordMode = "aligned" | "speakers";
+
 type LessonDialogueReaderProps = {
   textId: string;
   arabic: string;
+  /** Same line structure as arabic; Fathom wording only (roles stay trustworthy). */
+  fathomArabic?: string | null;
   links?: ArabicLink[];
   knownLinks?: ArabicLink[];
   examples?: LineExampleRef[];
@@ -39,14 +43,21 @@ type LessonDialogueReaderProps = {
 export function LessonDialogueReader({
   textId,
   arabic,
+  fathomArabic = null,
   links = [],
   knownLinks = [],
   examples = [],
   audioController,
   hideLookup = false,
 }: LessonDialogueReaderProps) {
-  const lines = useMemo(() => parseDialogueLines(arabic), [arabic]);
-  const rawLines = useMemo(() => splitTextLines(arabic), [arabic]);
+  const hasFathom = Boolean(fathomArabic?.trim());
+  const [wordMode, setWordMode] = useState<DialogueWordMode>(
+    hasFathom ? "speakers" : "aligned",
+  );
+  const displayArabic =
+    wordMode === "speakers" && fathomArabic?.trim() ? fathomArabic : arabic;
+  const lines = useMemo(() => parseDialogueLines(displayArabic), [displayArabic]);
+  const rawLines = useMemo(() => splitTextLines(displayArabic), [displayArabic]);
   const nonEmptyLineCount = useMemo(
     () => rawLines.filter((line) => line.trim().length > 0).length,
     [rawLines],
@@ -100,6 +111,44 @@ export function LessonDialogueReader({
 
   return (
     <div className="flex flex-col gap-5">
+      {hasFathom ? (
+        <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+          <div
+            className="inline-flex rounded-[var(--radius-md)] border border-[var(--line)] p-0.5"
+            role="group"
+            aria-label="Dialogue word source"
+          >
+            <button
+              type="button"
+              className={`min-h-10 rounded-[var(--radius-sm)] px-3 text-sm ${
+                wordMode === "speakers"
+                  ? "bg-[var(--accent-soft)] font-medium text-[var(--ink)]"
+                  : "text-[var(--ink-muted)] hover:text-[var(--ink)]"
+              }`}
+              onClick={() => setWordMode("speakers")}
+            >
+              Speakers (Fathom)
+            </button>
+            <button
+              type="button"
+              className={`min-h-10 rounded-[var(--radius-sm)] px-3 text-sm ${
+                wordMode === "aligned"
+                  ? "bg-[var(--accent-soft)] font-medium text-[var(--ink)]"
+                  : "text-[var(--ink-muted)] hover:text-[var(--ink)]"
+              }`}
+              onClick={() => setWordMode("aligned")}
+            >
+              Aligned (STT)
+            </button>
+          </div>
+          <p className="text-xs text-[var(--ink-muted)]">
+            {wordMode === "speakers"
+              ? "Roles from Fathom. Words may lack Arabic script."
+              : "STT words in Fathom speaker windows. Better Arabic; roles can slip on short turns."}
+          </p>
+        </div>
+      ) : null}
+
       {showLineFilter ? (
         <label className="flex flex-col gap-1.5">
           <span className="text-xs text-[var(--ink-muted)]">

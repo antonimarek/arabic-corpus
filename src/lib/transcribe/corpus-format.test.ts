@@ -13,8 +13,10 @@ describe("mergeTurnsByRole", () => {
         role: "TUTOR",
         speaker: "Speaker 2",
         text: "first",
-        fathomText: "first",
+        sttText: "first",
+        fathomText: "fathom-first",
         source: "stt",
+        similarity: 1,
       },
       {
         startSeconds: 5,
@@ -23,8 +25,10 @@ describe("mergeTurnsByRole", () => {
         role: "TUTOR",
         speaker: "Speaker 2",
         text: "second",
-        fathomText: "second",
+        sttText: "second",
+        fathomText: "fathom-second",
         source: "stt",
+        similarity: 1,
       },
       {
         startSeconds: 10,
@@ -33,13 +37,20 @@ describe("mergeTurnsByRole", () => {
         role: "STUDENT",
         speaker: "Student",
         text: "reply",
-        fathomText: "reply",
+        sttText: "reply",
+        fathomText: "fathom-reply",
         source: "stt",
+        similarity: 1,
       },
     ];
 
     const merged = mergeTurnsByRole(turns);
     expect(merged).toHaveLength(2);
     expect(buildCorpusArabicText(merged)).toContain("[TUTOR] first second");
+
+    const fathomMerged = mergeTurnsByRole(turns, { textField: "fathomText" });
+    expect(buildCorpusArabicText(fathomMerged)).toContain(
+      "[TUTOR] fathom-first fathom-second",
+    );
   });
 });

@@ -9,13 +9,25 @@ export type CorpusDialogueLine = {
   turnCount: number;
 };
 
-export function mergeTurnsByRole(turns: DialogueTurn[]): CorpusDialogueLine[] {
+export type CorpusTextField = "text" | "fathomText" | "sttText";
+
+function turnFieldText(turn: DialogueTurn, field: CorpusTextField): string {
+  if (field === "fathomText") return turn.fathomText.trim();
+  if (field === "sttText") return turn.sttText.trim();
+  return turn.text.trim();
+}
+
+export function mergeTurnsByRole(
+  turns: DialogueTurn[],
+  options?: { textField?: CorpusTextField },
+): CorpusDialogueLine[] {
   if (turns.length === 0) return [];
+  const textField = options?.textField ?? "text";
 
   const merged: CorpusDialogueLine[] = [];
   let current: CorpusDialogueLine = {
     role: turns[0].role,
-    text: turns[0].text.trim(),
+    text: turnFieldText(turns[0], textField),
     startSeconds: turns[0].startSeconds,
     endSeconds: turns[0].endSeconds,
     timestampLabel: turns[0].timestampLabel,
@@ -24,10 +36,11 @@ export function mergeTurnsByRole(turns: DialogueTurn[]): CorpusDialogueLine[] {
 
   for (let i = 1; i < turns.length; i += 1) {
     const turn = turns[i];
+    const piece = turnFieldText(turn, textField);
     if (turn.role === current.role) {
       current = {
         ...current,
-        text: `${current.text} ${turn.text}`.replace(/\s+/g, " ").trim(),
+        text: `${current.text} ${piece}`.replace(/\s+/g, " ").trim(),
         endSeconds: turn.endSeconds,
         turnCount: current.turnCount + 1,
       };
@@ -36,7 +49,7 @@ export function mergeTurnsByRole(turns: DialogueTurn[]): CorpusDialogueLine[] {
     merged.push(current);
     current = {
       role: turn.role,
-      text: turn.text.trim(),
+      text: piece,
       startSeconds: turn.startSeconds,
       endSeconds: turn.endSeconds,
       timestampLabel: turn.timestampLabel,

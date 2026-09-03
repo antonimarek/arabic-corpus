@@ -16,7 +16,9 @@ function turn(partial: Partial<DialogueTurn> & Pick<DialogueTurn, "role" | "text
     timestampLabel: "1:00",
     speaker: partial.role === "TUTOR" ? "Speaker 2" : "Student",
     fathomText: partial.text,
+    sttText: partial.text,
     source: "stt",
+    similarity: 1,
     ...partial,
   };
 }

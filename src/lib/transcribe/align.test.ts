@@ -2,9 +2,11 @@ import { describe, expect, it } from "vitest";
 
 import {
   alignDialogue,
+  chooseTurnText,
   extractSttForWindow,
   mergeConsecutiveSegments,
   sliceChunkText,
+  turnTextSimilarity,
   withSegmentEnds,
 } from "./align";
 import type { FathomSegment } from "./fathom-parse";
@@ -18,6 +20,48 @@ describe("sliceChunkText", () => {
     };
     expect(sliceChunkText(chunk, 0, 50)).toContain("one two");
     expect(sliceChunkText(chunk, 50, 100)).toContain("nine ten");
+  });
+});
+
+describe("turnTextSimilarity", () => {
+  it("scores identical token sets highly", () => {
+    expect(turnTextSimilarity("I'm tired Tavan", "I'm tired Tavan")).toBe(1);
+  });
+
+  it("scores unrelated strings low", () => {
+    expect(turnTextSimilarity("on. What? أنا", "Hello, I'm Antoni.")).toBeLessThan(0.2);
+  });
+});
+
+describe("chooseTurnText", () => {
+  it("falls back to fathom on empty STT", () => {
+    const chosen = chooseTurnText({
+      sttText: "",
+      fathomText: "Hello",
+      durationSeconds: 3,
+    });
+    expect(chosen.source).toBe("fathom_fallback");
+    expect(chosen.text).toBe("Hello");
+  });
+
+  it("keeps STT when it alone has Arabic", () => {
+    const chosen = chooseTurnText({
+      sttText: "أنا تعبان شوي",
+      fathomText: "I'm Tavan",
+      durationSeconds: 4,
+    });
+    expect(chosen.text).toBe("أنا تعبان شوي");
+    expect(["stt", "mixed"]).toContain(chosen.source);
+  });
+
+  it("prefers fathom on short mismatched windows", () => {
+    const chosen = chooseTurnText({
+      sttText: "on. What? maybe I heard that",
+      fathomText: "Hello, I'm Antoni.",
+      durationSeconds: 2,
+    });
+    expect(chosen.source).toBe("fathom_fallback");
+    expect(chosen.text).toBe("Hello, I'm Antoni.");
   });
 });
 
@@ -55,7 +99,7 @@ describe("alignDialogue", () => {
 
     expect(turns).toHaveLength(2);
     expect(turns[0]?.role).toBe("TUTOR");
-    expect(turns[0]?.source).toBe("stt");
+    expect(turns[0]?.sttText.length).toBeGreaterThan(0);
     expect(turns[0]?.text.length).toBeGreaterThan(0);
     expect(turns[1]?.role).toBe("STUDENT");
   });

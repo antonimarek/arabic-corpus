@@ -12,6 +12,7 @@ import { TextAudioPlayer } from "@/components/text-audio-player";
 import { useTextAudioController } from "@/lib/text-audio-controller";
 import { parseLineHash, splitTextLines } from "@/lib/text-lines";
 import type { TextDetailPayload } from "@/lib/text-detail";
+import { isStudyPackV2 } from "@/lib/transcribe/study-pack";
 
 type LessonTextDetailProps = {
   text: TextDetailPayload;
@@ -113,6 +114,9 @@ export function LessonTextDetail({ text }: LessonTextDetailProps) {
         <LessonDialogueReader
           textId={text.id}
           arabic={text.arabic}
+          fathomArabic={
+            isStudyPackV2(text.studyPack) ? text.studyPack.fathomArabic ?? null : null
+          }
           links={text.links}
           knownLinks={text.knownLinks}
           examples={text.examples.map((example) => ({

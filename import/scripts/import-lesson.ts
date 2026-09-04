@@ -141,14 +141,21 @@ async function main() {
 
   const merged = mergeTurnsByRole(dialogue.turns);
   const fathomMerged = mergeTurnsByRole(dialogue.turns, { textField: "fathomText" });
+  const hasWispr = dialogue.turns.some((turn) => Boolean(turn.wisprText?.trim()));
+  const wisprSourceTurns = dialogue.turns.map((turn) => ({
+    ...turn,
+    wisprText: turn.wisprText?.trim() || turn.fathomText || turn.text,
+  }));
+  const wisprMerged = mergeTurnsByRole(wisprSourceTurns, { textField: "wisprText" });
   const arabic = buildCorpusArabicText(merged);
   const fathomArabic = buildCorpusArabicText(fathomMerged);
+  const wisprArabic = hasWispr ? buildCorpusArabicText(wisprMerged) : undefined;
   const lineStarts = corpusLineStartsMs(merged);
   const studyPack = buildStudyPack(
     lesson,
     dialogue.turns,
     merged.map((line) => line.timestampLabel),
-    { fathomArabic },
+    { fathomArabic, wisprArabic },
   );
   const studyPackPath = path.join(lessonDir, "lesson_study_pack.md");
   await writeFile(studyPackPath, `${studyPackToMarkdown(studyPack)}\n`);

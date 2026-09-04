@@ -16,7 +16,8 @@ export type DialogueTurn = {
   text: string;
   sttText: string;
   fathomText: string;
-  source: "stt" | "fathom_fallback" | "mixed";
+  wisprText: string;
+  source: "stt" | "fathom_fallback" | "mixed" | "wispr";
   similarity: number;
   url?: string;
 };
@@ -153,12 +154,39 @@ export function turnTextSimilarity(a: string, b: string): number {
 export function chooseTurnText(params: {
   sttText: string;
   fathomText: string;
+  wisprText?: string;
   durationSeconds: number;
 }): { text: string; source: DialogueTurn["source"]; similarity: number } {
   const sttText = params.sttText.trim();
   const fathomText = params.fathomText.trim();
-  const similarity = turnTextSimilarity(sttText, fathomText);
+  const wisprText = (params.wisprText ?? "").trim();
   const duration = Math.max(0, params.durationSeconds);
+
+  if (wisprText) {
+    const wisprVsFathom = turnTextSimilarity(wisprText, fathomText);
+    const wisprVsStt = turnTextSimilarity(wisprText, sttText);
+    const wisprHasArabic = hasArabic(wisprText);
+    const sttHasArabic = hasArabic(sttText);
+
+    // Prefer Wispr wording when it clearly belongs on this timed turn.
+    if (wisprVsFathom >= 0.18 || wisprVsStt >= 0.22 || (wisprHasArabic && wisprText.length >= 12)) {
+      // If STT has Arabic Wispr missed, keep STT as mixed enrichment only when Wispr is weak Arabic.
+      if (sttHasArabic && !wisprHasArabic && sttText.length >= 12 && wisprVsFathom < 0.35) {
+        return {
+          text: sttText,
+          source: "mixed",
+          similarity: Math.max(wisprVsFathom, wisprVsStt),
+        };
+      }
+      return {
+        text: wisprText,
+        source: "wispr",
+        similarity: Math.max(wisprVsFathom, wisprVsStt),
+      };
+    }
+  }
+
+  const similarity = turnTextSimilarity(sttText, fathomText);
   const lengthRatio =
     fathomText.length === 0
       ? sttText.length > 0
@@ -224,21 +252,26 @@ export function alignDialogue(params: {
   totalSeconds: number;
   tutorNames?: string[];
   mergeSameSpeaker?: boolean;
+  /** Parallel Wispr wording aligned to the same segment list (after merge). */
+  wisprTexts?: Array<{ text: string; score: number } | null>;
 }): DialogueTurn[] {
   const tutorNames = params.tutorNames ?? ["Speaker 2"];
   const withEnds = withSegmentEnds(params.fathomSegments, params.totalSeconds);
   const segments = params.mergeSameSpeaker === false ? withEnds : mergeConsecutiveSegments(withEnds);
 
-  return segments.map((segment) => {
+  return segments.map((segment, index) => {
     const sttText = extractSttForWindow(
       params.sttChunks,
       segment.timestampSeconds,
       segment.endSeconds,
     );
     const fathomText = segment.text.trim();
+    const wisprHit = params.wisprTexts?.[index];
+    const wisprText = wisprHit?.text?.trim() ?? "";
     const chosen = chooseTurnText({
       sttText,
       fathomText,
+      wisprText,
       durationSeconds: segment.endSeconds - segment.timestampSeconds,
     });
 
@@ -251,6 +284,7 @@ export function alignDialogue(params: {
       text: chosen.text,
       sttText,
       fathomText,
+      wisprText,
       source: chosen.source,
       similarity: chosen.similarity,
       url: segment.url,
@@ -267,12 +301,14 @@ export function dialogueToMarkdown(turns: DialogueTurn[]): string {
 export function dialogueStats(turns: DialogueTurn[]) {
   const fallback = turns.filter((turn) => turn.source === "fathom_fallback").length;
   const mixed = turns.filter((turn) => turn.source === "mixed").length;
+  const wispr = turns.filter((turn) => turn.source === "wispr").length;
   return {
     turnCount: turns.length,
     tutorTurns: turns.filter((turn) => turn.role === "TUTOR").length,
     studentTurns: turns.filter((turn) => turn.role === "STUDENT").length,
     fathomFallbackTurns: fallback,
     mixedTurns: mixed,
+    wisprTurns: wispr,
     sttTurns: turns.filter((turn) => turn.source === "stt").length,
   };
 }

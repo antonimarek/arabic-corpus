@@ -65,11 +65,20 @@ After `transcribe:lesson`, map speaker-labelled Fathom timestamps onto the STT t
 npm run transcribe:align -- --lesson lesson-2026-08-31
 ```
 
-Roles always come from Fathom. Words prefer STT when the time-window slice matches the Fathom utterance; short / mismatched windows fall back to Fathom text. Writes:
+Optional Wispr Flow transcript (`Name: text` lines, no timestamps required). Put it at `import/processed/lessons/<id>/wispr.transcript.raw.txt` or pass `--wispr-transcript`:
+
+```bash
+npm run transcribe:align -- --lesson sep-03-2026 \
+  --wispr-transcript import/processed/lessons/sep-03-2026/wispr.transcript.raw.txt
+```
+
+Roles/timestamps stay on Fathom (`Antoni` student, `Speaker 2` / Moayad tutor). Wispr only supplies wording when the sequence match is good. Words prefer Wispr → STT → Fathom.
+
+Writes:
 
 - `lesson_dialogue.md` — `TUTOR` / `STUDENT` turns with chosen wording
-- `lesson_dialogue.json` — structured turns + stats (`stt` / `mixed` / `fathom_fallback`)
-- `lesson_review_queue.csv` — side-by-side STT vs Fathom for review
+- `lesson_dialogue.json` — structured turns + stats (`wispr` / `stt` / `mixed` / `fathom_fallback`)
+- `lesson_review_queue.csv` — side-by-side sources for review
 
 ### Import to corpus + study pack
 
@@ -77,7 +86,7 @@ Roles always come from Fathom. Words prefer STT when the time-window slice match
 npm run import:lesson -- --lesson lesson-2026-08-31 --owner-email you@example.com
 ```
 
-Creates a **text** with merged dialogue lines, synced audio (compressed if needed), line-start markers, and an in-app **Study** tab (structured `study_pack` v2 JSON on the text). Also stores `fathomArabic` for a Dialogue tab toggle (**Speakers (Fathom)** vs **Aligned (STT)**). Writes `lesson_study_pack.md` locally.
+Creates a **text** with merged dialogue lines, synced audio (compressed if needed), line-start markers, and an in-app **Study** tab (structured `study_pack` v2 JSON on the text). Also stores `fathomArabic` / `wisprArabic` for a Dialogue tab toggle (**Speakers** vs **Aligned (STT)**). Writes `lesson_study_pack.md` locally.
 
 To refresh study pack on an already-imported lesson (regenerates v2 recall cards, corrections, contrasts):
 

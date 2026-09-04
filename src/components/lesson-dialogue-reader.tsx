@@ -33,6 +33,8 @@ type LessonDialogueReaderProps = {
   arabic: string;
   /** Same line structure as arabic; Fathom wording only (roles stay trustworthy). */
   fathomArabic?: string | null;
+  /** Same line structure; Wispr wording on Fathom times/roles. */
+  wisprArabic?: string | null;
   links?: ArabicLink[];
   knownLinks?: ArabicLink[];
   examples?: LineExampleRef[];
@@ -44,18 +46,23 @@ export function LessonDialogueReader({
   textId,
   arabic,
   fathomArabic = null,
+  wisprArabic = null,
   links = [],
   knownLinks = [],
   examples = [],
   audioController,
   hideLookup = false,
 }: LessonDialogueReaderProps) {
-  const hasFathom = Boolean(fathomArabic?.trim());
+  const speakersArabic = wisprArabic?.trim() || fathomArabic?.trim() || null;
+  const speakersLabel = wisprArabic?.trim()
+    ? "Speakers (Wispr)"
+    : "Speakers (Fathom)";
+  const hasSpeakers = Boolean(speakersArabic);
   const [wordMode, setWordMode] = useState<DialogueWordMode>(
-    hasFathom ? "speakers" : "aligned",
+    hasSpeakers ? "speakers" : "aligned",
   );
   const displayArabic =
-    wordMode === "speakers" && fathomArabic?.trim() ? fathomArabic : arabic;
+    wordMode === "speakers" && speakersArabic ? speakersArabic : arabic;
   const lines = useMemo(() => parseDialogueLines(displayArabic), [displayArabic]);
   const rawLines = useMemo(() => splitTextLines(displayArabic), [displayArabic]);
   const nonEmptyLineCount = useMemo(
@@ -111,7 +118,7 @@ export function LessonDialogueReader({
 
   return (
     <div className="flex flex-col gap-5">
-      {hasFathom ? (
+      {hasSpeakers ? (
         <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
           <div
             className="inline-flex rounded-[var(--radius-md)] border border-[var(--line)] p-0.5"
@@ -127,7 +134,7 @@ export function LessonDialogueReader({
               }`}
               onClick={() => setWordMode("speakers")}
             >
-              Speakers (Fathom)
+              {speakersLabel}
             </button>
             <button
               type="button"
@@ -143,7 +150,9 @@ export function LessonDialogueReader({
           </div>
           <p className="text-xs text-[var(--ink-muted)]">
             {wordMode === "speakers"
-              ? "Roles from Fathom. Words may lack Arabic script."
+              ? wisprArabic?.trim()
+                ? "Fathom times/roles + Wispr wording. Best default for reading."
+                : "Roles from Fathom. Words may lack Arabic script."
               : "STT words in Fathom speaker windows. Better Arabic; roles can slip on short turns."}
           </p>
         </div>

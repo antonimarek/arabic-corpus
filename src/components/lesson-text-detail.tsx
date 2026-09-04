@@ -117,6 +117,9 @@ export function LessonTextDetail({ text }: LessonTextDetailProps) {
           fathomArabic={
             isStudyPackV2(text.studyPack) ? text.studyPack.fathomArabic ?? null : null
           }
+          wisprArabic={
+            isStudyPackV2(text.studyPack) ? text.studyPack.wisprArabic ?? null : null
+          }
           links={text.links}
           knownLinks={text.knownLinks}
           examples={text.examples.map((example) => ({

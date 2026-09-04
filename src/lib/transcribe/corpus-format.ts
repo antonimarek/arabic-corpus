@@ -9,12 +9,13 @@ export type CorpusDialogueLine = {
   turnCount: number;
 };
 
-export type CorpusTextField = "text" | "fathomText" | "sttText";
+export type CorpusTextField = "text" | "fathomText" | "sttText" | "wisprText";
 
 function turnFieldText(turn: DialogueTurn, field: CorpusTextField): string {
-  if (field === "fathomText") return turn.fathomText.trim();
-  if (field === "sttText") return turn.sttText.trim();
-  return turn.text.trim();
+  if (field === "fathomText") return (turn.fathomText ?? "").trim();
+  if (field === "sttText") return (turn.sttText ?? turn.text ?? "").trim();
+  if (field === "wisprText") return (turn.wisprText ?? "").trim();
+  return (turn.text ?? "").trim();
 }
 
 export function mergeTurnsByRole(

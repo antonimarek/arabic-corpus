@@ -15,6 +15,7 @@ describe("mergeTurnsByRole", () => {
         text: "first",
         sttText: "first",
         fathomText: "fathom-first",
+        wisprText: "wispr-first",
         source: "stt",
         similarity: 1,
       },
@@ -27,6 +28,7 @@ describe("mergeTurnsByRole", () => {
         text: "second",
         sttText: "second",
         fathomText: "fathom-second",
+        wisprText: "wispr-second",
         source: "stt",
         similarity: 1,
       },
@@ -39,6 +41,7 @@ describe("mergeTurnsByRole", () => {
         text: "reply",
         sttText: "reply",
         fathomText: "fathom-reply",
+        wisprText: "wispr-reply",
         source: "stt",
         similarity: 1,
       },
@@ -51,6 +54,11 @@ describe("mergeTurnsByRole", () => {
     const fathomMerged = mergeTurnsByRole(turns, { textField: "fathomText" });
     expect(buildCorpusArabicText(fathomMerged)).toContain(
       "[TUTOR] fathom-first fathom-second",
+    );
+
+    const wisprMerged = mergeTurnsByRole(turns, { textField: "wisprText" });
+    expect(buildCorpusArabicText(wisprMerged)).toContain(
+      "[TUTOR] wispr-first wispr-second",
     );
   });
 });

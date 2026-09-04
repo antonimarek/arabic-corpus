@@ -1,9 +1,11 @@
 #!/usr/bin/env npx tsx
 /**
  * Align STT transcript to Fathom speaker turns.
+ * Optional Wispr Flow transcript supplies better wording on those timed turns.
  *
  * Usage:
  *   npm run transcribe:align -- --lesson lesson-2026-08-31
+ *   npm run transcribe:align -- --lesson sep-03-2026 --wispr-transcript import/processed/lessons/sep-03-2026/wispr.transcript.raw.txt
  */
 
 import { readFile, writeFile } from "node:fs/promises";
@@ -14,9 +16,16 @@ import {
   alignDialogue,
   dialogueStats,
   dialogueToMarkdown,
+  mergeConsecutiveSegments,
+  withSegmentEnds,
   type SttChunk,
 } from "../../src/lib/transcribe/align";
 import { parseFathomTranscript } from "../../src/lib/transcribe/fathom-parse";
+import { mapWisprTextOntoFathomSegments } from "../../src/lib/transcribe/wispr-align";
+import {
+  mergeConsecutiveWisprTurns,
+  parseWisprTranscript,
+} from "../../src/lib/transcribe/wispr-parse";
 
 type LessonVerbatim = {
   durationSeconds: number;
@@ -30,6 +39,7 @@ function usage(): never {
 Options:
   --lesson              Lesson id under import/processed/lessons/
   --fathom-transcript   Override fathom raw transcript path
+  --wispr-transcript    Optional Wispr Flow transcript (Name: text)
   --verbatim            Override lesson_verbatim.json path
   --no-merge            Keep every fathom segment as its own turn
 `);
@@ -61,6 +71,11 @@ async function main() {
     argValue(args, "--fathom-transcript") ??
       path.join(lessonDir, "fathom.transcript.raw.txt"),
   );
+  const wisprArg = argValue(args, "--wispr-transcript");
+  const wisprPath = resolvePath(
+    wisprArg ?? path.join(lessonDir, "wispr.transcript.raw.txt"),
+  );
+  const useWispr = Boolean(wisprArg) || existsSync(wisprPath);
 
   if (!existsSync(verbatimPath)) {
     console.error(`Missing verbatim JSON: ${verbatimPath}`);
@@ -78,12 +93,41 @@ async function main() {
     process.exit(1);
   }
 
+  const mergeSameSpeaker = !args.includes("--no-merge");
+  const withEnds = withSegmentEnds(fathomSegments, verbatim.durationSeconds);
+  const segments = mergeSameSpeaker
+    ? mergeConsecutiveSegments(withEnds)
+    : withEnds;
+
+  let wisprTexts: Array<{ text: string; score: number } | null> | undefined;
+  let wisprTurnCount = 0;
+  if (useWispr && existsSync(wisprPath)) {
+    const wisprTurns = mergeConsecutiveWisprTurns(
+      parseWisprTranscript(await readFile(wisprPath, "utf8")),
+    );
+    wisprTurnCount = wisprTurns.length;
+    const mapped = mapWisprTextOntoFathomSegments({
+      fathomSegments: segments,
+      wisprTurns,
+      tutorNames: ["Speaker 2"],
+    });
+    wisprTexts = mapped.map((item) =>
+      item.wisprText
+        ? { text: item.wisprText, score: item.wisprScore }
+        : null,
+    );
+  } else if (wisprArg) {
+    console.error(`Missing wispr transcript: ${wisprPath}`);
+    process.exit(1);
+  }
+
   const turns = alignDialogue({
-    fathomSegments,
+    fathomSegments: segments,
     sttChunks: verbatim.chunks,
     totalSeconds: verbatim.durationSeconds,
     tutorNames: ["Speaker 2"],
-    mergeSameSpeaker: !args.includes("--no-merge"),
+    mergeSameSpeaker: false,
+    wisprTexts,
   });
 
   const stats = dialogueStats(turns);
@@ -93,12 +137,23 @@ async function main() {
 
   await writeFile(
     jsonPath,
-    `${JSON.stringify({ lesson, stats, turns }, null, 2)}\n`,
+    `${JSON.stringify(
+      {
+        lesson,
+        stats,
+        wispr: useWispr
+          ? { path: path.relative(process.cwd(), wisprPath), turnCount: wisprTurnCount }
+          : null,
+        turns,
+      },
+      null,
+      2,
+    )}\n`,
   );
   await writeFile(mdPath, `${dialogueToMarkdown(turns)}\n`);
 
   const csvLines = [
-    "start_seconds,end_seconds,role,speaker,source,similarity,text,fathom_text,stt_text",
+    "start_seconds,end_seconds,role,speaker,source,similarity,text,fathom_text,stt_text,wispr_text",
     ...turns.map((turn) =>
       [
         turn.startSeconds,
@@ -110,6 +165,7 @@ async function main() {
         csvEscape(turn.text),
         csvEscape(turn.fathomText),
         csvEscape(turn.sttText),
+        csvEscape(turn.wisprText),
       ].join(","),
     ),
   ];
@@ -118,8 +174,11 @@ async function main() {
   console.log(`Dialogue: ${mdPath}`);
   console.log(`JSON:     ${jsonPath}`);
   console.log(`Review:   ${reviewPath}`);
+  if (useWispr) {
+    console.log(`Wispr:    ${wisprPath} (${wisprTurnCount} turns after merge)`);
+  }
   console.log(
-    `Turns: ${stats.turnCount} (${stats.tutorTurns} tutor, ${stats.studentTurns} student, ${stats.sttTurns} stt, ${stats.mixedTurns} mixed, ${stats.fathomFallbackTurns} fathom fallback)`,
+    `Turns: ${stats.turnCount} (${stats.tutorTurns} tutor, ${stats.studentTurns} student, ${stats.wisprTurns} wispr, ${stats.sttTurns} stt, ${stats.mixedTurns} mixed, ${stats.fathomFallbackTurns} fathom fallback)`,
   );
 }
 

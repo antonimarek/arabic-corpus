@@ -61,6 +61,8 @@ export type StudyPackV2 = {
   grammarThreads: GrammarThread[];
   /** Same role/line structure as corpus arabic, but Fathom wording only. */
   fathomArabic?: string;
+  /** Same role/line structure; Wispr wording mapped onto Fathom times/roles. */
+  wisprArabic?: string;
   recallPhrases?: LegacyRecallPhrase[];
 };
 
@@ -138,7 +140,7 @@ export function buildStudyPack(
   lesson: string,
   turns: DialogueTurn[],
   mergedTimestamps?: string[],
-  options?: { fathomArabic?: string },
+  options?: { fathomArabic?: string; wisprArabic?: string },
 ): StudyPackV2 {
   const lineIndex = buildLineIndex(
     mergedTimestamps ??
@@ -252,6 +254,7 @@ export function buildStudyPack(
     confusionMoments: confusionMoments.slice(0, 10),
     grammarThreads,
     fathomArabic: options?.fathomArabic,
+    wisprArabic: options?.wisprArabic,
     weeklyPlan: [
       "Day 1 (lesson day): skim the Study tab only — no heavy study.",
       "Day 2 (~15 min): active recall — cover the English cue, say Arabic for 5 cards.",

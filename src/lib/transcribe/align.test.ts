@@ -63,6 +63,17 @@ describe("chooseTurnText", () => {
     expect(chosen.source).toBe("fathom_fallback");
     expect(chosen.text).toBe("Hello, I'm Antoni.");
   });
+
+  it("prefers wispr wording when it matches the timed turn", () => {
+    const chosen = chooseTurnText({
+      sttText: "on. What?",
+      fathomText: "Hello, I'm Antoni.",
+      wisprText: "Hello, I'm Antoni. Marhaba.",
+      durationSeconds: 2,
+    });
+    expect(chosen.source).toBe("wispr");
+    expect(chosen.text).toContain("Hello");
+  });
 });
 
 describe("alignDialogue", () => {

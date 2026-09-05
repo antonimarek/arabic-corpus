@@ -28,6 +28,8 @@ describe("parseImportBundle", () => {
     if (result.ok) {
       expect(result.bundle.source?.origin).toBe("lesson");
       expect(result.bundle.source?.value).toBe("high");
+      const example = result.bundle.items.find((item) => item.type === "example");
+      expect(example?.structure_names).toEqual(["كنت عم + verb"]);
     }
   });
 

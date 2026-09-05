@@ -5,6 +5,7 @@ import { redirect } from "next/navigation";
 
 import { mapImportItem } from "@/lib/corpus/map-bundle";
 import {
+  attachExampleStructures,
   enrichVocabularyRecord,
   isWriteErr,
   writeExample,
@@ -28,6 +29,10 @@ import {
 } from "@/lib/import/origin";
 import { findExistingMatches } from "@/lib/import/match";
 import { buildPreviewRow } from "@/lib/import/preview";
+import {
+  collectStructureNameIds,
+  structureIdsForExample,
+} from "@/lib/import/structure-join";
 import { readBundle, readDecisions } from "@/lib/import/run";
 import { requireUserId } from "@/lib/require-user";
 import type { Json } from "@/types/database";
@@ -201,6 +206,7 @@ export async function commitImportRun(
   const { origin, value } = provenanceFromBundle(bundle);
   const stamped = applyImportProvenance(bundle, origin, value);
   const existing = await findExistingMatches(supabase, stamped.items);
+  const itemIds: (string | null)[] = stamped.items.map(() => null);
   const counts: ImportRunCounts = {
     inserted: 0,
     updated: 0,
@@ -240,9 +246,11 @@ export async function commitImportRun(
         continue;
       }
       if (!result.enriched) {
+        itemIds[index] = result.id;
         counts.skipped += 1;
         continue;
       }
+      itemIds[index] = result.id;
       counts.updated += 1;
       counts.updatedItems.push({
         type: mapped.type,
@@ -254,6 +262,7 @@ export async function commitImportRun(
 
     if (match) {
       // Non-vocab exact match with keep: still skip insert to avoid duplicates.
+      itemIds[index] = match.id;
       counts.skipped += 1;
       continue;
     }
@@ -278,11 +287,30 @@ export async function commitImportRun(
     }
 
     counts.inserted += 1;
+    itemIds[index] = result.id;
     counts.created.push({
       type: mapped.type,
       id: result.id,
       label: itemLabel(item),
     });
+  }
+
+  const nameToId = collectStructureNameIds(stamped.items, itemIds);
+  for (let index = 0; index < stamped.items.length; index += 1) {
+    const item = stamped.items[index];
+    const exampleId = itemIds[index];
+    if (!exampleId || item.type !== "example") continue;
+    const structureIds = structureIdsForExample(item, nameToId);
+    if (structureIds.length === 0) continue;
+    const join = await attachExampleStructures(
+      supabase,
+      exampleId,
+      structureIds,
+    );
+    if (join.error) {
+      counts.failed += 1;
+      counts.failures.push({ index, error: join.error });
+    }
   }
 
   const { error } = await supabase

@@ -52,7 +52,7 @@ export async function reindexEmbeddings(): Promise<ReindexResult> {
   {
     const { data, error } = await supabase
       .from("examples")
-      .select("id, arabic, translation, transliteration");
+      .select("id, arabic, translation, transliteration, notes");
     if (error) return { error: error.message };
     const rows = data ?? [];
     for (let i = 0; i < rows.length; i += 64) {
@@ -60,7 +60,7 @@ export async function reindexEmbeddings(): Promise<ReindexResult> {
       const embeddings = await embedDocuments(
         chunk.map(
           (row) =>
-            packText([row.arabic, row.transliteration, row.translation]) || " ",
+            packText([row.arabic, row.transliteration, row.translation, row.notes]) || " ",
         ),
       );
       for (let j = 0; j < chunk.length; j += 1) {

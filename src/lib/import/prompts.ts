@@ -41,12 +41,14 @@ export const PROMPT_EXAMPLE_BUNDLE: ImportBundle = {
       name: "كنت عم + verb",
       arabic_form: "كنت عم",
       meaning: "used for ongoing action in the past",
+      explanation: "Literally was + عم + verb. Used for ongoing action in the past.",
     },
     {
       type: "example",
       arabic: "شو كنت عم تعمل؟",
       translation: "What were you doing?",
       tags: ["past"],
+      structure_names: ["كنت عم + verb"],
     },
   ],
 };
@@ -67,12 +69,13 @@ Rules:
 - If the source writes both on one line ("حرّك - يحرّك" or "كتاب / كتب"), split them into the two fields. Do not leave both in arabic.
 - Particles, adverbs, and other: arabic only. No present or plural.
 - Example needs arabic. translation is optional.
-- Structure needs name. arabic_form and meaning help.
+- Structure needs name. arabic_form, meaning, and explanation help.
+- If a chunk meaning is not word-for-word, emit a structure with explanation (literal vs used-for) and the sentence as an example. Set that example's structure_names to the structure name.
 - Text needs title and arabic.
 - Set source.origin to lesson, native, book, or generated. Set source.value to high, mid, or low.
 - Lesson and native default to high. Generated defaults to low. Book is high unless it is a bulk glossary dump (mid).
 - Do not invent rows. If a row is model-made, origin is generated and value is low.
-- Do not invent graph links or ids.
+- Do not invent graph UUIDs. You may set structure_names on an example to names of structure items in this same bundle.
 
 Schema:
 ${IMPORT_BUNDLE_SCHEMA_TEXT}
@@ -104,6 +107,7 @@ export const IMPORT_PROMPTS: ImportPrompt[] = [
 
 Task: The user will attach a lesson export from the corpus app (dialogue with Tutor/You turns, optional heuristic study pack). Extract high-value corpus items only:
 - Prioritize production gaps, tutor corrections, contrast pairs, and natural chunks — not every word said.
+- Non-compositional chunks (فاتني = I missed, lit. it went over me) are structures with explanation, plus the sentence as a linked example.
 - Cap roughly: 5–10 vocabulary, 3–8 examples, 2–4 structures. Drop filler and English meta-talk.
 - Use source.title from the lesson heading in the export. Set source.origin to lesson and source.value to high.
 - Do not invent rows not supported by the transcript. Put [verify] in notes when Arabic may be wrong.

@@ -126,6 +126,7 @@ export function TextDetailClient({
             arabic: example.arabic,
             translation: example.translation,
             transliteration: example.transliteration,
+            notes: example.notes,
             sourceTitle:
               example.source_line != null
                 ? `Line ${example.source_line}`

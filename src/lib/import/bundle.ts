@@ -47,6 +47,7 @@ export type ImportItem = {
   title?: string;
   source?: string;
   occurred_on?: string;
+  structure_names?: string[];
 };
 
 export type ImportBundle = {
@@ -94,6 +95,7 @@ const itemSchema = z.object({
   title: z.string().optional(),
   source: z.string().optional(),
   occurred_on: z.string().optional(),
+  structure_names: z.array(z.string()).optional(),
 });
 
 export const importBundleSchema: z.ZodType<ImportBundle> = z.object({
@@ -390,6 +392,7 @@ export const IMPORT_BUNDLE_SCHEMA_TEXT = `{
       "arabic_form": "structure",
       "meaning": "structure",
       "explanation": "structure",
+      "structure_names": ["optional example: names of structure items in this bundle"],
       "title": "required for text",
       "source": "text",
       "occurred_on": "YYYY-MM-DD"

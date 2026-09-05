@@ -18,6 +18,7 @@ import {
   normalizeLineStarts,
   setLineStart,
 } from "@/lib/audio";
+import { newStructureHref } from "@/lib/capture-href";
 import { saveTextLineStarts } from "@/app/(app)/texts/audio-actions";
 import {
   renderLinkedArabic,
@@ -627,7 +628,7 @@ export function TextLineReader({
                       <div className="absolute end-0 top-full z-20 mt-1 w-48 rounded-[var(--radius-md)] border border-[var(--line)] bg-[var(--surface-raised)] py-1 text-start text-sm shadow-[var(--shadow-soft)]">
                         <button
                           type="button"
-                          className="block w-full px-3 py-1.5 text-left hover:bg-[color-mix(in_srgb,var(--ink)_6%,transparent)]"
+                          className="block w-full min-h-11 px-3 py-2.5 text-left hover:bg-[color-mix(in_srgb,var(--ink)_6%,transparent)]"
                           onClick={() => {
                             void copyText(line);
                             setOpenMenu(null);
@@ -637,7 +638,7 @@ export function TextLineReader({
                         </button>
                         <button
                           type="button"
-                          className="block w-full px-3 py-1.5 text-left hover:bg-[color-mix(in_srgb,var(--ink)_6%,transparent)]"
+                          className="block w-full min-h-11 px-3 py-2.5 text-left hover:bg-[color-mix(in_srgb,var(--ink)_6%,transparent)]"
                           onClick={() => {
                             const url = `${window.location.origin}${lineHref(textId, lineNumber)}`;
                             void copyText(url);
@@ -648,10 +649,21 @@ export function TextLineReader({
                         </button>
                         <Link
                           href={`/examples/new?text=${textId}&line=${lineNumber}&arabic=${encodeURIComponent(line)}`}
-                          className="block px-3 py-1.5 hover:bg-[color-mix(in_srgb,var(--ink)_6%,transparent)]"
+                          className="flex min-h-11 items-center px-3 py-2.5 hover:bg-[color-mix(in_srgb,var(--ink)_6%,transparent)]"
                           onClick={() => setOpenMenu(null)}
                         >
                           Add example from line
+                        </Link>
+                        <Link
+                          href={newStructureHref({
+                            arabic: line,
+                            textId,
+                            lineNumber,
+                          })}
+                          className="flex min-h-11 items-center px-3 py-2.5 hover:bg-[color-mix(in_srgb,var(--ink)_6%,transparent)]"
+                          onClick={() => setOpenMenu(null)}
+                        >
+                          Add structure from line
                         </Link>
                         {lineExamples.length > 0 ? (
                           <div className="border-t border-[var(--line)] pt-1">
@@ -662,7 +674,7 @@ export function TextLineReader({
                               <Link
                                 key={ex.id}
                                 href={`/examples/${ex.id}`}
-                                className="block truncate px-3 py-1.5 font-arabic text-base hover:bg-[color-mix(in_srgb,var(--ink)_6%,transparent)]"
+                                className="block truncate min-h-11 px-3 py-2.5 font-arabic text-base hover:bg-[color-mix(in_srgb,var(--ink)_6%,transparent)]"
                                 dir="rtl"
                                 onClick={() => setOpenMenu(null)}
                               >

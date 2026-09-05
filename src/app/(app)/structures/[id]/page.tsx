@@ -27,6 +27,7 @@ export default async function StructureDetailPage({
           arabic,
           translation,
           transliteration,
+          notes,
           texts(title),
           example_vocabulary(vocabulary(id, arabic, transliteration))
         )
@@ -177,6 +178,7 @@ export default async function StructureDetailPage({
             arabic: example.arabic,
             translation: example.translation,
             transliteration: example.transliteration,
+            notes: example.notes,
             sourceTitle: example.texts?.title ?? null,
             vocabHints:
               example.example_vocabulary

@@ -6,6 +6,7 @@ import { ArabicReader } from "@/components/arabic-reader";
 import { ConfirmDelete } from "@/components/confirm-delete";
 import { LearnExampleButton } from "@/components/learn-example-button";
 import { structureLink, vocabularyLink } from "@/lib/arabic-links";
+import { newStructureHref } from "@/lib/capture-href";
 import { createClient } from "@/lib/supabase/server";
 import { notNull } from "@/lib/tags";
 import { lineHref } from "@/lib/text-lines";
@@ -81,6 +82,17 @@ export default async function ExampleDetailPage({
           className="text-[var(--accent)] hover:underline"
         >
           Edit
+        </Link>
+        <Link
+          href={newStructureHref({
+            arabic: example.arabic,
+            exampleId: example.id,
+            textId: text?.id,
+            lineNumber: example.source_line ?? undefined,
+          })}
+          className="text-[var(--accent)] hover:underline"
+        >
+          Save as structure
         </Link>
         {vocabulary.length === 0 ? (
           <Link

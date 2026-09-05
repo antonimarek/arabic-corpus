@@ -21,7 +21,12 @@ type ExampleOption = {
 };
 
 type StructureFormProps =
-  | { mode: "create"; exampleOptions: ExampleOption[] }
+  | {
+      mode: "create";
+      exampleOptions: ExampleOption[];
+      defaultArabicForm?: string;
+      defaultExampleIds?: string[];
+    }
   | {
       mode: "edit";
       structure: Structure;
@@ -38,6 +43,14 @@ export function StructureForm(props: StructureFormProps) {
 
   const [state, formAction, pending] = useActionState(action, initialState);
   const structure = props.mode === "edit" ? props.structure : null;
+  const defaultArabicForm =
+    props.mode === "edit"
+      ? (structure?.arabic_form ?? "")
+      : (props.defaultArabicForm ?? "");
+  const selectedExampleIds =
+    props.mode === "edit"
+      ? props.selectedExampleIds
+      : (props.defaultExampleIds ?? []);
 
   return (
     <form action={formAction} className="flex flex-col gap-5">
@@ -58,7 +71,7 @@ export function StructureForm(props: StructureFormProps) {
           name="arabic_form"
           dir="rtl"
           lang="ar"
-          defaultValue={structure?.arabic_form ?? ""}
+          defaultValue={defaultArabicForm}
           className="font-arabic rounded-md border border-[var(--line)] bg-[var(--surface)] px-3 py-2.5 text-xl outline-none focus:border-[var(--accent)]"
         />
       </label>
@@ -105,9 +118,7 @@ export function StructureForm(props: StructureFormProps) {
         name="example_ids"
         label="Linked examples"
         options={props.exampleOptions}
-        selectedIds={
-          props.mode === "edit" ? props.selectedExampleIds : undefined
-        }
+        selectedIds={selectedExampleIds}
         emptyHint="No examples yet. Add an example first, then link it here."
       />
 

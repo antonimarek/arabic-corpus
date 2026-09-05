@@ -909,6 +909,30 @@ export async function syncExampleJoins(
   return {};
 }
 
+export async function attachExampleStructures(
+  supabase: CorpusClient,
+  exampleId: string,
+  structureIds: string[],
+): Promise<{ error?: string }> {
+  const unique = [...new Set(structureIds.filter(Boolean))];
+  if (unique.length === 0) {
+    return {};
+  }
+
+  const { error } = await supabase.from("example_structures").upsert(
+    unique.map((structureId) => ({
+      example_id: exampleId,
+      structure_id: structureId,
+    })),
+    { onConflict: "example_id,structure_id", ignoreDuplicates: true },
+  );
+  if (error) {
+    return { error: error.message };
+  }
+
+  return {};
+}
+
 export async function syncStructureExampleLinks(
   supabase: CorpusClient,
   structureId: string,

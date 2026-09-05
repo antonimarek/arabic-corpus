@@ -1,7 +1,19 @@
 import { StructureForm } from "@/app/(app)/structures/structure-form";
 import { createClient } from "@/lib/supabase/server";
 
-export default async function NewStructurePage() {
+type NewStructureProps = {
+  searchParams: Promise<{
+    arabic?: string;
+    example?: string;
+    text?: string;
+    line?: string;
+  }>;
+};
+
+export default async function NewStructurePage({
+  searchParams,
+}: NewStructureProps) {
+  const params = await searchParams;
   const supabase = await createClient();
   const { data: examples } = await supabase
     .from("examples")
@@ -18,7 +30,12 @@ export default async function NewStructurePage() {
   return (
     <section className="flex flex-col gap-6">
       <h1 className="text-xl font-medium text-[var(--ink)]">New structure</h1>
-      <StructureForm mode="create" exampleOptions={exampleOptions} />
+      <StructureForm
+        mode="create"
+        exampleOptions={exampleOptions}
+        defaultArabicForm={params.arabic}
+        defaultExampleIds={params.example ? [params.example] : []}
+      />
     </section>
   );
 }

@@ -5,25 +5,9 @@ import { usePathname } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 
 import { signOut } from "@/app/login/actions";
+import { BottomNav } from "@/components/bottom-nav";
+import { ADD_ITEMS, hideBottomNav, MAIN_NAV } from "@/lib/app-nav";
 import type { BuildInfo } from "@/lib/build-info";
-
-const NAV = [
-  { href: "/", label: "Search" },
-  { href: "/texts", label: "Texts" },
-  { href: "/examples", label: "Examples" },
-  { href: "/vocabulary", label: "Vocabulary" },
-  { href: "/patterns", label: "Patterns" },
-  { href: "/structures", label: "Structures" },
-] as const;
-
-const ADD_ITEMS = [
-  { href: "/texts/new", label: "Text" },
-  { href: "/examples/new", label: "Example" },
-  { href: "/vocabulary/new", label: "Vocabulary" },
-  { href: "/patterns/new", label: "Connect pattern" },
-  { href: "/structures/new", label: "Structure" },
-  { href: "/import", label: "Import" },
-] as const;
 
 type AppShellProps = {
   children: React.ReactNode;
@@ -36,6 +20,7 @@ export function AppShell({ children, buildInfo }: AppShellProps) {
   const [moreOpen, setMoreOpen] = useState(false);
   const addRef = useRef<HTMLDivElement>(null);
   const moreRef = useRef<HTMLDivElement>(null);
+  const showBottom = !hideBottomNav(pathname);
 
   useEffect(() => {
     function onPointerDown(event: PointerEvent) {
@@ -57,7 +42,11 @@ export function AppShell({ children, buildInfo }: AppShellProps) {
     "block px-3 py-3 text-sm text-[var(--ink)] hover:bg-[var(--surface-hover)]";
 
   return (
-    <div className="mx-auto flex min-h-full w-full max-w-3xl flex-col px-4 pb-10 pt-5 sm:px-6 sm:pt-8">
+    <div
+      className={`mx-auto flex min-h-full w-full max-w-3xl flex-col px-4 pt-5 sm:px-6 sm:pt-8 ${
+        showBottom ? "pb-24 md:pb-10" : "pb-10"
+      }`}
+    >
       <header className="mb-6 flex items-start justify-between gap-4 sm:mb-8">
         <div className="min-w-0">
           <Link href="/" className="block">
@@ -100,7 +89,7 @@ export function AppShell({ children, buildInfo }: AppShellProps) {
               </div>
             ) : null}
           </div>
-          <div className="relative" ref={moreRef}>
+          <div className="relative hidden md:block" ref={moreRef}>
             <button
               type="button"
               onClick={() => setMoreOpen((open) => !open)}
@@ -152,10 +141,10 @@ export function AppShell({ children, buildInfo }: AppShellProps) {
       </header>
 
       <nav
-        className="mb-8 flex gap-1 overflow-x-auto pb-1"
+        className="mb-8 hidden gap-1 overflow-x-auto pb-1 md:flex"
         aria-label="Main"
       >
-        {NAV.map((item) => {
+        {MAIN_NAV.map((item) => {
           const active =
             item.href === "/"
               ? pathname === "/"
@@ -179,13 +168,11 @@ export function AppShell({ children, buildInfo }: AppShellProps) {
       <div className="flex-1">{children}</div>
 
       <footer className="mt-10 border-t border-[var(--line)] pt-4">
-        <p
-          className="text-[11px] tracking-wide text-[var(--ink-muted)]"
-          title={buildInfo.detail}
-        >
+        <p className="text-[11px] tracking-wide text-[var(--ink-muted)]">
           Build {buildInfo.label}
         </p>
       </footer>
+      <BottomNav />
     </div>
   );
 }

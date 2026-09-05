@@ -11,6 +11,7 @@ import {
 } from "@/lib/highlight-arabic";
 import { parseDialogueLines, roleLabel } from "@/lib/lesson-dialogue";
 import { extractArabicRuns, extractLatinRuns } from "@/lib/mixed-script";
+import { newStructureHref } from "@/lib/capture-href";
 import type { TextAudioController } from "@/lib/text-audio-controller";
 import {
   LINE_FILTER_MIN_LINES,
@@ -247,7 +248,7 @@ export function LessonDialogueReader({
                         <div className="absolute end-0 top-full z-20 mt-1 w-48 rounded-[var(--radius-md)] border border-[var(--line)] bg-[var(--surface-raised)] py-1 text-start text-sm shadow-[var(--shadow-soft)]">
                           <button
                             type="button"
-                            className="block w-full px-3 py-1.5 text-left hover:bg-[color-mix(in_srgb,var(--ink)_6%,transparent)]"
+                            className="block w-full min-h-11 px-3 py-2.5 text-left hover:bg-[color-mix(in_srgb,var(--ink)_6%,transparent)]"
                             onClick={() => {
                               void copyText(line.text);
                               setOpenMenu(null);
@@ -257,7 +258,7 @@ export function LessonDialogueReader({
                           </button>
                           <button
                             type="button"
-                            className="block w-full px-3 py-1.5 text-left hover:bg-[color-mix(in_srgb,var(--ink)_6%,transparent)]"
+                            className="block w-full min-h-11 px-3 py-2.5 text-left hover:bg-[color-mix(in_srgb,var(--ink)_6%,transparent)]"
                             onClick={() => {
                               const url = `${window.location.origin}${lineHref(textId, lineNumber)}`;
                               void copyText(url);
@@ -268,10 +269,21 @@ export function LessonDialogueReader({
                           </button>
                           <Link
                             href={`/examples/new?text=${textId}&line=${lineNumber}&arabic=${encodeURIComponent(arabicOnly)}`}
-                            className="block px-3 py-1.5 hover:bg-[color-mix(in_srgb,var(--ink)_6%,transparent)]"
+                            className="flex min-h-11 items-center px-3 py-2.5 hover:bg-[color-mix(in_srgb,var(--ink)_6%,transparent)]"
                             onClick={() => setOpenMenu(null)}
                           >
                             Add example from line
+                          </Link>
+                          <Link
+                            href={newStructureHref({
+                              arabic: arabicOnly,
+                              textId,
+                              lineNumber,
+                            })}
+                            className="flex min-h-11 items-center px-3 py-2.5 hover:bg-[color-mix(in_srgb,var(--ink)_6%,transparent)]"
+                            onClick={() => setOpenMenu(null)}
+                          >
+                            Add structure from line
                           </Link>
                           {lineExamples.length > 0 ? (
                             <div className="border-t border-[var(--line)] pt-1">
@@ -282,7 +294,7 @@ export function LessonDialogueReader({
                                 <Link
                                   key={ex.id}
                                   href={`/examples/${ex.id}`}
-                                  className="block truncate px-3 py-1.5 font-arabic text-base hover:bg-[color-mix(in_srgb,var(--ink)_6%,transparent)]"
+                                  className="block truncate min-h-11 px-3 py-2.5 font-arabic text-base hover:bg-[color-mix(in_srgb,var(--ink)_6%,transparent)]"
                                   dir="rtl"
                                   onClick={() => setOpenMenu(null)}
                                 >

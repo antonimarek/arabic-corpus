@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Instrument_Sans, Noto_Naskh_Arabic } from "next/font/google";
 
 import { getSiteUrl } from "@/lib/env";
@@ -21,6 +21,12 @@ export const metadata: Metadata = {
   title: "Levantine corpus",
   description: "Levantine Arabic corpus for study and retrieval",
   metadataBase: new URL(getSiteUrl()),
+};
+
+export const viewport: Viewport = {
+  width: "device-width",
+  initialScale: 1,
+  viewportFit: "cover",
 };
 
 export default function RootLayout({ children }: LayoutProps<"/">) {

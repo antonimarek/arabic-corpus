@@ -44,6 +44,7 @@ export type TextDetailPayload = {
     arabic: string;
     translation: string | null;
     transliteration: string | null;
+    notes: string | null;
     source_line: number | null;
     vocabHints: string[];
   }>;
@@ -66,6 +67,7 @@ const TEXT_DETAIL_SELECT = `
     arabic,
     translation,
     transliteration,
+    notes,
     source_line,
     example_vocabulary(
       vocabulary(
@@ -175,6 +177,7 @@ export async function fetchTextDetail(
       arabic: example.arabic,
       translation: example.translation,
       transliteration: example.transliteration,
+      notes: example.notes,
       source_line: example.source_line ?? null,
       vocabHints:
         example.example_vocabulary

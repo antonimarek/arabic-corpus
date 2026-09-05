@@ -9,7 +9,7 @@ export default async function ExamplesPage() {
   const { data: rows, error } = await supabase
     .from("examples")
     .select(
-      "id, arabic, translation, created_at, example_tags(tags(name))",
+      "id, arabic, translation, notes, created_at, example_tags(tags(name))",
     )
     .order("created_at", { ascending: false });
 
@@ -46,6 +46,7 @@ export default async function ExamplesPage() {
               [],
             arabic: row.arabic,
             subtitle: row.translation,
+            note: row.notes,
           }))}
         />
       )}

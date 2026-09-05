@@ -73,9 +73,11 @@ body {
   transition: border-color 0.15s ease, background-color 0.15s ease;
 }
 
-.ui-row:hover {
-  border-color: color-mix(in srgb, var(--accent) 28%, var(--line));
-  background: color-mix(in srgb, var(--surface-raised) 92%, var(--accent-soft));
+@media (hover: hover) {
+  .ui-row:hover {
+    border-color: color-mix(in srgb, var(--accent) 28%, var(--line));
+    background: color-mix(in srgb, var(--surface-raised) 92%, var(--accent-soft));
+  }
 }
 
 .ui-chip {

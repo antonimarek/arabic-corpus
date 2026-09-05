@@ -23,6 +23,7 @@ export default async function SearchHomePage({ searchParams }: SearchHomeProps) 
     id: string;
     arabic: string;
     translation: string | null;
+    notes: string | null;
   }[] = [];
   let candidates: Awaited<ReturnType<typeof loadSessionCandidates>> = [];
 
@@ -37,7 +38,7 @@ export default async function SearchHomePage({ searchParams }: SearchHomeProps) 
     const [{ data: examples }, sessionCandidates] = await Promise.all([
       supabase
         .from("examples")
-        .select("id, arabic, translation")
+        .select("id, arabic, translation, notes")
         .order("created_at", { ascending: false })
         .limit(5),
       loadSessionCandidates(supabase),
@@ -59,7 +60,6 @@ export default async function SearchHomePage({ searchParams }: SearchHomeProps) 
           name="q"
           type="search"
           defaultValue={query}
-          autoFocus
           enterKeyHint="search"
           autoCapitalize="off"
           autoCorrect="off"
@@ -132,6 +132,11 @@ export default async function SearchHomePage({ searchParams }: SearchHomeProps) 
                       {example.translation ? (
                         <span className="text-sm text-[var(--ink-muted)]">
                           {example.translation}
+                        </span>
+                      ) : null}
+                      {example.notes ? (
+                        <span className="line-clamp-2 text-sm text-[var(--ink-muted)]">
+                          {example.notes}
                         </span>
                       ) : null}
                     </Link>

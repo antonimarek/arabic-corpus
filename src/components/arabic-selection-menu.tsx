@@ -14,6 +14,7 @@ import {
 import { lookupPhrase, type PhraseHit } from "@/app/(app)/lookup/actions";
 import { attachVocabularyForm } from "@/app/(app)/vocabulary/actions";
 import { arwordsSearchUrl } from "@/lib/arwords";
+import { newStructureHref } from "@/lib/capture-href";
 import type { ArabicLink } from "@/lib/highlight-arabic";
 
 type NoticeApi = {
@@ -171,6 +172,13 @@ export function ArabicSelectionMenu({
   const addExampleHref = menu
     ? exampleHref(menu.text, textId, lineNumber)
     : "/examples/new";
+  const addStructureHref = menu
+    ? newStructureHref({
+        arabic: menu.text,
+        textId,
+        lineNumber,
+      })
+    : "/structures/new";
   const arwordsHref = menu ? arwordsSearchUrl(menu.text) : "https://www.arwords.com/words";
   const lineGloss = lineTranslation?.trim() || null;
   const vocabHits =
@@ -254,6 +262,13 @@ export function ArabicSelectionMenu({
                 onClick={close}
               >
                 Add example
+              </Link>
+              <Link
+                href={addStructureHref}
+                className="block px-3 py-2.5 hover:bg-[var(--surface-hover)]"
+                onClick={close}
+              >
+                Add structure
               </Link>
             </>
           ) : (
@@ -362,6 +377,15 @@ export function ArabicSelectionMenu({
               >
                 Add example
               </Link>
+              {structureHits.length === 0 ? (
+                <Link
+                  href={addStructureHref}
+                  className="block px-3 py-2.5 hover:bg-[var(--surface-hover)]"
+                  onClick={close}
+                >
+                  Add structure
+                </Link>
+              ) : null}
             </>
           )}
         </div>

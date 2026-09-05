@@ -8,6 +8,7 @@ type ExampleRow = {
   sourceTitle?: string | null;
   sourceHref?: string | null;
   vocabHints?: string[];
+  notes?: string | null;
 };
 
 export function ExampleList({
@@ -50,6 +51,11 @@ export function ExampleList({
             {(example.vocabHints?.length ?? 0) > 0 ? (
               <span className="text-xs text-[var(--ink-muted)]">
                 {example.vocabHints!.slice(0, 3).join(" · ")}
+              </span>
+            ) : null}
+            {example.notes ? (
+              <span className="line-clamp-2 text-sm leading-relaxed text-[var(--ink-muted)]">
+                {example.notes}
               </span>
             ) : null}
           </Link>

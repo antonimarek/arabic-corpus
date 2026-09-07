@@ -30,12 +30,14 @@ import type { Database } from "../../src/types/database";
 type LessonDialogue = {
   lesson: string;
   turns: DialogueTurn[];
+  pipeline?: "fathom" | "wispr";
 };
 
 type LessonManifest = {
   audioPath?: string;
   model?: string;
   durationSeconds?: number;
+  pipeline?: "fathom" | "wispr";
   fathom?: { recordingId?: string | null };
 };
 
@@ -71,6 +73,7 @@ Options:
   --owner-email      Corpus owner email
   --owner-id         Corpus owner uuid (alternative)
   --audio            Override source audio path
+  --no-audio         Skip audio upload (Wispr-only / text+study pack)
   --title            Text title override
   --occurred-on      ISO date (default: lesson id date if parseable)
   --dry-run          Build study pack + preview only
@@ -138,6 +141,18 @@ async function main() {
   const manifest = existsSync(manifestPath)
     ? (JSON.parse(await readFile(manifestPath, "utf8")) as LessonManifest)
     : {};
+  const pipeline =
+    dialogue.pipeline ??
+    manifest.pipeline ??
+    (dialogue.turns.every((turn) => turn.source === "wispr") ? "wispr" : "fathom");
+  const forceNoAudio = args.includes("--no-audio");
+  const audioOverride = argValue(args, "--audio") ?? manifest.audioPath ?? "";
+  const audioSourceCandidate = audioOverride ? resolvePath(audioOverride) : "";
+  const hasAudioFile =
+    Boolean(audioSourceCandidate) && existsSync(audioSourceCandidate);
+  // Wispr: audio optional. Fathom: audio required unless --no-audio.
+  const noAudio = forceNoAudio || !hasAudioFile;
+  const audioSynced = pipeline !== "wispr" && hasAudioFile && !forceNoAudio;
 
   const merged = mergeTurnsByRole(dialogue.turns);
   const fathomMerged = mergeTurnsByRole(dialogue.turns, { textField: "fathomText" });
@@ -148,14 +163,15 @@ async function main() {
   }));
   const wisprMerged = mergeTurnsByRole(wisprSourceTurns, { textField: "wisprText" });
   const arabic = buildCorpusArabicText(merged);
-  const fathomArabic = buildCorpusArabicText(fathomMerged);
+  const fathomArabic =
+    pipeline === "wispr" ? undefined : buildCorpusArabicText(fathomMerged);
   const wisprArabic = hasWispr ? buildCorpusArabicText(wisprMerged) : undefined;
-  const lineStarts = corpusLineStartsMs(merged);
+  const lineStarts = audioSynced ? corpusLineStartsMs(merged) : null;
   const studyPack = buildStudyPack(
     lesson,
     dialogue.turns,
     merged.map((line) => line.timestampLabel),
-    { fathomArabic, wisprArabic },
+    { fathomArabic, wisprArabic, audioSynced },
   );
   const studyPackPath = path.join(lessonDir, "lesson_study_pack.md");
   await writeFile(studyPackPath, `${studyPackToMarkdown(studyPack)}\n`);
@@ -213,7 +229,7 @@ async function main() {
     const patch = updateDialogue
       ? {
           arabic,
-          audio_line_starts_ms: lineStarts,
+          ...(lineStarts ? { audio_line_starts_ms: lineStarts } : {}),
           study_pack: studyPack,
         }
       : { study_pack: studyPack };
@@ -258,16 +274,23 @@ async function main() {
     title,
     arabic,
     translation: null,
-    source: "Levantine lesson (Fathom + gpt-transcribe)",
+    source:
+      pipeline === "wispr"
+        ? "Levantine lesson (Wispr Flow)"
+        : "Levantine lesson (Fathom + gpt-transcribe)",
     occurred_on: occurredOn,
     notes: buildCorpusNotes({
       lesson,
-      fathomUrl,
+      fathomUrl: pipeline === "wispr" ? undefined : fathomUrl,
       model: manifest.model,
       turnCount: dialogue.turns.length,
       lineCount: merged.length,
+      pipeline,
     }),
-    tags: ["lesson", "levantine", "dialogue"],
+    tags:
+      pipeline === "wispr"
+        ? ["lesson", "levantine", "dialogue", "wispr"]
+        : ["lesson", "levantine", "dialogue"],
   });
 
   if ("error" in textResult) {
@@ -276,49 +299,68 @@ async function main() {
   }
 
   const textId = textResult.id;
-  const audioSource = resolvePath(
-    argValue(args, "--audio") ?? manifest.audioPath ?? "",
-  );
-  if (!audioSource || !existsSync(audioSource)) {
-    console.error("Audio path missing. Pass --audio or ensure lesson_manifest.json has audioPath.");
-    process.exit(1);
-  }
+  let audioBytes: number | null = null;
+  let audioDurationMs: number | null = null;
 
-  const compressedPath = path.join(lessonDir, "lesson_audio_corpus.m4a");
-  const compressed = await compressAudioForCorpus(
-    audioSource,
-    compressedPath,
-    AUDIO_MAX_BYTES,
-  );
-  const durationSeconds = await probeDurationSeconds(compressed.outputPath);
-  const durationMs = Math.round(durationSeconds * 1000);
-  const storagePath = textAudioPath(ownerId, textId, "m4a");
-  const audioBuffer = await readFile(compressed.outputPath);
+  if (noAudio) {
+    if (pipeline !== "wispr" && !forceNoAudio) {
+      console.error(
+        "Audio path missing. Pass --audio, set lesson_manifest.json audioPath, or use --no-audio.",
+      );
+      process.exit(1);
+    }
+    const { error: metaError } = await supabase
+      .from("texts")
+      .update({
+        study_pack: studyPack,
+        audio_line_starts_ms: null,
+      })
+      .eq("id", textId)
+      .eq("owner_id", ownerId);
+    if (metaError) {
+      console.error(metaError.message);
+      process.exit(1);
+    }
+    console.log("Skipped audio upload.");
+  } else {
+    const audioSource = audioSourceCandidate;
+    const compressedPath = path.join(lessonDir, "lesson_audio_corpus.m4a");
+    const compressed = await compressAudioForCorpus(
+      audioSource,
+      compressedPath,
+      AUDIO_MAX_BYTES,
+    );
+    const durationSeconds = await probeDurationSeconds(compressed.outputPath);
+    audioDurationMs = Math.round(durationSeconds * 1000);
+    audioBytes = compressed.bytes;
+    const storagePath = textAudioPath(ownerId, textId, "m4a");
+    const audioBuffer = await readFile(compressed.outputPath);
 
-  const upload = await supabase.storage
-    .from(TEXT_AUDIO_BUCKET)
-    .upload(storagePath, audioBuffer, {
-      contentType: "audio/mp4",
-      upsert: true,
-    });
-  if (upload.error) {
-    console.error(upload.error.message);
-    process.exit(1);
-  }
+    const upload = await supabase.storage
+      .from(TEXT_AUDIO_BUCKET)
+      .upload(storagePath, audioBuffer, {
+        contentType: "audio/mp4",
+        upsert: true,
+      });
+    if (upload.error) {
+      console.error(upload.error.message);
+      process.exit(1);
+    }
 
-  const { error: metaError } = await supabase
-    .from("texts")
-    .update({
-      audio_path: storagePath,
-      audio_duration_ms: durationMs,
-      audio_line_starts_ms: lineStarts,
-      study_pack: studyPack,
-    })
-    .eq("id", textId)
-    .eq("owner_id", ownerId);
-  if (metaError) {
-    console.error(metaError.message);
-    process.exit(1);
+    const { error: metaError } = await supabase
+      .from("texts")
+      .update({
+        audio_path: storagePath,
+        audio_duration_ms: audioDurationMs,
+        audio_line_starts_ms: lineStarts,
+        study_pack: studyPack,
+      })
+      .eq("id", textId)
+      .eq("owner_id", ownerId);
+    if (metaError) {
+      console.error(metaError.message);
+      process.exit(1);
+    }
   }
 
   await writeFile(
@@ -329,9 +371,10 @@ async function main() {
         textId,
         title,
         occurredOn,
+        pipeline,
         lineCount: merged.length,
-        audioBytes: compressed.bytes,
-        audioDurationMs: durationMs,
+        audioBytes,
+        audioDurationMs,
         studyPackPath: path.relative(process.cwd(), studyPackPath),
         importedAt: new Date().toISOString(),
       },
@@ -341,7 +384,11 @@ async function main() {
   );
 
   console.log(`Imported text id: ${textId}`);
-  console.log(`Audio: ${compressed.bytes} bytes (${(compressed.bytes / 1024 / 1024).toFixed(1)} MB)`);
+  if (audioBytes != null && audioDurationMs != null) {
+    console.log(
+      `Audio: ${audioBytes} bytes (${(audioBytes / 1024 / 1024).toFixed(1)} MB)`,
+    );
+  }
   console.log(`Open: /texts/${textId}`);
 }
 

@@ -15,6 +15,7 @@
     "transcribe:benchmark": "tsx import/scripts/transcribe-benchmark.ts",
     "transcribe:lesson": "tsx import/scripts/transcribe-lesson.ts",
     "transcribe:align": "tsx import/scripts/align-lesson.ts",
+    "transcribe:align:wispr": "tsx import/scripts/align-lesson-wispr.ts",
     "import:lesson": "tsx import/scripts/import-lesson.ts"
   },
   "dependencies": {

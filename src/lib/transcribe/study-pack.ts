@@ -140,7 +140,12 @@ export function buildStudyPack(
   lesson: string,
   turns: DialogueTurn[],
   mergedTimestamps?: string[],
-  options?: { fathomArabic?: string; wisprArabic?: string },
+  options?: {
+    fathomArabic?: string;
+    wisprArabic?: string;
+    /** False for Wispr-only imports without seekable audio timestamps. */
+    audioSynced?: boolean;
+  },
 ): StudyPackV2 {
   const lineIndex = buildLineIndex(
     mergedTimestamps ??
@@ -258,7 +263,9 @@ export function buildStudyPack(
     weeklyPlan: [
       "Day 1 (lesson day): skim the Study tab only — no heavy study.",
       "Day 2 (~15 min): active recall — cover the English cue, say Arabic for 5 cards.",
-      "Day 4 (~20 min): listening — replay 3 marked timestamps in Dialogue.",
+      options?.audioSynced === false
+        ? "Day 4 (~20 min): re-read 3 Study cards aloud; mark unclear lines in Dialogue."
+        : "Day 4 (~20 min): listening — replay 3 marked timestamps in Dialogue.",
       "Day 6 (~15 min): output — 3 min Arabic monologue on your week, record yourself.",
       "Before next lesson: review confusion moments; pick 3 items to ask tutor.",
     ],

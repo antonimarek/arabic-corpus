@@ -80,6 +80,22 @@ Writes:
 - `lesson_dialogue.json` — structured turns + stats (`wispr` / `stt` / `mixed` / `fathom_fallback`)
 - `lesson_review_queue.csv` — side-by-side sources for review
 
+### Wispr-only (no Fathom)
+
+When the lesson was recorded only in Wispr Flow (microphone + Notetaker), skip Fathom/STT:
+
+```bash
+# Save MCP/export transcript first:
+#   import/processed/lessons/<id>/wispr.transcript.raw.txt
+
+npm run transcribe:align:wispr -- --lesson sep-07-2026
+npm run import:lesson -- --lesson sep-07-2026 --owner-email you@example.com
+```
+
+Audio is optional. Pass `--audio` later if you export a Wispr recording. Labels are `L1`, `L2`, … (no clock seek). Study pack still builds from speaker turns.
+
+Writes the same dialogue / study pack artifacts, with `pipeline: "wispr"` in `lesson_dialogue.json`.
+
 ### Import to corpus + study pack
 
 ```bash
@@ -87,6 +103,8 @@ npm run import:lesson -- --lesson lesson-2026-08-31 --owner-email you@example.co
 ```
 
 Creates a **text** with merged dialogue lines, synced audio (compressed if needed), line-start markers, and an in-app **Study** tab (structured `study_pack` v2 JSON on the text). Also stores `fathomArabic` / `wisprArabic` for a Dialogue tab toggle (**Speakers** vs **Aligned (STT)**). Writes `lesson_study_pack.md` locally.
+
+Wispr-only imports skip audio by default (`--no-audio` also works on the Fathom path).
 
 To refresh study pack on an already-imported lesson (regenerates v2 recall cards, corrections, contrasts):
 

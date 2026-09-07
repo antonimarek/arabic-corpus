@@ -79,15 +79,21 @@ export function buildCorpusNotes(params: {
   model?: string;
   turnCount: number;
   lineCount: number;
+  pipeline?: "fathom" | "wispr";
 }): string {
   const parts = [
-    "Imported from lesson transcription pipeline.",
+    params.pipeline === "wispr"
+      ? "Imported from Wispr Flow lesson pipeline (no Fathom timestamps)."
+      : "Imported from lesson transcription pipeline.",
     `Lesson id: ${params.lesson}`,
     `Dialogue turns: ${params.turnCount}`,
     `Corpus lines: ${params.lineCount}`,
   ];
   if (params.model) parts.push(`STT model: ${params.model}`);
   if (params.fathomUrl) parts.push(`Fathom: ${params.fathomUrl}`);
+  if (params.pipeline === "wispr") {
+    parts.push("Line labels are L1, L2, … (no clock seek).");
+  }
   parts.push("Study pack is available in the Study tab when imported.");
   return parts.join("\n");
 }

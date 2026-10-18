@@ -7,10 +7,12 @@ import {
 } from "./wispr-parse";
 
 describe("wisprRoleForSpeaker", () => {
-  it("maps Antoni to student and Moayad to tutor", () => {
+  it("maps Antoni to student and Moayad / clip speakers to tutor", () => {
     expect(wisprRoleForSpeaker("Antoni Marek (You)")).toBe("STUDENT");
     expect(wisprRoleForSpeaker("Moayad")).toBe("TUTOR");
-    expect(wisprRoleForSpeaker("Speaker 3")).toBe("OTHER");
+    expect(wisprRoleForSpeaker("Speaker 3")).toBe("TUTOR");
+    expect(wisprRoleForSpeaker("Audio")).toBe("TUTOR");
+    expect(wisprRoleForSpeaker("Speaker 4")).toBe("OTHER");
   });
 });
 
@@ -18,13 +20,22 @@ describe("parseWisprTranscript", () => {
   it("parses Name: text lines and drops OTHER by default", () => {
     const turns = parseWisprTranscript(`Antoni Marek (You): Taban.
 Moayad:  راح عليّ درس.
-Speaker 3: ignored
+Speaker 4: ignored
 `);
     expect(turns).toHaveLength(2);
     expect(turns[0]?.role).toBe("STUDENT");
     expect(turns[0]?.text).toBe("Taban.");
     expect(turns[1]?.role).toBe("TUTOR");
     expect(turns[1]?.text).toContain("راح علي");
+  });
+
+  it("parses optional [MM:SS] prefixes into startSeconds", () => {
+    const turns = parseWisprTranscript(`[02:37] Moayad: مرحبا.
+[03:01] Antoni Marek (You): تمام.
+`);
+    expect(turns).toHaveLength(2);
+    expect(turns[0]?.startSeconds).toBe(2 * 60 + 37);
+    expect(turns[1]?.startSeconds).toBe(3 * 60 + 1);
   });
 });
 

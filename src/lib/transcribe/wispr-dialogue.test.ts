@@ -32,6 +32,17 @@ Moayad: اليوم كان يوم عادي.`),
     expect(turns[2]?.text).toBe("اليوم كان يوم عادي.");
   });
 
+  it("uses clock labels when startSeconds are present", () => {
+    const turns = wisprTurnsToDialogue({
+      turns: parseWisprTranscript(`[02:37] Moayad: مرحبا.
+[02:42] Antoni Marek (You): تمام.`),
+      mergeSameSpeaker: false,
+    });
+    expect(turns[0]?.timestampLabel).toBe("2:37");
+    expect(turns[0]?.startSeconds).toBe(157);
+    expect(turns[1]?.timestampLabel).toBe("2:42");
+  });
+
   it("treats Speaker 1 as tutor when configured", () => {
     const wispr = parseWisprTranscript(
       `Speaker 1: تعبان؟

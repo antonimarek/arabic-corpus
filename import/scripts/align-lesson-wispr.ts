@@ -65,7 +65,8 @@ async function main() {
   const mergeSameSpeaker = !args.includes("--no-merge");
   const wisprTurns = parseWisprTranscript(await readFile(wisprPath, "utf8"), {
     // Wispr often labels the tutor as Speaker 1 when the student mic is identified.
-    tutorNames: ["moayad", "speaker 1", "speaker 2"],
+    // Speaker 1/2 = tutor mic label varies. Speaker 3 / Audio = listening clip.
+    tutorNames: ["moayad", "speaker 1", "speaker 2", "speaker 3", "audio"],
   });
   if (wisprTurns.length === 0) {
     console.error("No Wispr turns parsed.");

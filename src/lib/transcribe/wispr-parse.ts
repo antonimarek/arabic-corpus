@@ -2,12 +2,16 @@ export type WisprTurn = {
   speaker: string;
   text: string;
   role: "TUTOR" | "STUDENT" | "OTHER";
+  /** Present when export uses `[MM:SS] Name: text` lines. */
+  startSeconds?: number;
 };
 
-const LINE_RE = /^([^:\n]+):\s*(.*)$/;
+/** Optional `[MM:SS]` / `[H:MM:SS]` prefix, then `Name: text`. */
+const LINE_RE =
+  /^(?:\[(?:(\d{1,2}):)?(\d{1,2}):(\d{2})\]\s*)?([^:\n]+):\s*(.*)$/;
 
 const DEFAULT_STUDENT_NAMES = ["antoni", "antoni marek", "antoni marek (you)", "you"];
-const DEFAULT_TUTOR_NAMES = ["moayad", "speaker 2"];
+const DEFAULT_TUTOR_NAMES = ["moayad", "speaker 1", "speaker 2", "speaker 3", "audio"];
 
 export function normalizeWisprSpeakerName(speaker: string): string {
   return speaker
@@ -64,14 +68,25 @@ export function parseWisprTranscript(
     const match = LINE_RE.exec(line);
     if (!match) continue;
 
-    const speaker = (match[1] ?? "").trim();
-    const text = (match[2] ?? "").trim();
+    const hours = match[1] != null ? Number(match[1]) : null;
+    const minutes = match[2] != null ? Number(match[2]) : null;
+    const seconds = match[3] != null ? Number(match[3]) : null;
+    const speaker = (match[4] ?? "").trim();
+    const text = (match[5] ?? "").trim();
     if (!speaker || !text) continue;
+    // Skip markdown / section labels mistaken as speakers.
+    if (speaker.startsWith("#") || speaker.length > 80) continue;
 
     const role = wisprRoleForSpeaker(speaker, options);
     if (dropOther && role === "OTHER") continue;
 
-    turns.push({ speaker, text, role });
+    let startSeconds: number | undefined;
+    if (minutes != null && seconds != null && !Number.isNaN(minutes) && !Number.isNaN(seconds)) {
+      const h = hours != null && !Number.isNaN(hours) ? hours : 0;
+      startSeconds = h * 3600 + minutes * 60 + seconds;
+    }
+
+    turns.push({ speaker, text, role, startSeconds });
   }
 
   return turns;

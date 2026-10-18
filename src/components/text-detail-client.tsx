@@ -1,5 +1,6 @@
 "use client";
 
+import dynamic from "next/dynamic";
 import Link from "next/link";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect } from "react";
@@ -8,14 +9,32 @@ import { deleteText } from "@/app/(app)/texts/actions";
 import { ConfirmDelete } from "@/components/confirm-delete";
 import { ExampleList } from "@/components/example-list";
 import { FocusTargetStrip } from "@/components/focus-target-strip";
-import { LessonTextDetail } from "@/components/lesson-text-detail";
 import { TextAudioField } from "@/components/text-audio-field";
-import { TextLineReader } from "@/components/text-line-reader";
 import { writeLastText } from "@/lib/prefs";
 import { createClient } from "@/lib/supabase/client";
 import { fetchTextDetail, textQueryKey } from "@/lib/text-detail";
 import type { TextDetailPayload } from "@/lib/text-detail";
 import { lineHref } from "@/lib/text-lines";
+
+const LessonTextDetail = dynamic(
+  () =>
+    import("@/components/lesson-text-detail").then((mod) => mod.LessonTextDetail),
+  {
+    loading: () => (
+      <p className="text-sm text-[var(--ink-muted)]">Loading lesson…</p>
+    ),
+  },
+);
+
+const TextLineReader = dynamic(
+  () =>
+    import("@/components/text-line-reader").then((mod) => mod.TextLineReader),
+  {
+    loading: () => (
+      <p className="text-sm text-[var(--ink-muted)]">Loading text…</p>
+    ),
+  },
+);
 
 export function TextDetailClient({
   textId,
@@ -37,7 +56,7 @@ export function TextDetailClient({
   }, [initialData, queryClient, textId]);
 
   const text = data ?? initialData;
-  const isLesson = text.tags.includes("lesson") && text.studyPack != null;
+  const isLesson = text.tags.includes("lesson");
 
   useEffect(() => {
     writeLastText({ id: text.id, title: text.title });
@@ -65,11 +84,7 @@ export function TextDetailClient({
         </p>
       </header>
 
-      <FocusTargetStrip
-        textId={text.id}
-        focus={text.focus}
-        vocabOptions={text.vocabOptions}
-      />
+      <FocusTargetStrip textId={text.id} focus={text.focus} />
 
       <TextAudioField textId={text.id} hasAudio={Boolean(text.audioPath)} />
 

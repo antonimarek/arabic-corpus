@@ -1,18 +1,66 @@
 "use client";
 
+import dynamic from "next/dynamic";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useCallback, useEffect, useMemo } from "react";
+import { useQuery } from "@tanstack/react-query";
 
-import { LessonAiStudyPlan } from "@/components/lesson-ai-study-plan";
-import { LessonDialogueReader } from "@/components/lesson-dialogue-reader";
-import { LessonExportActions } from "@/components/lesson-export-actions";
-import { LessonStudyPack } from "@/components/lesson-study-pack";
 import { LessonTextTabs, type LessonTextTab } from "@/components/lesson-text-tabs";
 import { TextAudioPlayer } from "@/components/text-audio-player";
+import { createClient } from "@/lib/supabase/client";
 import { useTextAudioController } from "@/lib/text-audio-controller";
 import { parseLineHash, splitTextLines } from "@/lib/text-lines";
-import type { TextDetailPayload } from "@/lib/text-detail";
+import {
+  fetchTextStudyExtras,
+  textStudyQueryKey,
+  type TextDetailPayload,
+} from "@/lib/text-detail";
 import { isStudyPackV2 } from "@/lib/transcribe/study-pack";
+
+const LessonAiStudyPlan = dynamic(
+  () =>
+    import("@/components/lesson-ai-study-plan").then((mod) => mod.LessonAiStudyPlan),
+  {
+    loading: () => (
+      <p className="text-sm text-[var(--ink-muted)]">Loading study plan…</p>
+    ),
+  },
+);
+const LessonStudyPack = dynamic(
+  () =>
+    import("@/components/lesson-study-pack").then((mod) => mod.LessonStudyPack),
+  {
+    loading: () => (
+      <p className="text-sm text-[var(--ink-muted)]">Loading study pack…</p>
+    ),
+  },
+);
+const LessonExportActions = dynamic(
+  () =>
+    import("@/components/lesson-export-actions").then(
+      (mod) => mod.LessonExportActions,
+    ),
+);
+const LessonDialogueReader = dynamic(
+  () =>
+    import("@/components/lesson-dialogue-reader").then(
+      (mod) => mod.LessonDialogueReader,
+    ),
+  {
+    loading: () => (
+      <p className="text-sm text-[var(--ink-muted)]">Loading dialogue…</p>
+    ),
+  },
+);
+const TextLineReader = dynamic(
+  () =>
+    import("@/components/text-line-reader").then((mod) => mod.TextLineReader),
+  {
+    loading: () => (
+      <p className="text-sm text-[var(--ink-muted)]">Loading text…</p>
+    ),
+  },
+);
 
 type LessonTextDetailProps = {
   text: TextDetailPayload;
@@ -26,6 +74,20 @@ export function LessonTextDetail({ text }: LessonTextDetailProps) {
   const router = useRouter();
   const searchParams = useSearchParams();
   const activeTab = parseTab(searchParams.get("tab"));
+
+  const {
+    data: study,
+    isPending,
+    isError,
+    error,
+  } = useQuery({
+    queryKey: textStudyQueryKey(text.id),
+    queryFn: () => fetchTextStudyExtras(createClient(), text.id),
+    staleTime: 5 * 60 * 1000,
+  });
+
+  const studyPack = study?.studyPack ?? null;
+  const aiStudyPlan = study?.aiStudyPlan ?? null;
 
   const audioInput = text.audioUrl
     ? {
@@ -66,8 +128,53 @@ export function LessonTextDetail({ text }: LessonTextDetailProps) {
     }
   }, [activeTab, setTab]);
 
-  if (!text.studyPack) {
-    return null;
+  if (isPending) {
+    return (
+      <div className="flex flex-col gap-4">
+        {audioInput ? (
+          <TextAudioPlayer
+            audioUrl={audioInput.url}
+            controller={audioController}
+            nonEmptyLineCount={nonEmptyLineCount}
+          />
+        ) : null}
+        <p className="text-sm text-[var(--ink-muted)]">Loading study…</p>
+      </div>
+    );
+  }
+
+  if (isError) {
+    return (
+      <p className="text-sm text-[var(--danger)]" role="alert">
+        {error instanceof Error ? error.message : "Could not load study."}
+      </p>
+    );
+  }
+
+  if (!studyPack) {
+    return (
+      <TextLineReader
+        textId={text.id}
+        arabic={text.arabic}
+        translation={text.translation}
+        links={text.links}
+        knownLinks={text.knownLinks}
+        examples={text.examples.map((example) => ({
+          id: example.id,
+          arabic: example.arabic,
+          sourceLine: example.source_line,
+        }))}
+        audio={
+          text.audioUrl
+            ? {
+                url: text.audioUrl,
+                durationMs: text.audioDurationMs,
+                lineStarts: text.audioLineStartsMs,
+              }
+            : null
+        }
+      />
+    );
   }
 
   return (
@@ -84,7 +191,7 @@ export function LessonTextDetail({ text }: LessonTextDetailProps) {
 
       <LessonExportActions
         arabic={text.arabic}
-        studyPack={text.studyPack}
+        studyPack={studyPack}
         title={text.title}
         source={text.source}
         occurredOn={text.occurred_on}
@@ -94,17 +201,14 @@ export function LessonTextDetail({ text }: LessonTextDetailProps) {
 
       {activeTab === "study" ? (
         <>
-          <LessonAiStudyPlan
-            textId={text.id}
-            initialContent={text.aiStudyPlan}
-          />
+          <LessonAiStudyPlan textId={text.id} initialContent={aiStudyPlan} />
           <div className="border-t border-[var(--line)] pt-6">
             <h2 className="mb-4 text-sm text-[var(--ink-muted)]">
               From transcript (automatic)
             </h2>
             <LessonStudyPack
               textId={text.id}
-              studyPack={text.studyPack}
+              studyPack={studyPack}
               lineStartsMs={text.audioLineStartsMs}
               audioController={audioController}
             />
@@ -115,13 +219,12 @@ export function LessonTextDetail({ text }: LessonTextDetailProps) {
           textId={text.id}
           arabic={text.arabic}
           fathomArabic={
-            isStudyPackV2(text.studyPack) ? text.studyPack.fathomArabic ?? null : null
+            isStudyPackV2(studyPack) ? studyPack.fathomArabic ?? null : null
           }
           wisprArabic={
-            isStudyPackV2(text.studyPack) ? text.studyPack.wisprArabic ?? null : null
+            isStudyPackV2(studyPack) ? studyPack.wisprArabic ?? null : null
           }
           links={text.links}
-          knownLinks={text.knownLinks}
           examples={text.examples.map((example) => ({
             id: example.id,
             arabic: example.arabic,

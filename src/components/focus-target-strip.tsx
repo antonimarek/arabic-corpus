@@ -1,44 +1,59 @@
 "use client";
 
 import Link from "next/link";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 
 import {
   addTextFocus,
   removeTextFocus,
+  searchVocabularyForFocus,
 } from "@/app/(app)/texts/actions";
-import { optionMatchesQuery } from "@/lib/option-filter";
 import type { FocusTarget, VocabOption } from "@/lib/text-detail";
 import { textQueryKey } from "@/lib/text-detail";
 
 type FocusTargetStripProps = {
   textId: string;
   focus: FocusTarget[];
-  vocabOptions: VocabOption[];
 };
 
-export function FocusTargetStrip({
-  textId,
-  focus,
-  vocabOptions,
-}: FocusTargetStripProps) {
+const DEBOUNCE_MS = 200;
+
+export function FocusTargetStrip({ textId, focus }: FocusTargetStripProps) {
   const queryClient = useQueryClient();
   const [adding, setAdding] = useState(false);
   const [query, setQuery] = useState("");
+  const [debounced, setDebounced] = useState("");
+  const [options, setOptions] = useState<VocabOption[]>([]);
+  const [searching, setSearching] = useState(false);
+  const [searchError, setSearchError] = useState<string | null>(null);
   const focusIds = useMemo(() => new Set(focus.map((row) => row.id)), [focus]);
-  const available = useMemo(
-    () =>
-      vocabOptions.filter(
-        (option) =>
-          !focusIds.has(option.id) &&
-          optionMatchesQuery(
-            { label: option.arabic, hint: option.gloss },
-            query,
-          ),
-      ),
-    [focusIds, query, vocabOptions],
-  );
+
+  useEffect(() => {
+    if (!adding) return;
+    const handle = window.setTimeout(() => setDebounced(query), DEBOUNCE_MS);
+    return () => window.clearTimeout(handle);
+  }, [adding, query]);
+
+  useEffect(() => {
+    if (!adding) return;
+    let cancelled = false;
+    setSearching(true);
+    setSearchError(null);
+    void searchVocabularyForFocus(debounced).then((result) => {
+      if (cancelled) return;
+      setSearching(false);
+      if (result.error) {
+        setSearchError(result.error);
+        setOptions([]);
+        return;
+      }
+      setOptions(result.options.filter((option) => !focusIds.has(option.id)));
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [adding, debounced, focusIds]);
 
   const refresh = () => {
     void queryClient.invalidateQueries({ queryKey: textQueryKey(textId) });
@@ -53,7 +68,12 @@ export function FocusTargetStrip({
         <button
           type="button"
           className="text-sm text-[var(--accent)] hover:underline"
-          onClick={() => setAdding((open) => !open)}
+          onClick={() => {
+            setAdding((open) => !open);
+            setQuery("");
+            setDebounced("");
+            setSearchError(null);
+          }}
           aria-expanded={adding}
         >
           {adding ? "Done" : "Add target"}
@@ -107,16 +127,25 @@ export function FocusTargetStrip({
             type="search"
             value={query}
             onChange={(event) => setQuery(event.target.value)}
-            placeholder="Filter vocabulary…"
+            placeholder="Search vocabulary…"
             className="rounded-md border border-[var(--line)] bg-[var(--background)] px-3 py-2 text-sm outline-none focus:border-[var(--accent)]"
+            autoFocus
           />
-          {available.length === 0 ? (
+          {searchError ? (
+            <p className="px-1 py-2 text-sm text-[var(--danger)]" role="alert">
+              {searchError}
+            </p>
+          ) : searching ? (
             <p className="px-1 py-2 text-sm text-[var(--ink-muted)]">
-              No matching words.
+              Searching…
+            </p>
+          ) : options.length === 0 ? (
+            <p className="px-1 py-2 text-sm text-[var(--ink-muted)]">
+              No matches.
             </p>
           ) : (
             <ul className="max-h-48 overflow-y-auto">
-              {available.slice(0, 40).map((option) => (
+              {options.map((option) => (
                 <li key={option.id}>
                   <form
                     action={async () => {

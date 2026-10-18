@@ -18,7 +18,6 @@ import {
   pairLabel,
   posKind,
 } from "@/lib/citation";
-import { rootsMatch } from "@/lib/option-filter";
 import { isPatternRole, PATTERN_ROLE_LABEL } from "@/lib/patterns";
 import { createClient } from "@/lib/supabase/server";
 import { notNull } from "@/lib/tags";
@@ -108,19 +107,17 @@ export default async function VocabularyDetailPage({
         vocabulary_senses(gloss, created_at),
         pattern_vocabulary(morph_patterns(name))`,
       )
-      .neq("id", id)
-      .not("root", "is", null);
-    family = (candidates ?? [])
-      .filter((row) => rootsMatch(vocabulary.root, row.root))
-      .map((row) => ({
-        id: row.id,
-        arabic: row.arabic,
-        transliteration: row.transliteration,
-        gloss: firstGloss(row.vocabulary_senses),
-        patternNames: (row.pattern_vocabulary ?? [])
-          .map((link) => link.morph_patterns?.name)
-          .filter(notNull),
-      }));
+      .eq("root", vocabulary.root)
+      .neq("id", id);
+    family = (candidates ?? []).map((row) => ({
+      id: row.id,
+      arabic: row.arabic,
+      transliteration: row.transliteration,
+      gloss: firstGloss(row.vocabulary_senses),
+      patternNames: (row.pattern_vocabulary ?? [])
+        .map((link) => link.morph_patterns?.name)
+        .filter(notNull),
+    }));
   }
 
   const familyLinked = family.filter((row) => row.patternNames.length > 0);

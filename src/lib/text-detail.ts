@@ -1,3 +1,5 @@
+import { cache } from "react";
+
 import { firstGloss, structureLink, vocabularyLink } from "@/lib/arabic-links";
 import { signedTextAudioUrl } from "@/lib/audio-storage";
 import type { ArabicLink } from "@/lib/highlight-arabic";
@@ -5,8 +7,11 @@ import { notNull } from "@/lib/tags";
 import type { StudyPack } from "@/lib/transcribe/study-pack";
 import { normalizeStudyPack } from "@/lib/transcribe/study-pack";
 import type { CorpusClient } from "@/lib/corpus/write";
+import { createClient } from "@/lib/supabase/server";
+import { vocabularyMatchingText } from "@/lib/vocab-search";
 
 export const textQueryKey = (id: string) => ["text", id] as const;
+export const textStudyQueryKey = (id: string) => ["text", id, "study"] as const;
 
 export type FocusTarget = {
   id: string;
@@ -32,13 +37,13 @@ export type TextDetailPayload = {
   audioDurationMs: number | null;
   audioLineStartsMs: number[] | null;
   audioUrl: string | null;
+  /** Null until Study tab loads extras (lessons). */
   studyPack: StudyPack | null;
   aiStudyPlan: string | null;
   tags: string[];
   links: ArabicLink[];
   knownLinks: ArabicLink[];
   focus: FocusTarget[];
-  vocabOptions: VocabOption[];
   examples: Array<{
     id: string;
     arabic: string;
@@ -50,8 +55,31 @@ export type TextDetailPayload = {
   }>;
 };
 
+export type TextShell = {
+  id: string;
+  title: string;
+  arabic: string;
+  source: string | null;
+  occurred_on: string | null;
+  tags: string[];
+};
+
+export type TextStudyExtras = {
+  studyPack: StudyPack | null;
+  aiStudyPlan: string | null;
+};
+
 const TEXT_DETAIL_SELECT = `
-  *,
+  id,
+  title,
+  arabic,
+  translation,
+  source,
+  occurred_on,
+  notes,
+  audio_path,
+  audio_duration_ms,
+  audio_line_starts_ms,
   text_tags(tags(name)),
   text_vocabulary(
     created_at,
@@ -69,14 +97,7 @@ const TEXT_DETAIL_SELECT = `
     transliteration,
     notes,
     source_line,
-    example_vocabulary(
-      vocabulary(
-        id,
-        arabic,
-        vocabulary_senses(gloss, created_at),
-        vocabulary_forms(arabic)
-      )
-    ),
+    example_vocabulary(vocabulary(arabic)),
     example_structures(structures(id, name, arabic_form, meaning))
   )
 `;
@@ -85,30 +106,67 @@ function parseStudyPack(value: unknown): StudyPack | null {
   return normalizeStudyPack(value);
 }
 
+export async function fetchTextShell(
+  supabase: CorpusClient,
+  id: string,
+): Promise<TextShell | null> {
+  const { data, error } = await supabase
+    .from("texts")
+    .select("id, title, arabic, source, occurred_on, text_tags(tags(name))")
+    .eq("id", id)
+    .maybeSingle();
+  if (error) throw new Error(error.message);
+  if (!data) return null;
+  return {
+    id: data.id,
+    title: data.title,
+    arabic: data.arabic,
+    source: data.source,
+    occurred_on: data.occurred_on,
+    tags: data.text_tags?.map((row) => row.tags?.name).filter(notNull) ?? [],
+  };
+}
+
+export async function fetchTextStudyExtras(
+  supabase: CorpusClient,
+  id: string,
+): Promise<TextStudyExtras> {
+  const { data, error } = await supabase
+    .from("texts")
+    .select("study_pack, ai_study_plan")
+    .eq("id", id)
+    .maybeSingle();
+  if (error) throw new Error(error.message);
+  if (!data) {
+    throw new Error("Text not found");
+  }
+  return {
+    studyPack: parseStudyPack(data.study_pack),
+    aiStudyPlan: data.ai_study_plan ?? null,
+  };
+}
+
 export async function fetchTextDetail(
   supabase: CorpusClient,
   id: string,
 ): Promise<TextDetailPayload> {
-  const [{ data: text, error }, { data: vocabRows, error: vocabError }] =
-    await Promise.all([
-      supabase.from("texts").select(TEXT_DETAIL_SELECT).eq("id", id).maybeSingle(),
-      supabase
-        .from("vocabulary")
-        .select(
-          "id, arabic, vocabulary_senses(gloss, created_at), vocabulary_forms(arabic)",
-        )
-        .order("created_at", { ascending: false }),
-    ]);
+  const { data: text, error } = await supabase
+    .from("texts")
+    .select(TEXT_DETAIL_SELECT)
+    .eq("id", id)
+    .maybeSingle();
 
   if (error) {
     throw new Error(error.message);
   }
-  if (vocabError) {
-    throw new Error(vocabError.message);
-  }
   if (!text) {
     throw new Error("Text not found");
   }
+
+  const [matchedVocab, audioUrl] = await Promise.all([
+    vocabularyMatchingText(supabase, text.arabic),
+    signedTextAudioUrl(supabase, text.audio_path),
+  ]);
 
   const tags =
     text.text_tags?.map((row) => row.tags?.name).filter(notNull) ?? [];
@@ -117,9 +175,7 @@ export async function fetchTextDetail(
   const focusRows = [...(text.text_vocabulary ?? [])].sort((a, b) =>
     (a.created_at ?? "").localeCompare(b.created_at ?? ""),
   );
-  const focusVocab = focusRows
-    .map((row) => row.vocabulary)
-    .filter(notNull);
+  const focusVocab = focusRows.map((row) => row.vocabulary).filter(notNull);
   const focusIds = new Set(focusVocab.map((row) => row.id));
 
   const linkMap = new Map<string, ArabicLink>();
@@ -138,13 +194,7 @@ export async function fetchTextDetail(
   }
 
   const knownLinks: ArabicLink[] = [];
-  const vocabOptions: VocabOption[] = [];
-  for (const row of vocabRows ?? []) {
-    vocabOptions.push({
-      id: row.id,
-      arabic: row.arabic,
-      gloss: firstGloss(row.vocabulary_senses),
-    });
+  for (const row of matchedVocab) {
     if (focusIds.has(row.id)) continue;
     knownLinks.push(vocabularyLink({ ...row, kind: "known" }));
   }
@@ -160,9 +210,9 @@ export async function fetchTextDetail(
     audioPath: text.audio_path ?? null,
     audioDurationMs: text.audio_duration_ms ?? null,
     audioLineStartsMs: text.audio_line_starts_ms ?? null,
-    audioUrl: await signedTextAudioUrl(supabase, text.audio_path),
-    studyPack: parseStudyPack(text.study_pack),
-    aiStudyPlan: text.ai_study_plan ?? null,
+    audioUrl,
+    studyPack: null,
+    aiStudyPlan: null,
     tags,
     links: [...linkMap.values()],
     knownLinks,
@@ -171,7 +221,6 @@ export async function fetchTextDetail(
       arabic: vocab.arabic,
       gloss: firstGloss(vocab.vocabulary_senses),
     })),
-    vocabOptions,
     examples: examples.map((example) => ({
       id: example.id,
       arabic: example.arabic,
@@ -186,3 +235,9 @@ export async function fetchTextDetail(
     })),
   };
 }
+
+/** Same-request dedupe for RSC (Today + detail). */
+export const fetchTextDetailCached = cache(async (id: string) => {
+  const supabase = await createClient();
+  return fetchTextDetail(supabase, id);
+});

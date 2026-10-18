@@ -33,9 +33,33 @@ import {
   collectStructureNameIds,
   structureIdsForExample,
 } from "@/lib/import/structure-join";
+import { embedImportCreated } from "@/lib/import/embed-created";
 import { readBundle, readDecisions } from "@/lib/import/run";
 import { requireUserId } from "@/lib/require-user";
 import type { Json } from "@/types/database";
+
+const IMPORT_WRITE_CONCURRENCY = 8;
+
+async function mapPool<T>(
+  items: T[],
+  concurrency: number,
+  worker: (item: T) => Promise<void>,
+): Promise<void> {
+  if (items.length === 0) return;
+  let cursor = 0;
+  async function runWorker() {
+    while (cursor < items.length) {
+      const index = cursor;
+      cursor += 1;
+      await worker(items[index]);
+    }
+  }
+  const workers = Array.from(
+    { length: Math.min(concurrency, items.length) },
+    () => runWorker(),
+  );
+  await Promise.all(workers);
+}
 
 export type ImportFormState = {
   error?: string;
@@ -207,30 +231,40 @@ export async function commitImportRun(
   const stamped = applyImportProvenance(bundle, origin, value);
   const existing = await findExistingMatches(supabase, stamped.items);
   const itemIds: (string | null)[] = stamped.items.map(() => null);
-  const counts: ImportRunCounts = {
-    inserted: 0,
-    updated: 0,
-    skipped: 0,
-    failed: 0,
-    created: [],
-    updatedItems: [],
-    failures: [],
-  };
+  type WriteOutcome =
+    | { kind: "skip"; index: number; id?: string }
+    | { kind: "fail"; index: number; error: string }
+    | {
+        kind: "updated";
+        index: number;
+        id: string;
+        type: ImportRunCounts["updatedItems"][number]["type"];
+        label: string;
+      }
+    | {
+        kind: "created";
+        index: number;
+        id: string;
+        type: ImportRunCounts["created"][number]["type"];
+        label: string;
+      };
 
-  for (let index = 0; index < stamped.items.length; index += 1) {
+  const outcomes: WriteOutcome[] = new Array(stamped.items.length);
+  const workIndexes = stamped.items.map((_, index) => index);
+
+  await mapPool(workIndexes, IMPORT_WRITE_CONCURRENCY, async (index) => {
     const item = stamped.items[index];
     const match = existing[index];
     const row = buildPreviewRow(index, item, match, stored[String(index)]);
     if (row.decision === "skip") {
-      counts.skipped += 1;
-      continue;
+      outcomes[index] = { kind: "skip", index };
+      return;
     }
 
     const mapped = mapImportItem(item);
     if ("error" in mapped) {
-      counts.failed += 1;
-      counts.failures.push({ index, error: mapped.error });
-      continue;
+      outcomes[index] = { kind: "fail", index, error: mapped.error };
+      return;
     }
 
     if (match?.vocabulary && mapped.type === "vocabulary") {
@@ -241,30 +275,26 @@ export async function commitImportRun(
         mapped.input,
       );
       if (isWriteErr(result)) {
-        counts.failed += 1;
-        counts.failures.push({ index, error: result.error });
-        continue;
+        outcomes[index] = { kind: "fail", index, error: result.error };
+        return;
       }
       if (!result.enriched) {
-        itemIds[index] = result.id;
-        counts.skipped += 1;
-        continue;
+        outcomes[index] = { kind: "skip", index, id: result.id };
+        return;
       }
-      itemIds[index] = result.id;
-      counts.updated += 1;
-      counts.updatedItems.push({
-        type: mapped.type,
+      outcomes[index] = {
+        kind: "updated",
+        index,
         id: result.id,
+        type: mapped.type,
         label: itemLabel(item),
-      });
-      continue;
+      };
+      return;
     }
 
     if (match) {
-      // Non-vocab exact match with keep: still skip insert to avoid duplicates.
-      itemIds[index] = match.id;
-      counts.skipped += 1;
-      continue;
+      outcomes[index] = { kind: "skip", index, id: match.id };
+      return;
     }
 
     let result;
@@ -281,36 +311,83 @@ export async function commitImportRun(
     }
 
     if (isWriteErr(result)) {
-      counts.failed += 1;
-      counts.failures.push({ index, error: result.error });
-      continue;
+      outcomes[index] = { kind: "fail", index, error: result.error };
+      return;
     }
 
-    counts.inserted += 1;
-    itemIds[index] = result.id;
-    counts.created.push({
-      type: mapped.type,
+    outcomes[index] = {
+      kind: "created",
+      index,
       id: result.id,
+      type: mapped.type,
       label: itemLabel(item),
+    };
+  });
+
+  const counts: ImportRunCounts = {
+    inserted: 0,
+    updated: 0,
+    skipped: 0,
+    failed: 0,
+    created: [],
+    updatedItems: [],
+    failures: [],
+  };
+
+  for (const outcome of outcomes) {
+    if (!outcome) continue;
+    if (outcome.kind === "skip") {
+      counts.skipped += 1;
+      if (outcome.id) itemIds[outcome.index] = outcome.id;
+      continue;
+    }
+    if (outcome.kind === "fail") {
+      counts.failed += 1;
+      counts.failures.push({ index: outcome.index, error: outcome.error });
+      continue;
+    }
+    if (outcome.kind === "updated") {
+      itemIds[outcome.index] = outcome.id;
+      counts.updated += 1;
+      counts.updatedItems.push({
+        type: outcome.type,
+        id: outcome.id,
+        label: outcome.label,
+      });
+      continue;
+    }
+    itemIds[outcome.index] = outcome.id;
+    counts.inserted += 1;
+    counts.created.push({
+      type: outcome.type,
+      id: outcome.id,
+      label: outcome.label,
     });
   }
 
   const nameToId = collectStructureNameIds(stamped.items, itemIds);
-  for (let index = 0; index < stamped.items.length; index += 1) {
-    const item = stamped.items[index];
+  const joinIndexes = stamped.items
+    .map((item, index) => ({ item, index }))
+    .filter(({ item, index }) => item.type === "example" && itemIds[index]);
+
+  const joinFailures: Array<{ index: number; error: string }> = [];
+  await mapPool(joinIndexes, IMPORT_WRITE_CONCURRENCY, async ({ item, index }) => {
     const exampleId = itemIds[index];
-    if (!exampleId || item.type !== "example") continue;
+    if (!exampleId) return;
     const structureIds = structureIdsForExample(item, nameToId);
-    if (structureIds.length === 0) continue;
+    if (structureIds.length === 0) return;
     const join = await attachExampleStructures(
       supabase,
       exampleId,
       structureIds,
     );
     if (join.error) {
-      counts.failed += 1;
-      counts.failures.push({ index, error: join.error });
+      joinFailures.push({ index, error: join.error });
     }
+  });
+  for (const failure of joinFailures) {
+    counts.failed += 1;
+    counts.failures.push(failure);
   }
 
   const { error } = await supabase
@@ -325,6 +402,8 @@ export async function commitImportRun(
   if (error) {
     return { error: error.message };
   }
+
+  await embedImportCreated(supabase, counts);
 
   revalidatePath("/");
   revalidatePath("/import");

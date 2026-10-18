@@ -12,6 +12,8 @@ import {
 import { removeTextAudioObjects } from "@/lib/audio-storage";
 import { emptyToNull, parseTagNames } from "@/lib/form";
 import { requireUserId } from "@/lib/require-user";
+import { searchVocabulary } from "@/app/(app)/vocabulary/search-actions";
+import type { VocabOption } from "@/lib/text-detail";
 
 export type TextFormState = {
   error?: string;
@@ -94,6 +96,20 @@ export async function deleteText(id: string) {
   revalidatePath("/texts");
   revalidatePath("/");
   redirect("/texts");
+}
+
+export async function searchVocabularyForFocus(
+  query: string,
+): Promise<{ options: VocabOption[]; error?: string }> {
+  const result = await searchVocabulary(query, 20);
+  return {
+    options: result.options.map((row) => ({
+      id: row.id,
+      arabic: row.arabic,
+      gloss: row.gloss,
+    })),
+    error: result.error,
+  };
 }
 
 export async function addTextFocus(textId: string, vocabularyId: string) {

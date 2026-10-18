@@ -1,6 +1,5 @@
 import { PatternForm } from "@/app/(app)/patterns/pattern-form";
 import { firstGloss } from "@/lib/arabic-links";
-import { rootsMatch } from "@/lib/option-filter";
 import { parseSuggestionPayload } from "@/lib/pattern-discover/payload";
 import type { PatternPair, VocabOption } from "@/lib/patterns";
 import { createClient } from "@/lib/supabase/server";
@@ -8,6 +7,21 @@ import { createClient } from "@/lib/supabase/server";
 type NewPatternPageProps = {
   searchParams: Promise<{ vocabulary?: string; suggestion?: string }>;
 };
+
+function toVocabOption(row: {
+  id: string;
+  arabic: string;
+  transliteration?: string | null;
+  vocabulary_senses?: { gloss: string; created_at?: string }[] | null;
+}): VocabOption {
+  return {
+    id: row.id,
+    arabic: row.arabic,
+    hint: [row.transliteration, firstGloss(row.vocabulary_senses)]
+      .filter(Boolean)
+      .join(" · "),
+  };
+}
 
 export default async function NewPatternPage({
   searchParams,
@@ -22,15 +36,13 @@ export default async function NewPatternPage({
     .select(
       "id, arabic, transliteration, root, vocabulary_senses(gloss, created_at)",
     )
-    .order("arabic");
+    .order("created_at", { ascending: false })
+    .limit(250);
 
-  const vocabOptions: VocabOption[] = (vocabRows ?? []).map((row) => ({
-    id: row.id,
-    arabic: row.arabic,
-    hint: [row.transliteration, firstGloss(row.vocabulary_senses)]
-      .filter(Boolean)
-      .join(" · "),
-  }));
+  const optionMap = new Map<string, VocabOption>();
+  for (const row of vocabRows ?? []) {
+    optionMap.set(row.id, toVocabOption(row));
+  }
 
   let seedArabic: string | undefined;
   let siblingOptions: VocabOption[] = [];
@@ -57,6 +69,22 @@ export default async function NewPatternPage({
         baseId: pair.base_id,
         derivedId: pair.derived_id,
       }));
+      const pairIds = [
+        ...new Set(
+          payload.pairs.flatMap((pair) => [pair.base_id, pair.derived_id]),
+        ),
+      ];
+      if (pairIds.length > 0) {
+        const { data: pairVocab } = await supabase
+          .from("vocabulary")
+          .select(
+            "id, arabic, transliteration, vocabulary_senses(gloss, created_at)",
+          )
+          .in("id", pairIds);
+        for (const row of pairVocab ?? []) {
+          optionMap.set(row.id, toVocabOption(row));
+        }
+      }
       defaults = {
         name: suggestion.name,
         arabic_sketch: suggestion.arabic_sketch,
@@ -66,25 +94,38 @@ export default async function NewPatternPage({
       };
     }
   } else if (vocabularyId) {
-    const seed = (vocabRows ?? []).find((row) => row.id === vocabularyId);
+    let seed = (vocabRows ?? []).find((row) => row.id === vocabularyId);
+    if (!seed) {
+      const { data } = await supabase
+        .from("vocabulary")
+        .select(
+          "id, arabic, transliteration, root, vocabulary_senses(gloss, created_at)",
+        )
+        .eq("id", vocabularyId)
+        .maybeSingle();
+      seed = data ?? undefined;
+      if (seed) optionMap.set(seed.id, toVocabOption(seed));
+    }
     if (seed) {
       seedArabic = seed.arabic;
       if (seed.root) {
-        siblingOptions = (vocabRows ?? [])
-          .filter(
-            (row) =>
-              row.id !== vocabularyId && rootsMatch(seed.root, row.root),
+        const { data: siblings } = await supabase
+          .from("vocabulary")
+          .select(
+            "id, arabic, transliteration, vocabulary_senses(gloss, created_at)",
           )
-          .map((row) => ({
-            id: row.id,
-            arabic: row.arabic,
-            hint: [row.transliteration, firstGloss(row.vocabulary_senses)]
-              .filter(Boolean)
-              .join(" · "),
-          }));
+          .eq("root", seed.root)
+          .neq("id", vocabularyId)
+          .limit(40);
+        siblingOptions = (siblings ?? []).map(toVocabOption);
+        for (const sibling of siblingOptions) {
+          optionMap.set(sibling.id, sibling);
+        }
       }
     }
   }
+
+  const vocabOptions = [...optionMap.values()];
 
   return (
     <section className="flex flex-col gap-6">

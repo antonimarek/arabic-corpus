@@ -97,11 +97,7 @@ export function TodaySession({
       {step === "listen" ? (
         <div className="flex flex-col gap-6">
           {text.focus.length > 0 ? (
-            <FocusTargetStrip
-              textId={text.id}
-              focus={text.focus}
-              vocabOptions={text.vocabOptions}
-            />
+            <FocusTargetStrip textId={text.id} focus={text.focus} />
           ) : null}
           <p className="text-sm text-[var(--ink-muted)]">
             Listen for meaning. Translation stays hidden.

@@ -21,15 +21,18 @@ export default async function NewExamplePage({ searchParams }: NewExampleProps) 
       supabase
         .from("texts")
         .select("id, title")
-        .order("created_at", { ascending: false }),
+        .order("created_at", { ascending: false })
+        .limit(200),
       supabase
         .from("vocabulary")
         .select("id, arabic, transliteration")
-        .order("created_at", { ascending: false }),
+        .order("created_at", { ascending: false })
+        .limit(200),
       supabase
         .from("structures")
         .select("id, name, arabic_form")
-        .order("created_at", { ascending: false }),
+        .order("created_at", { ascending: false })
+        .limit(200),
     ]);
 
   return (

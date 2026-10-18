@@ -10,6 +10,7 @@ import {
 import { PatternDiscover } from "@/app/(app)/patterns/pattern-discover";
 import { ConfirmDelete } from "@/components/confirm-delete";
 import { ExampleList } from "@/components/example-list";
+import { PatternLinkVocab } from "@/components/pattern-link-vocab";
 import { firstGloss } from "@/lib/arabic-links";
 import {
   inductivePairs,
@@ -18,13 +19,11 @@ import {
   MASTERY_LABEL,
   MASTERY_STATES,
   PATTERN_ROLE_LABEL,
-  PATTERN_ROLES,
   type PatternMember,
   type PatternRole,
 } from "@/lib/patterns";
 import { createClient } from "@/lib/supabase/server";
 import { notNull } from "@/lib/tags";
-import { rootsMatch } from "@/lib/option-filter";
 
 type PatternDetailProps = {
   params: Promise<{ id: string }>;
@@ -129,31 +128,7 @@ export default async function PatternDetailPage({
   }
   const examples = [...examplesMap.values()];
 
-  const memberIds = new Set(members.map((m) => m.vocabularyId));
-  const familyRoots = [
-    ...new Set(members.map((m) => m.root).filter(notNull)),
-  ];
-  let linkOptions: { id: string; label: string; hint?: string | null }[] = [];
-  const { data: allVocab } = await supabase
-    .from("vocabulary")
-    .select("id, arabic, transliteration, root, vocabulary_senses(gloss, created_at)")
-    .order("arabic");
-
-  if (allVocab) {
-    const preferred = allVocab.filter((row) => {
-      if (memberIds.has(row.id)) return false;
-      if (familyRoots.length === 0) return true;
-      return familyRoots.some((root) => rootsMatch(root, row.root));
-    });
-    const pool = preferred.length > 0 ? preferred : allVocab.filter((row) => !memberIds.has(row.id));
-    linkOptions = pool.slice(0, 200).map((row) => ({
-      id: row.id,
-      label: row.arabic,
-      hint: [row.transliteration, firstGloss(row.vocabulary_senses)]
-        .filter(Boolean)
-        .join(" · "),
-    }));
-  }
+  const memberIds = members.map((m) => m.vocabularyId);
 
   return (
     <article className="flex flex-col gap-8">
@@ -281,51 +256,11 @@ export default async function PatternDetailPage({
           );
         })}
 
-        <form
+        <PatternLinkVocab
+          patternId={pattern.id}
+          excludeIds={memberIds}
           action={linkVocabularyToPattern.bind(null, pattern.id)}
-          className="mt-4 flex flex-col gap-3 border-t border-[var(--line)] pt-4"
-        >
-          <h3 className="text-sm text-[var(--ink-muted)]">Link a word</h3>
-          <label className="flex flex-col gap-2">
-            <span className="sr-only">Word</span>
-            <select
-              name="vocabulary_id"
-              required
-              className="rounded-md border border-[var(--line)] bg-[var(--surface)] px-3 py-2.5 text-[15px] outline-none focus:border-[var(--accent)]"
-              defaultValue=""
-            >
-              <option value="" disabled>
-                Pick a word…
-              </option>
-              {linkOptions.map((option) => (
-                <option key={option.id} value={option.id}>
-                  {option.label}
-                  {option.hint ? ` — ${option.hint}` : ""}
-                </option>
-              ))}
-            </select>
-          </label>
-          <label className="flex flex-col gap-2">
-            <span className="text-sm text-[var(--ink-muted)]">Role</span>
-            <select
-              name="role"
-              defaultValue="derived"
-              className="rounded-md border border-[var(--line)] bg-[var(--surface)] px-3 py-2.5 text-[15px] outline-none focus:border-[var(--accent)]"
-            >
-              {PATTERN_ROLES.map((role) => (
-                <option key={role} value={role}>
-                  {PATTERN_ROLE_LABEL[role]}
-                </option>
-              ))}
-            </select>
-          </label>
-          <button
-            type="submit"
-            className="self-start text-sm text-[var(--accent)] hover:underline"
-          >
-            Link word
-          </button>
-        </form>
+        />
       </section>
 
       {pattern.notes ? (

@@ -36,7 +36,8 @@ export default async function EditPatternPage({ params }: EditPatternProps) {
       .select(
         "id, arabic, transliteration, vocabulary_senses(gloss, created_at)",
       )
-      .order("arabic"),
+      .order("created_at", { ascending: false })
+      .limit(250),
   ]);
 
   if (!data) {
@@ -59,13 +60,25 @@ export default async function EditPatternPage({ params }: EditPatternProps) {
     })
     .filter(notNull);
 
-  const vocabOptions: VocabOption[] = (vocabRows ?? []).map((row) => ({
-    id: row.id,
-    arabic: row.arabic,
-    hint: [row.transliteration, firstGloss(row.vocabulary_senses)]
-      .filter(Boolean)
-      .join(" · "),
-  }));
+  const optionMap = new Map<string, VocabOption>();
+  for (const row of vocabRows ?? []) {
+    optionMap.set(row.id, {
+      id: row.id,
+      arabic: row.arabic,
+      hint: [row.transliteration, firstGloss(row.vocabulary_senses)]
+        .filter(Boolean)
+        .join(" · "),
+    });
+  }
+  for (const member of members) {
+    if (optionMap.has(member.vocabularyId)) continue;
+    optionMap.set(member.vocabularyId, {
+      id: member.vocabularyId,
+      arabic: member.arabic,
+      hint: [member.transliteration, member.gloss].filter(Boolean).join(" · "),
+    });
+  }
+  const vocabOptions = [...optionMap.values()];
 
   const { pattern_vocabulary: _links, ...pattern } = data;
 

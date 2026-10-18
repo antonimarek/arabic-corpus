@@ -124,22 +124,66 @@ export async function suggestFormHostsForPhrase(
   supabase: SupabaseClient<Database>,
   phrase: string,
 ): Promise<PhraseHit[]> {
-  const { data } = await supabase
-    .from("vocabulary")
-    .select(
-      "id, arabic, root, part_of_speech, vocabulary_senses(gloss, created_at)",
-    )
-    .order("created_at", { ascending: false });
+  const surfaceKey = phraseMatchKey(phrase) ?? phraseSearchKey(phrase);
+  if (!surfaceKey) return [];
+  const stems = matchKeysForNormalized(surfaceKey);
+  const dropped = surfaceKey.startsWith("ا") && surfaceKey.length >= 3
+    ? surfaceKey.slice(1)
+    : null;
+  const keyPool = [...new Set([...stems, ...(dropped ? [dropped] : [])])];
 
-  const hosts: FormHost[] = (data ?? []).map((row) => ({
-    id: row.id,
-    arabic: row.arabic,
-    root: row.root,
-    part_of_speech: row.part_of_speech,
-    gloss: firstGloss(row.vocabulary_senses),
-  }));
+  const byId = new Map<string, FormHost>();
 
-  return suggestedFormHosts(phrase, hosts).map((host) => ({
+  for (let i = 0; i < keyPool.length; i += 40) {
+    const chunk = keyPool.slice(i, i + 40);
+    const [{ data: byArabic }, { data: byRoot }] = await Promise.all([
+      supabase
+        .from("vocabulary")
+        .select(
+          "id, arabic, root, part_of_speech, vocabulary_senses(gloss, created_at)",
+        )
+        .in("search_arabic", chunk)
+        .limit(80),
+      supabase
+        .from("vocabulary")
+        .select(
+          "id, arabic, root, part_of_speech, vocabulary_senses(gloss, created_at)",
+        )
+        .in("root", chunk)
+        .limit(80),
+    ]);
+    for (const row of [...(byArabic ?? []), ...(byRoot ?? [])]) {
+      byId.set(row.id, {
+        id: row.id,
+        arabic: row.arabic,
+        root: row.root,
+        part_of_speech: row.part_of_speech,
+        gloss: firstGloss(row.vocabulary_senses),
+      });
+    }
+  }
+
+  // Fallback: recent verbs/nouns if key lookup is empty (new corpus edge).
+  if (byId.size === 0) {
+    const { data } = await supabase
+      .from("vocabulary")
+      .select(
+        "id, arabic, root, part_of_speech, vocabulary_senses(gloss, created_at)",
+      )
+      .order("created_at", { ascending: false })
+      .limit(120);
+    for (const row of data ?? []) {
+      byId.set(row.id, {
+        id: row.id,
+        arabic: row.arabic,
+        root: row.root,
+        part_of_speech: row.part_of_speech,
+        gloss: firstGloss(row.vocabulary_senses),
+      });
+    }
+  }
+
+  return suggestedFormHosts(phrase, [...byId.values()]).map((host) => ({
     type: "vocabulary" as const,
     id: host.id,
     arabic: host.arabic,

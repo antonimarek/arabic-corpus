@@ -1,5 +1,3 @@
-import { cache } from "react";
-
 import { firstGloss, structureLink, vocabularyLink } from "@/lib/arabic-links";
 import { signedTextAudioUrl } from "@/lib/audio-storage";
 import type { ArabicLink } from "@/lib/highlight-arabic";
@@ -7,7 +5,6 @@ import { notNull } from "@/lib/tags";
 import type { StudyPack } from "@/lib/transcribe/study-pack";
 import { normalizeStudyPack } from "@/lib/transcribe/study-pack";
 import type { CorpusClient } from "@/lib/corpus/write";
-import { createClient } from "@/lib/supabase/server";
 import { vocabularyMatchingText } from "@/lib/vocab-search";
 
 export const textQueryKey = (id: string) => ["text", id] as const;
@@ -235,9 +232,3 @@ export async function fetchTextDetail(
     })),
   };
 }
-
-/** Same-request dedupe for RSC (Today + detail). */
-export const fetchTextDetailCached = cache(async (id: string) => {
-  const supabase = await createClient();
-  return fetchTextDetail(supabase, id);
-});

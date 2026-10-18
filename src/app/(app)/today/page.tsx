@@ -7,7 +7,7 @@ import {
   loadLearnCandidates,
   loadSessionCandidates,
 } from "@/lib/session-data";
-import { fetchTextDetailCached } from "@/lib/text-detail";
+import { fetchTextDetailCached } from "@/lib/text-detail-cached";
 import { createClient } from "@/lib/supabase/server";
 
 type TodayPageProps = {

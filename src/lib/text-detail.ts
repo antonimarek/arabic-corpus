@@ -9,6 +9,8 @@ import { vocabularyMatchingText } from "@/lib/vocab-search";
 
 export const textQueryKey = (id: string) => ["text", id] as const;
 export const textStudyQueryKey = (id: string) => ["text", id, "study"] as const;
+export const textKnownLinksQueryKey = (id: string) =>
+  ["text", id, "known"] as const;
 
 export type FocusTarget = {
   id: string;
@@ -143,6 +145,11 @@ export async function fetchTextStudyExtras(
   };
 }
 
+/**
+ * Core text payload for first paint.
+ * Skips token→vocab matching (many Supabase round trips on long lessons).
+ * Load knownLinks via fetchTextKnownLinks after paint.
+ */
 export async function fetchTextDetail(
   supabase: CorpusClient,
   id: string,
@@ -160,10 +167,7 @@ export async function fetchTextDetail(
     throw new Error("Text not found");
   }
 
-  const [matchedVocab, audioUrl] = await Promise.all([
-    vocabularyMatchingText(supabase, text.arabic),
-    signedTextAudioUrl(supabase, text.audio_path),
-  ]);
+  const audioUrl = await signedTextAudioUrl(supabase, text.audio_path);
 
   const tags =
     text.text_tags?.map((row) => row.tags?.name).filter(notNull) ?? [];
@@ -173,7 +177,6 @@ export async function fetchTextDetail(
     (a.created_at ?? "").localeCompare(b.created_at ?? ""),
   );
   const focusVocab = focusRows.map((row) => row.vocabulary).filter(notNull);
-  const focusIds = new Set(focusVocab.map((row) => row.id));
 
   const linkMap = new Map<string, ArabicLink>();
   for (const vocab of focusVocab) {
@@ -188,12 +191,6 @@ export async function fetchTextDetail(
       if (!link) continue;
       linkMap.set(`s:${structure.id}`, link);
     }
-  }
-
-  const knownLinks: ArabicLink[] = [];
-  for (const row of matchedVocab) {
-    if (focusIds.has(row.id)) continue;
-    knownLinks.push(vocabularyLink({ ...row, kind: "known" }));
   }
 
   return {
@@ -212,7 +209,7 @@ export async function fetchTextDetail(
     aiStudyPlan: null,
     tags,
     links: [...linkMap.values()],
-    knownLinks,
+    knownLinks: [],
     focus: focusVocab.map((vocab) => ({
       id: vocab.id,
       arabic: vocab.arabic,
@@ -231,4 +228,19 @@ export async function fetchTextDetail(
           .filter(notNull) ?? [],
     })),
   };
+}
+
+/** Review-mode known-word links. Deferred from first open (token scan). */
+export async function fetchTextKnownLinks(
+  supabase: CorpusClient,
+  arabic: string,
+  focusIds: Set<string>,
+): Promise<ArabicLink[]> {
+  const matchedVocab = await vocabularyMatchingText(supabase, arabic);
+  const knownLinks: ArabicLink[] = [];
+  for (const row of matchedVocab) {
+    if (focusIds.has(row.id)) continue;
+    knownLinks.push(vocabularyLink({ ...row, kind: "known" }));
+  }
+  return knownLinks;
 }

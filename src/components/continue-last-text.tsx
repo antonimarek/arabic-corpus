@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useSyncExternalStore } from "react";
 
+import { usePrefetchTextDetail } from "@/lib/prefetch-text-detail";
 import {
   getLastTextServerSnapshot,
   readLastText,
@@ -15,6 +16,7 @@ export function ContinueLastText() {
     readLastText,
     getLastTextServerSnapshot,
   );
+  const prefetch = usePrefetchTextDetail();
 
   if (!last) return null;
 
@@ -24,6 +26,9 @@ export function ContinueLastText() {
       <Link
         href={`/texts/${last.id}`}
         className="text-[15px] text-[var(--ink)] hover:text-[var(--accent)]"
+        onMouseEnter={() => prefetch(last.id)}
+        onFocus={() => prefetch(last.id)}
+        onTouchStart={() => prefetch(last.id)}
       >
         {last.title}
       </Link>

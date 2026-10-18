@@ -9,8 +9,9 @@ import {
   removeTextFocus,
   searchVocabularyForFocus,
 } from "@/app/(app)/texts/actions";
+import { clearTextDetailCache } from "@/lib/text-detail-cache";
 import type { FocusTarget, VocabOption } from "@/lib/text-detail";
-import { textQueryKey } from "@/lib/text-detail";
+import { textKnownLinksQueryKey, textQueryKey } from "@/lib/text-detail";
 
 type FocusTargetStripProps = {
   textId: string;
@@ -56,7 +57,11 @@ export function FocusTargetStrip({ textId, focus }: FocusTargetStripProps) {
   }, [adding, debounced, focusIds]);
 
   const refresh = () => {
+    clearTextDetailCache(textId);
     void queryClient.invalidateQueries({ queryKey: textQueryKey(textId) });
+    void queryClient.invalidateQueries({
+      queryKey: textKnownLinksQueryKey(textId),
+    });
   };
 
   return (

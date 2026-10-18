@@ -3,6 +3,8 @@
 import Link from "next/link";
 import { useMemo, useState } from "react";
 
+import { usePrefetchTextDetail } from "@/lib/prefetch-text-detail";
+
 export type EntityListRow = {
   id: string;
   href: string;
@@ -14,7 +16,13 @@ export type EntityListRow = {
   note?: string | null;
 };
 
+function isTextDetailHref(href: string): string | null {
+  const match = /^\/texts\/([^/?#]+)\/?$/.exec(href);
+  return match?.[1] ?? null;
+}
+
 export function FilteredEntityList({ rows }: { rows: EntityListRow[] }) {
+  const prefetch = usePrefetchTextDetail();
   const [activeTag, setActiveTag] = useState<string | null>(null);
   const tags = useMemo(() => {
     const set = new Set<string>();
@@ -64,9 +72,19 @@ export function FilteredEntityList({ rows }: { rows: EntityListRow[] }) {
         </p>
       ) : (
         <ul className="flex flex-col gap-2">
-          {visible.map((row) => (
+          {visible.map((row) => {
+            const textId = isTextDetailHref(row.href);
+            return (
             <li key={row.id}>
-              <Link href={row.href} className="ui-row">
+              <Link
+                href={row.href}
+                className="ui-row"
+                onMouseEnter={
+                  textId ? () => prefetch(textId) : undefined
+                }
+                onFocus={textId ? () => prefetch(textId) : undefined}
+                onTouchStart={textId ? () => prefetch(textId) : undefined}
+              >
                 {row.title ? (
                   <span className="text-[15px] font-medium text-[var(--ink)]">
                     {row.title}
@@ -99,7 +117,8 @@ export function FilteredEntityList({ rows }: { rows: EntityListRow[] }) {
                 ) : null}
               </Link>
             </li>
-          ))}
+            );
+          })}
         </ul>
       )}
     </div>

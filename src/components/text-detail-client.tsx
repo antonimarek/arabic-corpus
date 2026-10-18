@@ -3,17 +3,27 @@
 import dynamic from "next/dynamic";
 import Link from "next/link";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { useEffect } from "react";
+import { useEffect, useMemo } from "react";
 
 import { deleteText } from "@/app/(app)/texts/actions";
 import { ConfirmDelete } from "@/components/confirm-delete";
 import { ExampleList } from "@/components/example-list";
 import { FocusTargetStrip } from "@/components/focus-target-strip";
 import { TextAudioField } from "@/components/text-audio-field";
+import { TextDetailSkeleton } from "@/components/text-detail-skeleton";
 import { writeLastText } from "@/lib/prefs";
 import { createClient } from "@/lib/supabase/client";
-import { fetchTextDetail, textQueryKey } from "@/lib/text-detail";
-import type { TextDetailPayload } from "@/lib/text-detail";
+import {
+  readTextDetailCache,
+  writeTextDetailCache,
+} from "@/lib/text-detail-cache";
+import {
+  fetchTextDetail,
+  fetchTextKnownLinks,
+  textKnownLinksQueryKey,
+  textQueryKey,
+} from "@/lib/text-detail";
+import type { TextDetailPayload, TextShell } from "@/lib/text-detail";
 import { lineHref } from "@/lib/text-lines";
 
 const LessonTextDetail = dynamic(
@@ -36,31 +46,72 @@ const TextLineReader = dynamic(
   },
 );
 
+const STALE_MS = 5 * 60 * 1000;
+
 export function TextDetailClient({
   textId,
-  initialData,
+  shell,
 }: {
   textId: string;
-  initialData: TextDetailPayload;
+  shell: TextShell;
 }) {
   const queryClient = useQueryClient();
-  const { data } = useQuery({
+  const cached = useMemo(() => {
+    return (
+      queryClient.getQueryData<TextDetailPayload>(textQueryKey(textId)) ??
+      readTextDetailCache(textId)
+    );
+  }, [queryClient, textId]);
+
+  const {
+    data,
+    isPending,
+    isError,
+    error,
+  } = useQuery({
     queryKey: textQueryKey(textId),
-    queryFn: () => fetchTextDetail(createClient(), textId),
-    initialData,
-    staleTime: 5 * 60 * 1000,
+    queryFn: async () => {
+      const detail = await fetchTextDetail(createClient(), textId);
+      writeTextDetailCache(detail);
+      return detail;
+    },
+    initialData: cached,
+    staleTime: STALE_MS,
+  });
+
+  const text = data;
+  const focusIds = useMemo(
+    () => new Set((text?.focus ?? []).map((row) => row.id)),
+    [text?.focus],
+  );
+
+  const { data: knownLinks = text?.knownLinks ?? [] } = useQuery({
+    queryKey: textKnownLinksQueryKey(textId),
+    queryFn: () =>
+      fetchTextKnownLinks(createClient(), text!.arabic, focusIds),
+    enabled: Boolean(text?.arabic),
+    staleTime: STALE_MS,
   });
 
   useEffect(() => {
-    queryClient.setQueryData(textQueryKey(textId), initialData);
-  }, [initialData, queryClient, textId]);
-
-  const text = data ?? initialData;
-  const isLesson = text.tags.includes("lesson");
-
-  useEffect(() => {
+    if (!text) return;
     writeLastText({ id: text.id, title: text.title });
-  }, [text.id, text.title]);
+  }, [text]);
+
+  if (!text && isPending) {
+    return <TextDetailSkeleton shell={shell} />;
+  }
+
+  if (isError || !text) {
+    return (
+      <p className="text-sm text-[var(--danger)]" role="alert">
+        {error instanceof Error ? error.message : "Could not load text."}
+      </p>
+    );
+  }
+
+  const isLesson = text.tags.includes("lesson");
+  const display = { ...text, knownLinks };
 
   return (
     <article className="flex flex-col gap-8">
@@ -89,14 +140,14 @@ export function TextDetailClient({
       <TextAudioField textId={text.id} hasAudio={Boolean(text.audioPath)} />
 
       {isLesson ? (
-        <LessonTextDetail text={text} />
+        <LessonTextDetail text={display} />
       ) : (
         <TextLineReader
           textId={text.id}
           arabic={text.arabic}
           translation={text.translation}
           links={text.links}
-          knownLinks={text.knownLinks}
+          knownLinks={knownLinks}
           examples={text.examples.map((example) => ({
             id: example.id,
             arabic: example.arabic,

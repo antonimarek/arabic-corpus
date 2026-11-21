@@ -1,4 +1,5 @@
 export const MAIN_NAV = [
+  { href: "/today", label: "Today" },
   { href: "/", label: "Search" },
   { href: "/texts", label: "Texts" },
   { href: "/examples", label: "Examples" },

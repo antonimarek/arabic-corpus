@@ -1,5 +1,17 @@
 # Changelog
 
+## 2026-11-21 — Faster loading and tab switching
+
+- **Server next to the database.** Vercel functions now run in `dub1`
+  (Dublin) instead of the default `iad1` (US East), next to Supabase in
+  `eu-west-1`. Warm queries take 30–60 ms; pages render in 40–70 ms.
+- **Instant tab switches.** Every tab has a `loading.tsx` skeleton, so links
+  prefetch the shell and a tap shows the new tab at once while data streams.
+- **Tab cache.** Visited tabs are reused for 30 s (`staleTimes.dynamic`).
+  Saves and edits still refresh them through `revalidatePath`.
+- **Remaining cost.** The first request after the app has been idle is a
+  cold start (~0.6 s); the rest is normal.
+
 ## 2026-11-21 — /today redesign
 
 - **Daily card session.** /today opens straight into one Start button and a

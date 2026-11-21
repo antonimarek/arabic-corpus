@@ -194,7 +194,7 @@ function SessionSteps({
           <button
             type="button"
             onClick={goNext}
-            className="self-start rounded-md bg-[var(--accent)] px-4 py-2.5 text-sm font-medium text-white"
+            className="self-start rounded-[var(--radius-md)] bg-[var(--accent)] hover:bg-[var(--accent-strong)] transition-colors px-4 py-2.5 text-sm font-medium text-white"
           >
             Continue
           </button>
@@ -233,7 +233,7 @@ function SessionSteps({
           <button
             type="button"
             onClick={goNext}
-            className="self-start rounded-md bg-[var(--accent)] px-4 py-2.5 text-sm font-medium text-white"
+            className="self-start rounded-[var(--radius-md)] bg-[var(--accent)] hover:bg-[var(--accent-strong)] transition-colors px-4 py-2.5 text-sm font-medium text-white"
           >
             Start retrieve
           </button>
@@ -280,7 +280,7 @@ function SessionSteps({
           <button
             type="button"
             onClick={goNext}
-            className="self-start rounded-md bg-[var(--accent)] px-4 py-2.5 text-sm font-medium text-white"
+            className="self-start rounded-[var(--radius-md)] bg-[var(--accent)] hover:bg-[var(--accent-strong)] transition-colors px-4 py-2.5 text-sm font-medium text-white"
           >
             Finish
           </button>

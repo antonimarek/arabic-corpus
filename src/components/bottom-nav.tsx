@@ -70,7 +70,7 @@ export function BottomNav() {
         </div>
       ) : null}
       <nav
-        className="fixed inset-x-0 bottom-0 z-40 border-t border-[var(--line)] bg-[var(--background)]"
+        className="fixed inset-x-0 bottom-0 z-40 border-t border-[var(--line)] bg-[color-mix(in_srgb,var(--surface)_90%,transparent)] backdrop-blur-md"
         style={{ paddingBottom: "env(safe-area-inset-bottom)" }}
         aria-label="Main"
       >
@@ -86,9 +86,9 @@ export function BottomNav() {
                 <Link
                   href={item.href}
                   aria-current={active ? "page" : undefined}
-                  className={`flex min-h-14 items-center justify-center px-1 text-center text-sm ${
+                  className={`relative flex min-h-14 items-center justify-center px-1 text-center text-sm ${
                     active
-                      ? "font-medium text-[var(--ink)]"
+                      ? "font-semibold text-[var(--accent)] after:absolute after:top-0 after:h-0.5 after:w-8 after:rounded-full after:bg-[var(--accent)]"
                       : "text-[var(--ink-muted)]"
                   }`}
                 >
@@ -105,7 +105,7 @@ export function BottomNav() {
               aria-current={moreActive ? "page" : undefined}
               className={`flex min-h-14 w-full items-center justify-center px-1 text-center text-sm ${
                 moreActive || moreOpen
-                  ? "font-medium text-[var(--ink)]"
+                  ? "font-semibold text-[var(--accent)]"
                   : "text-[var(--ink-muted)]"
               }`}
               onClick={() => setMoreOpen((open) => !open)}

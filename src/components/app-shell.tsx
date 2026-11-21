@@ -51,7 +51,7 @@ export function AppShell({ children, buildInfo }: AppShellProps) {
         <div className="min-w-0">
           <Link href="/" className="block">
             <span
-              className="font-arabic text-xl leading-none text-[var(--ink)]"
+              className="font-arabic text-2xl leading-none text-[var(--accent)]"
               lang="ar"
               dir="rtl"
             >
@@ -141,7 +141,7 @@ export function AppShell({ children, buildInfo }: AppShellProps) {
       </header>
 
       <nav
-        className="mb-8 hidden gap-1 overflow-x-auto pb-1 md:flex"
+        className="mb-8 hidden gap-1 overflow-x-auto rounded-full border border-[var(--line)] bg-[var(--surface)] p-1 md:flex"
         aria-label="Main"
       >
         {MAIN_NAV.map((item) => {
@@ -153,9 +153,9 @@ export function AppShell({ children, buildInfo }: AppShellProps) {
             <Link
               key={item.href}
               href={item.href}
-              className={`shrink-0 rounded-[var(--radius-sm)] px-3 py-2.5 text-sm transition-colors ${
+              className={`shrink-0 rounded-full px-4 py-2 text-sm transition-colors ${
                 active
-                  ? "bg-[var(--accent-soft)] font-medium text-[var(--ink)]"
+                  ? "bg-[var(--surface-raised)] font-semibold text-[var(--accent)] shadow-[var(--shadow-soft)]"
                   : "text-[var(--ink-muted)] hover:bg-[var(--surface-hover)] hover:text-[var(--ink)]"
               }`}
             >

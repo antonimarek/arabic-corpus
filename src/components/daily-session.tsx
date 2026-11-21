@@ -8,11 +8,16 @@ import type { DailyCard, DailySession } from "@/lib/daily-session";
 import type { ReviewGrade } from "@/lib/review";
 import { lineHref } from "@/lib/text-lines";
 
-const GRADES: { id: ReviewGrade; label: string; key: string }[] = [
-  { id: "again", label: "Again", key: "1" },
-  { id: "hard", label: "Hard", key: "2" },
-  { id: "good", label: "Good", key: "3" },
-  { id: "easy", label: "Easy", key: "4" },
+const GRADES: {
+  id: ReviewGrade;
+  label: string;
+  key: string;
+  color: string;
+}[] = [
+  { id: "again", label: "Again", key: "1", color: "var(--grade-again)" },
+  { id: "hard", label: "Hard", key: "2", color: "var(--grade-hard)" },
+  { id: "good", label: "Good", key: "3", color: "var(--accent)" },
+  { id: "easy", label: "Easy", key: "4", color: "var(--grade-easy)" },
 ];
 
 /** An "Again" card comes back at the end of the session, at most this often. */
@@ -190,16 +195,32 @@ export function DailySessionView({
   return (
     <div className="flex flex-col gap-5 pb-28 md:pb-0">
       <h1 className="sr-only">Today</h1>
-      <p className="text-sm font-medium text-[var(--ink)]" aria-live="polite">
-        today: {left} left
-      </p>
+      <div className="flex items-center gap-3">
+        <div
+          className="h-1.5 flex-1 overflow-hidden rounded-full bg-[var(--line)]"
+          aria-hidden="true"
+        >
+          <div
+            className="h-full rounded-full bg-[var(--accent)] transition-[width] duration-300 ease-out"
+            style={{
+              width: `${queue.length ? (index / queue.length) * 100 : 0}%`,
+            }}
+          />
+        </div>
+        <p
+          className="shrink-0 text-sm font-medium tabular-nums text-[var(--ink-muted)]"
+          aria-live="polite"
+        >
+          today: <span className="text-[var(--ink)]">{left}</span> left
+        </p>
+      </div>
       <CardView
         key={`${card.key}:${card.round}`}
         card={card}
         revealed={revealed}
       />
       <FailedSaves count={failed.length} onRetry={retryFailed} />
-      <div className="fixed inset-x-0 bottom-[calc(3.5rem+env(safe-area-inset-bottom))] z-30 border-t border-[var(--line)] bg-[var(--background)] px-4 py-3 md:static md:border-0 md:bg-transparent md:p-0">
+      <div className="fixed inset-x-0 bottom-[calc(3.5rem+env(safe-area-inset-bottom))] z-30 border-t border-[var(--line)] bg-[color-mix(in_srgb,var(--background)_88%,transparent)] px-4 py-3 backdrop-blur-md md:static md:border-0 md:bg-transparent md:p-0">
         {revealed ? (
           <div
             className="mx-auto grid max-w-2xl grid-cols-4 gap-2"
@@ -211,10 +232,11 @@ export function DailySessionView({
                 key={g.id}
                 type="button"
                 onClick={() => grade(g.id)}
-                className={`flex min-h-14 flex-col items-center justify-center rounded-[var(--radius-sm)] border text-[15px] font-medium transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--accent)] ${
+                style={{ "--g": g.color } as React.CSSProperties}
+                className={`flex min-h-14 flex-col items-center justify-center rounded-[var(--radius-md)] border text-[15px] font-semibold transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--g)] active:scale-[0.98] ${
                   g.id === "good"
-                    ? "border-transparent bg-[var(--accent)] text-white"
-                    : "border-[var(--line)] bg-[var(--surface)] text-[var(--ink)] hover:border-[color-mix(in_srgb,var(--accent)_35%,var(--line))]"
+                    ? "border-transparent bg-[var(--g)] text-white shadow-[var(--shadow-soft)] hover:bg-[var(--accent-strong)]"
+                    : "border-[color-mix(in_srgb,var(--g)_30%,var(--line))] bg-[color-mix(in_srgb,var(--g)_7%,var(--surface-raised))] text-[var(--g)] hover:bg-[color-mix(in_srgb,var(--g)_14%,var(--surface-raised))]"
                 }`}
               >
                 {g.label}
@@ -228,7 +250,7 @@ export function DailySessionView({
           <button
             type="button"
             onClick={() => setRevealed(true)}
-            className="mx-auto block min-h-14 w-full max-w-2xl rounded-[var(--radius-sm)] bg-[var(--accent)] text-[15px] font-medium text-white focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--accent)]"
+            className="mx-auto block min-h-14 w-full max-w-2xl rounded-[var(--radius-md)] bg-[var(--ink)] text-[15px] font-semibold text-[var(--surface)] shadow-[var(--shadow-soft)] transition-colors hover:bg-[color-mix(in_srgb,var(--ink)_85%,var(--accent))] active:scale-[0.99] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--accent)]"
           >
             Reveal
             <span className="ml-2 hidden text-xs font-normal opacity-75 md:inline">
@@ -260,9 +282,17 @@ function CardView({ card, revealed }: { card: QueueCard; revealed: boolean }) {
   };
 
   return (
-    <article className="ui-panel flex flex-col gap-6 px-5 py-8 sm:px-8 sm:py-10">
-      <div className="flex items-center justify-between gap-3 text-xs text-[var(--ink-muted)]">
-        <span>
+    <article className="relative flex flex-col gap-6 overflow-hidden rounded-[var(--radius-lg)] border border-[var(--line)] bg-[var(--surface-raised)] px-5 py-7 shadow-[var(--shadow-soft)] sm:px-10 sm:py-10">
+      <div className="flex items-center justify-between gap-3">
+        <span
+          className={`rounded-full px-2.5 py-1 text-[11px] font-semibold uppercase tracking-[0.08em] ${
+            card.kind === "new"
+              ? "bg-[var(--accent-soft)] text-[var(--accent)]"
+              : card.round > 0
+                ? "bg-[color-mix(in_srgb,var(--grade-again)_10%,transparent)] text-[var(--grade-again)]"
+                : "bg-[var(--surface-hover)] text-[var(--ink-muted)]"
+          }`}
+        >
           {card.kind === "new" ? "New" : card.round > 0 ? "Again" : "Review"}
         </span>
         {card.audioUrl ? (
@@ -271,7 +301,7 @@ function CardView({ card, revealed }: { card: QueueCard; revealed: boolean }) {
             <button
               type="button"
               onClick={play}
-              className="min-h-11 rounded-[var(--radius-sm)] border border-[var(--line)] px-3 text-sm text-[var(--ink)] focus-visible:outline-2 focus-visible:outline-[var(--accent)]"
+              className="inline-flex min-h-11 items-center gap-1.5 rounded-full border border-[var(--line)] bg-[var(--surface)] px-4 text-sm font-medium text-[var(--ink)] transition-colors hover:border-[color-mix(in_srgb,var(--accent)_40%,var(--line))] hover:text-[var(--accent)] focus-visible:outline-2 focus-visible:outline-[var(--accent)]"
             >
               <span aria-hidden="true">▶</span> Listen
             </button>
@@ -281,12 +311,12 @@ function CardView({ card, revealed }: { card: QueueCard; revealed: boolean }) {
       <p
         lang="ar"
         dir="rtl"
-        className="font-arabic text-center text-[2rem] leading-[1.9] text-balance break-words text-[var(--ink)] sm:text-[2.5rem]"
+        className="font-arabic py-4 text-center text-[2.125rem] leading-[1.9] text-balance break-words text-[var(--ink)] sm:py-8 sm:text-[2.75rem]"
       >
         {card.arabic}
       </p>
       {revealed ? (
-        <div className="flex flex-col gap-4 border-t border-[var(--line)] pt-5">
+        <div className="flex flex-col gap-5 border-t border-dashed border-[var(--line)] pt-6 motion-safe:animate-[reveal_200ms_ease-out]">
           {card.translation ? (
             <p className="text-center text-[17px] leading-relaxed text-[var(--ink)]">
               {card.translation}
@@ -300,10 +330,10 @@ function CardView({ card, revealed }: { card: QueueCard; revealed: boolean }) {
             <div
               lang="ar"
               dir="rtl"
-              className="font-arabic flex flex-col gap-1 text-lg leading-[1.9] text-[var(--ink-muted)]"
+              className="font-arabic flex flex-col gap-1 rounded-[var(--radius-md)] bg-[var(--surface)] px-4 py-3 text-lg leading-[1.9] text-[var(--ink-muted)]"
             >
               {card.contextBefore ? <p>{card.contextBefore}</p> : null}
-              <p className="text-[var(--ink)]">{card.arabic}</p>
+              <p className="font-semibold text-[var(--accent)]">{card.arabic}</p>
               {card.contextAfter ? <p>{card.contextAfter}</p> : null}
             </div>
           ) : null}
@@ -335,24 +365,33 @@ function StartScreen({
   onStart: () => void;
 }) {
   return (
-    <div className="flex flex-col items-center gap-6 py-10 text-center">
+    <div className="flex flex-col items-center gap-7 rounded-[var(--radius-lg)] border border-[var(--line)] bg-[var(--surface-raised)] px-6 py-12 text-center shadow-[var(--shadow-soft)]">
       <h1 className="sr-only">Today</h1>
-      <p className="text-[15px] font-medium text-[var(--ink)]">
-        today: {left} left
-      </p>
+      <span
+        lang="ar"
+        dir="rtl"
+        aria-hidden="true"
+        className="font-arabic text-2xl text-[var(--accent)]"
+      >
+        يلّا
+      </span>
+      <div className="flex flex-col items-center gap-1">
+        <p className="text-6xl font-semibold tabular-nums tracking-tight text-[var(--ink)]">
+          {left}
+        </p>
+        <p className="text-[15px] text-[var(--ink-muted)]">
+          today: {left} left
+        </p>
+      </div>
       <button
         type="button"
         autoFocus
         onClick={onStart}
-        className="min-h-14 w-full max-w-xs rounded-[var(--radius-sm)] bg-[var(--accent)] text-lg font-medium text-white focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--accent)]"
+        className="min-h-14 w-full max-w-xs rounded-[var(--radius-md)] bg-[var(--accent)] text-lg font-semibold text-white shadow-[var(--shadow-soft)] transition-colors hover:bg-[var(--accent-strong)] active:scale-[0.99] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--accent)]"
       >
         Start
       </button>
-      {streak > 0 ? (
-        <p className="text-sm text-[var(--ink-muted)]">
-          {streak === 1 ? "1 day" : `${streak} days`} in a row
-        </p>
-      ) : null}
+      {streak > 0 ? <StreakBadge streak={streak} /> : null}
     </div>
   );
 }
@@ -377,8 +416,14 @@ function EndScreen({
   const total = stats.graded + doneBefore;
   return (
     <div className="flex flex-col gap-8 py-6">
-      <section className="flex flex-col items-center gap-2 text-center">
-        <h1 className="text-xl font-medium text-[var(--ink)]">
+      <section className="flex flex-col items-center gap-3 rounded-[var(--radius-lg)] border border-[var(--line)] bg-[var(--surface-raised)] px-6 py-10 text-center shadow-[var(--shadow-soft)]">
+        <span
+          aria-hidden="true"
+          className="flex size-14 items-center justify-center rounded-full bg-[var(--accent-soft)] text-2xl text-[var(--accent)]"
+        >
+          ✓
+        </span>
+        <h1 className="text-2xl font-semibold tracking-tight text-[var(--ink)]">
           {total > 0 ? "Done for today" : "Nothing due today"}
         </h1>
         {total > 0 ? (
@@ -387,11 +432,7 @@ function EndScreen({
             {stats.fresh > 0 ? ` · ${stats.fresh} new` : ""}
           </p>
         ) : null}
-        {streak > 0 ? (
-          <p className="text-[15px] text-[var(--ink)]">
-            {streak === 1 ? "1 day" : `${streak} days`} in a row
-          </p>
-        ) : null}
+        {streak > 0 ? <StreakBadge streak={streak} /> : null}
         {failed}
       </section>
 
@@ -400,7 +441,7 @@ function EndScreen({
           type="button"
           onClick={onMore}
           disabled={loadingMore}
-          className="min-h-12 rounded-[var(--radius-sm)] border border-[var(--line)] px-5 text-[15px] text-[var(--ink)] disabled:opacity-60 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--accent)]"
+          className="min-h-12 rounded-full border border-[color-mix(in_srgb,var(--accent)_35%,var(--line))] bg-[var(--surface-raised)] px-6 text-[15px] font-semibold text-[var(--accent)] transition-colors hover:bg-[var(--accent-soft)] disabled:opacity-60 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--accent)]"
         >
           {loadingMore ? "Loading…" : "+5 more"}
         </button>
@@ -411,22 +452,35 @@ function EndScreen({
         ) : null}
       </div>
 
-      <section className="flex flex-col gap-2 border-t border-[var(--line)] pt-6">
-        <h2 className="text-sm text-[var(--ink-muted)]">If you want more</h2>
+      <section className="flex flex-col gap-2">
+        <h2 className="px-1 text-xs font-semibold uppercase tracking-[0.08em] text-[var(--ink-muted)]">
+          If you want more
+        </h2>
         <Link
           href="/today?mode=text"
-          className="flex min-h-12 items-center rounded-[var(--radius-sm)] px-1 text-[15px] text-[var(--accent)] hover:underline"
+          className="ui-row min-h-14 flex-row items-center justify-between text-[15px] font-medium text-[var(--ink)]"
         >
           Listen and read a text
+          <span aria-hidden="true" className="text-[var(--ink-muted)]">→</span>
         </Link>
         <Link
           href="/today?mode=fluency"
-          className="flex min-h-12 items-center rounded-[var(--radius-sm)] px-1 text-[15px] text-[var(--accent)] hover:underline"
+          className="ui-row min-h-14 flex-row items-center justify-between text-[15px] font-medium text-[var(--ink)]"
         >
           Fluency replay
+          <span aria-hidden="true" className="text-[var(--ink-muted)]">→</span>
         </Link>
       </section>
     </div>
+  );
+}
+
+function StreakBadge({ streak }: { streak: number }) {
+  return (
+    <p className="inline-flex items-center gap-1.5 rounded-full bg-[color-mix(in_srgb,var(--grade-hard)_12%,transparent)] px-3 py-1 text-sm font-medium text-[var(--grade-hard)]">
+      <span aria-hidden="true">🔥</span>
+      {streak === 1 ? "1 day" : `${streak} days`} in a row
+    </p>
   );
 }
 
@@ -450,7 +504,7 @@ function FailedSaves({
 
 export function DailySessionSkeleton() {
   return (
-    <div className="flex flex-col items-center gap-6 py-10" aria-busy="true">
+    <div className="flex flex-col items-center gap-6 rounded-[var(--radius-lg)] border border-[var(--line)] bg-[var(--surface-raised)] py-16" aria-busy="true">
       <div className="h-4 w-28 motion-safe:animate-pulse rounded bg-[var(--line)]" />
       <div className="h-14 w-full max-w-xs motion-safe:animate-pulse rounded-[var(--radius-sm)] bg-[var(--line)] opacity-60" />
     </div>

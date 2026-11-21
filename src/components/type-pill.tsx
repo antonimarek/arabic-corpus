@@ -1,10 +1,10 @@
 type EntityType = "text" | "example" | "vocabulary" | "structure";
 
 const STYLES: Record<EntityType, string> = {
-  text: "bg-[#efe8e1] text-[#6b4a3a]",
-  example: "bg-[#ebe6df] text-[#5c4a3a]",
-  vocabulary: "bg-[#e8ebe4] text-[#3f5248]",
-  structure: "bg-[#ebe4e8] text-[#5c3a4a]",
+  text: "bg-[#f3e9dc] text-[#7a4f22]",
+  example: "bg-[#ece8e1] text-[#4f4840]",
+  vocabulary: "bg-[#dff0ec] text-[#0e5a4f]",
+  structure: "bg-[#f1e4ea] text-[#6e3550]",
 };
 
 const LABELS: Record<EntityType, string> = {

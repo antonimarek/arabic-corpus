@@ -11,7 +11,7 @@ export default function AppleIcon() {
     (
       <div
         style={{
-          background: "#f3f1ec",
+          background: "#f5f2ec",
           width: "100%",
           height: "100%",
           display: "flex",
@@ -20,7 +20,7 @@ export default function AppleIcon() {
         }}
       >
         <svg width={108} height={108} viewBox="0 0 32 32">
-          <path fill="#c2410c" d={AYN} />
+          <path fill="#0e6b5e" d={AYN} />
         </svg>
       </div>
     ),

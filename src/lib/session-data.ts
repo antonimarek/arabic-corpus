@@ -92,7 +92,7 @@ export async function countEnrolledToday(
 
 export async function loadDueCards(
   supabase: CorpusClient,
-  limit = 8,
+  limit = 15,
 ): Promise<RetrieveCard[]> {
   const { data, error } = await supabase
     .from("review_items")
@@ -114,22 +114,30 @@ async function mapRetrieveCards(
     examples: ExampleJoin | ExampleJoin[] | null;
   }>,
 ): Promise<RetrieveCard[]> {
-  const cards: RetrieveCard[] = [];
-  const urlCache = new Map<string, string | null>();
-  for (const row of rows) {
-    const example = one(row.examples);
-    if (!example) continue;
+  const examples = rows
+    .map((row) => ({ reviewId: row.id, example: one(row.examples) }))
+    .filter(
+      (row): row is { reviewId: string; example: ExampleJoin } =>
+        row.example != null,
+    );
+  // One signed URL per distinct audio file, fetched in parallel.
+  const paths = [
+    ...new Set(
+      examples
+        .map(({ example }) => example.texts?.audio_path)
+        .filter((path): path is string => Boolean(path)),
+    ),
+  ];
+  const urls = new Map(
+    await Promise.all(
+      paths.map(
+        async (path) =>
+          [path, await signedTextAudioUrl(supabase, path)] as const,
+      ),
+    ),
+  );
+  return examples.map(({ reviewId, example }) => {
     const text = example.texts;
-    let audioUrl: string | null = null;
-    if (text?.audio_path) {
-      if (!urlCache.has(text.audio_path)) {
-        urlCache.set(
-          text.audio_path,
-          await signedTextAudioUrl(supabase, text.audio_path),
-        );
-      }
-      audioUrl = urlCache.get(text.audio_path) ?? null;
-    }
     const starts = normalizeLineStarts(text?.audio_line_starts_ms);
     const span =
       example.source_line != null
@@ -139,40 +147,34 @@ async function mapRetrieveCards(
             text?.audio_duration_ms ?? null,
           )
         : null;
-    cards.push({
-      reviewId: row.id,
+    return {
+      reviewId,
       exampleId: example.id,
       arabic: example.arabic,
       translation: example.translation,
       textId: text?.id ?? example.text_id,
       textTitle: text?.title ?? null,
       sourceLine: example.source_line,
-      audioUrl,
+      audioUrl: text?.audio_path ? (urls.get(text.audio_path) ?? null) : null,
       startMs: span?.startMs ?? null,
       endMs: span?.endMs ?? null,
-    });
-  }
-  return cards;
+    };
+  });
 }
 
 export async function loadLearnCandidates(
   supabase: CorpusClient,
   textId: string,
 ): Promise<LearnCandidate[]> {
-  const [{ data: examples, error }, { data: enrolled, error: enrolledError }] =
-    await Promise.all([
-      supabase
-        .from("examples")
-        .select("id, arabic, translation, source_line")
-        .eq("text_id", textId)
-        .order("source_line", { ascending: true }),
-      supabase.from("review_items").select("example_id"),
-    ]);
+  // Embedded review_items is RLS-scoped to the owner: empty = not enrolled.
+  const { data, error } = await supabase
+    .from("examples")
+    .select("id, arabic, translation, source_line, review_items(id)")
+    .eq("text_id", textId)
+    .order("source_line", { ascending: true });
   if (error) throw new Error(error.message);
-  if (enrolledError) throw new Error(enrolledError.message);
-  const taken = new Set((enrolled ?? []).map((row) => row.example_id));
-  return (examples ?? [])
-    .filter((row) => !taken.has(row.id))
+  return (data ?? [])
+    .filter((row) => (row.review_items?.length ?? 0) === 0)
     .map((row) => ({
       id: row.id,
       arabic: row.arabic,

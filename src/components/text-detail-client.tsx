@@ -12,6 +12,7 @@ import { FocusTargetStrip } from "@/components/focus-target-strip";
 import { TextAudioField } from "@/components/text-audio-field";
 import { TextDetailSkeleton } from "@/components/text-detail-skeleton";
 import { writeLastText } from "@/lib/prefs";
+import { syncTodayHintCookie } from "@/lib/session-prefs";
 import { createClient } from "@/lib/supabase/client";
 import {
   readTextDetailCache,
@@ -96,6 +97,7 @@ export function TextDetailClient({
   useEffect(() => {
     if (!text) return;
     writeLastText({ id: text.id, title: text.title });
+    syncTodayHintCookie();
   }, [text]);
 
   if (!text && isPending) {

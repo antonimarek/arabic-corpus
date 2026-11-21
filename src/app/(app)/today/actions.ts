@@ -12,9 +12,11 @@ import {
 import { countEnrolledToday } from "@/lib/session-data";
 import { requireUserId } from "@/lib/require-user";
 
+// /today is deliberately not revalidated: the session keeps its own optimistic
+// state, and revalidating the current path re-renders the whole page in the
+// action response (that made every grade wait for a full /today render).
 function revalidateReview(textId?: string | null) {
   revalidatePath("/");
-  revalidatePath("/today");
   revalidatePath("/examples");
   if (textId) revalidatePath(`/texts/${textId}`);
 }

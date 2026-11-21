@@ -1,6 +1,8 @@
 import { readLastText } from "@/lib/prefs";
 import {
   parseSessionBudget,
+  serializeTodayHint,
+  TODAY_HINT_COOKIE,
   type SessionBudget,
   type SessionStep,
 } from "@/lib/session";
@@ -19,6 +21,18 @@ export type FinishedText = {
   id: string;
   title: string;
 };
+
+/** Mirror today hints into a cookie so /today can pick the text on the server. */
+export function syncTodayHintCookie(): void {
+  if (typeof document === "undefined") return;
+  const progress = readSessionProgress();
+  const value = serializeTodayHint({
+    lastTextId: progress?.textId ?? readLastText()?.id ?? null,
+    unfinished: Boolean(progress),
+    finishedId: readLastFinishedText()?.id ?? null,
+  });
+  document.cookie = `${TODAY_HINT_COOKIE}=${value}; path=/; max-age=31536000; samesite=lax`;
+}
 
 function readJson<T>(key: string): unknown {
   if (typeof window === "undefined") return null;
@@ -60,10 +74,12 @@ export function readSessionProgress(): SessionProgress | null {
 
 export function writeSessionProgress(value: SessionProgress): void {
   window.localStorage.setItem(SESSION_PROGRESS_KEY, JSON.stringify(value));
+  syncTodayHintCookie();
 }
 
 export function clearSessionProgress(): void {
   window.localStorage.removeItem(SESSION_PROGRESS_KEY);
+  syncTodayHintCookie();
 }
 
 export function readLastFinishedText(): FinishedText | null {
@@ -76,6 +92,7 @@ export function readLastFinishedText(): FinishedText | null {
 
 export function writeLastFinishedText(value: FinishedText): void {
   window.localStorage.setItem(LAST_FINISHED_TEXT_KEY, JSON.stringify(value));
+  syncTodayHintCookie();
 }
 
 export type TodayPrefs = {

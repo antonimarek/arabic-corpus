@@ -25,9 +25,27 @@ export function RetrieveQueue({
   const audioRef = useRef<HTMLAudioElement>(null);
   const [index, setIndex] = useState(0);
   const [revealed, setRevealed] = useState(false);
-  const [pending, setPending] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [failed, setFailed] = useState<
+    { card: RetrieveCard; grade: ReviewGrade }[]
+  >([]);
   const card = cards[index];
+
+  // Optimistic: advance now, save in the background, surface failures for retry.
+  const save = (target: RetrieveCard, grade: ReviewGrade) => {
+    void gradeReview(target.reviewId, grade)
+      .then((result) => {
+        if (result.error) throw new Error(result.error);
+      })
+      .catch(() => {
+        setFailed((current) => [...current, { card: target, grade }]);
+      });
+  };
+
+  const retryFailed = () => {
+    const pendingRetries = failed;
+    setFailed([]);
+    for (const row of pendingRetries) save(row.card, row.grade);
+  };
 
   if (cards.length === 0) {
     return (
@@ -41,6 +59,7 @@ export function RetrieveQueue({
     return (
       <div className="flex flex-col gap-3">
         <p className="text-[15px] text-[var(--ink)]">Queue clear.</p>
+        <FailedSaves count={failed.length} onRetry={retryFailed} />
         <button
           type="button"
           onClick={onDone}
@@ -69,17 +88,9 @@ export function RetrieveQueue({
     el.addEventListener("timeupdate", onTime);
   };
 
-  const onGrade = async (grade: ReviewGrade) => {
-    setPending(true);
-    setError(null);
-    const result = await gradeReview(card.reviewId, grade);
-    setPending(false);
-    if (result.error) {
-      setError(result.error);
-      return;
-    }
+  const onGrade = (grade: ReviewGrade) => {
+    save(card, grade);
     setRevealed(false);
-    setError(null);
     setIndex((current) => current + 1);
   };
 
@@ -142,9 +153,8 @@ export function RetrieveQueue({
               <button
                 key={grade.id}
                 type="button"
-                disabled={pending}
                 onClick={() => void onGrade(grade.id)}
-                className="min-h-11 rounded-md border border-[var(--line)] bg-[var(--surface)] px-3 py-2 text-sm text-[var(--ink)] disabled:opacity-60"
+                className="min-h-11 rounded-md border border-[var(--line)] bg-[var(--surface)] px-3 py-2 text-sm text-[var(--ink)]"
               >
                 {grade.label}
               </button>
@@ -160,11 +170,25 @@ export function RetrieveQueue({
           Reveal
         </button>
       )}
-      {error ? (
-        <p className="text-sm text-[var(--danger)]" role="alert">
-          {error}
-        </p>
-      ) : null}
+      <FailedSaves count={failed.length} onRetry={retryFailed} />
     </div>
+  );
+}
+
+function FailedSaves({
+  count,
+  onRetry,
+}: {
+  count: number;
+  onRetry: () => void;
+}) {
+  if (count === 0) return null;
+  return (
+    <p className="text-sm text-[var(--danger)]" role="alert">
+      {count === 1 ? "1 grade" : `${count} grades`} didn&apos;t save.{" "}
+      <button type="button" onClick={onRetry} className="underline">
+        Retry
+      </button>
+    </p>
   );
 }

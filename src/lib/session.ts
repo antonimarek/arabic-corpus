@@ -93,3 +93,27 @@ export function nextStep(
   if (index < 0) return steps[0] ?? "done";
   return steps[index + 1] ?? "done";
 }
+
+/** Cookie mirror of localStorage hints so the server can pick today's text. */
+export const TODAY_HINT_COOKIE = "corpus-today";
+
+export type TodayHint = {
+  lastTextId: string | null;
+  unfinished: boolean;
+  finishedId: string | null;
+};
+
+const ID = /^[0-9a-f-]{8,64}$/i;
+
+export function serializeTodayHint(hint: TodayHint): string {
+  return [hint.lastTextId ?? "", hint.unfinished ? "1" : "0", hint.finishedId ?? ""].join(".");
+}
+
+export function parseTodayHint(raw: string | null | undefined): TodayHint {
+  const [last = "", unfinished = "0", finished = ""] = (raw ?? "").split(".");
+  return {
+    lastTextId: ID.test(last) ? last : null,
+    unfinished: unfinished === "1" && ID.test(last),
+    finishedId: ID.test(finished) ? finished : null,
+  };
+}

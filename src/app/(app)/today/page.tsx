@@ -1,45 +1,61 @@
-import { TodayRedirect } from "@/components/today-redirect";
+import { cookies } from "next/headers";
+import { redirect } from "next/navigation";
+
 import { TodaySession } from "@/components/today-session";
-import { parseSessionBudget } from "@/lib/session";
+import {
+  parseSessionBudget,
+  parseTodayHint,
+  rankSession,
+  TODAY_HINT_COOKIE,
+} from "@/lib/session";
 import {
   loadDueCards,
   loadFluencyText,
   loadLearnCandidates,
   loadSessionCandidates,
 } from "@/lib/session-data";
-import { fetchTextDetailCached } from "@/lib/text-detail-cached";
 import { createClient } from "@/lib/supabase/server";
+import { fetchTextDetailCached } from "@/lib/text-detail-cached";
 
 type TodayPageProps = {
   searchParams: Promise<{ m?: string; text?: string; finished?: string }>;
 };
 
 export default async function TodayPage({ searchParams }: TodayPageProps) {
-  const { m, text: textId, finished } = await searchParams;
+  const [{ m, text: textParam, finished }, cookieStore, supabase] =
+    await Promise.all([searchParams, cookies(), createClient()]);
   const budget = parseSessionBudget(m);
-  const supabase = await createClient();
-  const candidates = await loadSessionCandidates(supabase);
+  const hint = parseTodayHint(cookieStore.get(TODAY_HINT_COOKIE)?.value);
 
+  // Cards don't depend on the text: start them before anything else.
+  const dueCards = loadDueCards(supabase);
+
+  let textId = textParam ?? null;
   if (!textId) {
-    return <TodayRedirect candidates={candidates} budget={budget} />;
+    // Pick on the server (was a client redirect = a second full request).
+    const ranked = rankSession({
+      texts: await loadSessionCandidates(supabase),
+      lastTextId: hint.lastTextId,
+      lastUnfinished: hint.unfinished,
+    });
+    if (!ranked.ok) redirect("/");
+    textId = ranked.text.id;
   }
 
-  let detail: Awaited<ReturnType<typeof fetchTextDetailCached>>;
-  try {
-    detail = await fetchTextDetailCached(textId);
-  } catch {
-    return <TodayRedirect candidates={candidates} budget={budget} />;
-  }
+  const finishedId = finished ?? hint.finishedId;
+  const learnCandidates = loadLearnCandidates(supabase, textId);
+  const fluency =
+    finishedId && finishedId !== textId
+      ? loadFluencyText(supabase, finishedId)
+      : Promise.resolve(null);
+  // Avoid unhandled rejections if we redirect before these are consumed.
+  for (const p of [dueCards, learnCandidates, fluency]) p.catch(() => {});
 
-  if (!detail.audioUrl) {
-    return <TodayRedirect candidates={candidates} budget={budget} />;
+  const detail = await fetchTextDetailCached(textId).catch(() => null);
+  if (!detail?.audioUrl) {
+    if (textParam) redirect(`/today?m=${budget}`);
+    redirect("/");
   }
-
-  const [dueCards, learnCandidates, fluency] = await Promise.all([
-    loadDueCards(supabase),
-    loadLearnCandidates(supabase, textId),
-    finished ? loadFluencyText(supabase, finished) : Promise.resolve(null),
-  ]);
 
   return (
     <TodaySession

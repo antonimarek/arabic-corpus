@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useMemo, useState } from "react";
+import { Suspense, use, useEffect, useState, type ReactNode } from "react";
 
 import { FocusTargetStrip } from "@/components/focus-target-strip";
 import { LearnExampleList } from "@/components/learn-example-list";
@@ -39,14 +39,78 @@ export function TodaySession({
 }: {
   budget: SessionBudget;
   text: TextDetailPayload;
-  dueCards: RetrieveCard[];
-  learnCandidates: LearnCandidate[];
-  fluency: FluencyText | null;
+  dueCards: Promise<RetrieveCard[]>;
+  learnCandidates: Promise<LearnCandidate[]>;
+  fluency: Promise<FluencyText | null>;
 }) {
-  const steps = useMemo(
-    () => stepsForBudget(budget, dueCards.length),
-    [budget, dueCards.length],
+  // Only the 5-min budget branches on due count; others render instantly.
+  if (budget === 5) {
+    return (
+      <Suspense fallback={<SessionSkeleton />}>
+        <FiveMinuteSession
+          text={text}
+          dueCards={dueCards}
+          learnCandidates={learnCandidates}
+          fluency={fluency}
+        />
+      </Suspense>
+    );
+  }
+  return (
+    <SessionSteps
+      budget={budget}
+      steps={stepsForBudget(budget, 0)}
+      text={text}
+      dueCards={dueCards}
+      learnCandidates={learnCandidates}
+      fluency={fluency}
+    />
   );
+}
+
+function FiveMinuteSession(
+  props: Omit<Parameters<typeof SessionSteps>[0], "budget" | "steps">,
+) {
+  const due = use(props.dueCards);
+  return (
+    <SessionSteps {...props} budget={5} steps={stepsForBudget(5, due.length)} />
+  );
+}
+
+function SessionSkeleton() {
+  return (
+    <div className="flex flex-col gap-3" aria-busy="true">
+      <div className="h-4 w-24 animate-pulse rounded bg-[var(--line)]" />
+      <div className="h-28 animate-pulse rounded-md bg-[var(--line)] opacity-60" />
+    </div>
+  );
+}
+
+function Await<T>({
+  value,
+  children,
+}: {
+  value: Promise<T>;
+  children: (resolved: T) => ReactNode;
+}) {
+  return children(use(value));
+}
+
+function SessionSteps({
+  budget,
+  steps,
+  text,
+  dueCards,
+  learnCandidates,
+  fluency,
+}: {
+  budget: SessionBudget;
+  steps: SessionStep[];
+  text: TextDetailPayload;
+  dueCards: Promise<RetrieveCard[]>;
+  learnCandidates: Promise<LearnCandidate[]>;
+  fluency: Promise<FluencyText | null>;
+}) {
   const [step, setStep] = useState<SessionStep>(steps[0] ?? "listen");
   const [done, setDone] = useState(false);
 
@@ -65,14 +129,13 @@ export function TodaySession({
     setStep(next);
   };
 
-  const audio =
-    text.audioUrl
-      ? {
-          url: text.audioUrl,
-          durationMs: text.audioDurationMs,
-          lineStarts: text.audioLineStartsMs,
-        }
-      : null;
+  const audio = text.audioUrl
+    ? {
+        url: text.audioUrl,
+        durationMs: text.audioDurationMs,
+        lineStarts: text.audioLineStartsMs,
+      }
+    : null;
 
   if (done) {
     return (
@@ -135,14 +198,20 @@ export function TodaySession({
             }))}
             audio={audio}
           />
-          {learnCandidates.length > 0 ? (
-            <section className="border-t border-[var(--line)] pt-6">
-              <h2 className="mb-3 text-sm text-[var(--ink-muted)]">
-                Learn a line
-              </h2>
-              <LearnExampleList examples={learnCandidates} />
-            </section>
-          ) : null}
+          <Suspense fallback={null}>
+            <Await value={learnCandidates}>
+              {(candidates) =>
+                candidates.length > 0 ? (
+                  <section className="border-t border-[var(--line)] pt-6">
+                    <h2 className="mb-3 text-sm text-[var(--ink-muted)]">
+                      Learn a line
+                    </h2>
+                    <LearnExampleList examples={candidates} />
+                  </section>
+                ) : null
+              }
+            </Await>
+          </Suspense>
           <button
             type="button"
             onClick={goNext}
@@ -154,7 +223,11 @@ export function TodaySession({
       ) : null}
 
       {step === "retrieve" ? (
-        <RetrieveQueue cards={dueCards} onDone={goNext} />
+        <Suspense fallback={<SessionSkeleton />}>
+          <Await value={dueCards}>
+            {(cards) => <RetrieveQueue cards={cards} onDone={goNext} />}
+          </Await>
+        </Suspense>
       ) : null}
 
       {step === "fluency" ? (
@@ -162,24 +235,30 @@ export function TodaySession({
           <p className="text-sm text-[var(--ink-muted)]">
             Replay a known text at full speed. No lookup.
           </p>
-          {fluency?.audioUrl ? (
-            <TextLineReader
-              textId={fluency.id}
-              arabic={fluency.arabic}
-              audio={{
-                url: fluency.audioUrl,
-                durationMs: fluency.durationMs,
-                lineStarts: fluency.lineStarts,
-              }}
-              hideTranslation
-              hideLookup
-              fixedRate={1}
-            />
-          ) : (
-            <p className="text-sm text-[var(--ink-muted)]">
-              Finish one audio text, then fluency has a replay target.
-            </p>
-          )}
+          <Suspense fallback={<SessionSkeleton />}>
+            <Await value={fluency}>
+              {(fluency) =>
+                fluency?.audioUrl ? (
+                  <TextLineReader
+                    textId={fluency.id}
+                    arabic={fluency.arabic}
+                    audio={{
+                      url: fluency.audioUrl,
+                      durationMs: fluency.durationMs,
+                      lineStarts: fluency.lineStarts,
+                    }}
+                    hideTranslation
+                    hideLookup
+                    fixedRate={1}
+                  />
+                ) : (
+                  <p className="text-sm text-[var(--ink-muted)]">
+                    Finish one audio text, then fluency has a replay target.
+                  </p>
+                )
+              }
+            </Await>
+          </Suspense>
           <button
             type="button"
             onClick={goNext}

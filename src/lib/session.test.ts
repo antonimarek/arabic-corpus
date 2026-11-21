@@ -2,6 +2,8 @@ import { describe, expect, it } from "vitest";
 
 import {
   nextStep,
+  parseTodayHint,
+  serializeTodayHint,
   rankSession,
   stepsForBudget,
   type SessionTextCandidate,
@@ -113,5 +115,29 @@ describe("session steps", () => {
       "retrieve",
       "fluency",
     ]);
+  });
+});
+
+describe("today hint cookie", () => {
+  const id = "3f2a9c1e-0b4d-4e8a-9f1a-2b3c4d5e6f70";
+  const other = "aa2a9c1e-0b4d-4e8a-9f1a-2b3c4d5e6f71";
+
+  it("round-trips", () => {
+    const hint = { lastTextId: id, unfinished: true, finishedId: other };
+    expect(parseTodayHint(serializeTodayHint(hint))).toEqual(hint);
+  });
+
+  it("is empty for missing or junk input", () => {
+    const empty = { lastTextId: null, unfinished: false, finishedId: null };
+    expect(parseTodayHint(undefined)).toEqual(empty);
+    expect(parseTodayHint("<script>.1.x")).toEqual(empty);
+  });
+
+  it("drops unfinished when there is no last text", () => {
+    expect(parseTodayHint(`.1.${other}`)).toEqual({
+      lastTextId: null,
+      unfinished: false,
+      finishedId: other,
+    });
   });
 });

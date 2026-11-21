@@ -90,3 +90,85 @@ export function gradeStoredCard(
   const result = scheduler.next(toCard(stored), now, GRADE[grade]);
   return toStored(result.card);
 }
+
+// ---------------------------------------------------------------------------
+// Daily session: capped queue, backlog spreading, streak
+// ---------------------------------------------------------------------------
+
+export const DAILY_DUE_CAP = 15;
+export const MORE_BATCH = 5;
+
+export type DueStub = { id: string; due: string; state: number };
+
+/** FSRS states: 1 Learning, 3 Relearning — short intervals, review first. */
+function isLearning(state: number): boolean {
+  return state === 1 || state === 3;
+}
+
+/** Priority order: learning/relearning first, then most overdue first. */
+export function orderDue<T extends DueStub>(items: T[]): T[] {
+  return [...items].sort((a, b) => {
+    const learn = Number(isLearning(b.state)) - Number(isLearning(a.state));
+    if (learn !== 0) return learn;
+    return a.due.localeCompare(b.due);
+  });
+}
+
+/**
+ * Overflow protection. Spread an overdue pile over the coming days at most
+ * `perDay` per day instead of dumping it all on today. Day 0 is today and
+ * gets whatever is left of today's cap. Read-time only: nothing in the DB is
+ * rescheduled; unpicked cards simply wait, and grading moves them on.
+ */
+export function spreadBacklog<T extends DueStub>(
+  items: T[],
+  {
+    perDay = DAILY_DUE_CAP,
+    reviewedToday = 0,
+  }: { perDay?: number; reviewedToday?: number } = {},
+): T[][] {
+  const ordered = orderDue(items);
+  const days: T[][] = [];
+  const todayRoom = Math.max(0, perDay - reviewedToday);
+  days.push(ordered.slice(0, todayRoom));
+  for (let i = todayRoom; i < ordered.length; i += perDay) {
+    days.push(ordered.slice(i, i + perDay));
+  }
+  return days;
+}
+
+/** Due cards for today's session, after the cap and what's done today. */
+export function pickTodayDue<T extends DueStub>(
+  items: T[],
+  reviewedToday: number,
+  perDay = DAILY_DUE_CAP,
+): T[] {
+  return spreadBacklog(items, { perDay, reviewedToday })[0] ?? [];
+}
+
+/** New cards still allowed today. */
+export function newSlotsLeft(enrolledToday: number, cap = DAILY_NEW_CAP): number {
+  return Math.max(0, cap - enrolledToday);
+}
+
+function dayKey(date: Date): string {
+  return date.toISOString().slice(0, 10);
+}
+
+/**
+ * Consecutive active days ending today (or yesterday, so an unfinished today
+ * never shows as broken). One graded card counts as a day done.
+ */
+export function streakDays(activeDays: string[], now = new Date()): number {
+  const set = new Set(activeDays);
+  const cursor = startOfUtcDay(now);
+  if (!set.has(dayKey(cursor))) {
+    cursor.setUTCDate(cursor.getUTCDate() - 1);
+  }
+  let streak = 0;
+  while (set.has(dayKey(cursor))) {
+    streak += 1;
+    cursor.setUTCDate(cursor.getUTCDate() - 1);
+  }
+  return streak;
+}

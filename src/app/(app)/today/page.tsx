@@ -1,7 +1,14 @@
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 
+import { Suspense } from "react";
+
+import {
+  DailySessionSkeleton,
+  DailySessionView,
+} from "@/components/daily-session";
 import { TodaySession } from "@/components/today-session";
+import { loadDailySession } from "@/lib/daily-session";
 import {
   parseSessionBudget,
   parseTodayHint,
@@ -18,12 +25,26 @@ import { createClient } from "@/lib/supabase/server";
 import { fetchTextDetailCached } from "@/lib/text-detail-cached";
 
 type TodayPageProps = {
-  searchParams: Promise<{ m?: string; text?: string; finished?: string }>;
+  searchParams: Promise<{
+    m?: string;
+    text?: string;
+    finished?: string;
+    mode?: string;
+  }>;
 };
 
 export default async function TodayPage({ searchParams }: TodayPageProps) {
-  const [{ m, text: textParam, finished }, cookieStore, supabase] =
+  const [{ m, text: textParam, finished, mode }, cookieStore, supabase] =
     await Promise.all([searchParams, cookies(), createClient()]);
+
+  // Default: the capped daily card session. Text flows are secondary modes.
+  if (!textParam && mode !== "text" && mode !== "fluency") {
+    return (
+      <Suspense fallback={<DailySessionSkeleton />}>
+        <DailySessionView session={loadDailySession(supabase)} />
+      </Suspense>
+    );
+  }
   const budget = parseSessionBudget(m);
   const hint = parseTodayHint(cookieStore.get(TODAY_HINT_COOKIE)?.value);
 
@@ -38,7 +59,7 @@ export default async function TodayPage({ searchParams }: TodayPageProps) {
       lastTextId: hint.lastTextId,
       lastUnfinished: hint.unfinished,
     });
-    if (!ranked.ok) redirect("/");
+    if (!ranked.ok) redirect("/today");
     textId = ranked.text.id;
   }
 
@@ -53,8 +74,8 @@ export default async function TodayPage({ searchParams }: TodayPageProps) {
 
   const detail = await fetchTextDetailCached(textId).catch(() => null);
   if (!detail?.audioUrl) {
-    if (textParam) redirect(`/today?m=${budget}`);
-    redirect("/");
+    if (textParam) redirect(`/today?mode=text&m=${budget}`);
+    redirect("/today");
   }
 
   return (
@@ -64,6 +85,13 @@ export default async function TodayPage({ searchParams }: TodayPageProps) {
       dueCards={dueCards}
       learnCandidates={learnCandidates}
       fluency={fluency}
+      onlySteps={
+        mode === "fluency"
+          ? ["fluency"]
+          : mode === "text"
+            ? ["listen", "read"]
+            : undefined
+      }
     />
   );
 }

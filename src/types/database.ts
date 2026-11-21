@@ -712,6 +712,44 @@ export type Database = {
           },
         ];
       };
+      review_log: {
+        Row: {
+          id: string;
+          owner_id: string;
+          review_item_id: string;
+          grade: string;
+          was_new: boolean;
+          reviewed_at: string;
+          reviewed_on: string;
+        };
+        Insert: {
+          id?: string;
+          owner_id?: string;
+          review_item_id: string;
+          grade: string;
+          was_new?: boolean;
+          reviewed_at?: string;
+          reviewed_on?: string;
+        };
+        Update: {
+          id?: string;
+          owner_id?: string;
+          review_item_id?: string;
+          grade?: string;
+          was_new?: boolean;
+          reviewed_at?: string;
+          reviewed_on?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "review_log_review_item_id_fkey";
+            columns: ["review_item_id"];
+            isOneToOne: false;
+            referencedRelation: "review_items";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
       search_misses: {
         Row: {
           id: string;

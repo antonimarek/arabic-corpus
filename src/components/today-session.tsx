@@ -36,13 +36,28 @@ export function TodaySession({
   dueCards,
   learnCandidates,
   fluency,
+  onlySteps,
 }: {
   budget: SessionBudget;
   text: TextDetailPayload;
   dueCards: Promise<RetrieveCard[]>;
   learnCandidates: Promise<LearnCandidate[]>;
   fluency: Promise<FluencyText | null>;
+  /** Run just these steps (e.g. fluency replay after the card session). */
+  onlySteps?: SessionStep[];
 }) {
+  if (onlySteps) {
+    return (
+      <SessionSteps
+        budget={budget}
+        steps={onlySteps}
+        text={text}
+        dueCards={dueCards}
+        learnCandidates={learnCandidates}
+        fluency={fluency}
+      />
+    );
+  }
   // Only the 5-min budget branches on due count; others render instantly.
   if (budget === 5) {
     return (
@@ -141,8 +156,11 @@ function SessionSteps({
     return (
       <div className="flex flex-col gap-4">
         <p className="text-[15px] text-[var(--ink)]">Session done.</p>
-        <Link href="/" className="text-sm text-[var(--accent)] hover:underline">
-          Back to search
+        <Link
+          href="/today"
+          className="text-sm text-[var(--accent)] hover:underline"
+        >
+          Back to today
         </Link>
       </div>
     );

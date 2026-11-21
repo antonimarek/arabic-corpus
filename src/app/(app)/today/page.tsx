@@ -1,4 +1,3 @@
-import { timedPage } from "@/lib/timing";
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 
@@ -34,7 +33,7 @@ type TodayPageProps = {
   }>;
 };
 
-async function TodayPage({ searchParams }: TodayPageProps) {
+export default async function TodayPage({ searchParams }: TodayPageProps) {
   const [{ m, text: textParam, finished, mode }, cookieStore, supabase] =
     await Promise.all([searchParams, cookies(), createClient()]);
 
@@ -96,5 +95,3 @@ async function TodayPage({ searchParams }: TodayPageProps) {
     />
   );
 }
-
-export default timedPage("/today", TodayPage);

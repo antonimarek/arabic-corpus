@@ -1,11 +1,10 @@
-import { timedPage } from "@/lib/timing";
 import Link from "next/link";
 
 import { FilteredEntityList } from "@/components/filtered-entity-list";
 import { createClient } from "@/lib/supabase/server";
 import { notNull } from "@/lib/tags";
 
-async function StructuresPage() {
+export default async function StructuresPage() {
   const supabase = await createClient();
   const { data: rows, error } = await supabase
     .from("structures")
@@ -70,5 +69,3 @@ async function StructuresPage() {
     </section>
   );
 }
-
-export default timedPage("/structures", StructuresPage);

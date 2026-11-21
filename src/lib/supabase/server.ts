@@ -3,14 +3,13 @@ import { cookies } from "next/headers";
 
 import { getSupabaseAnonKey, getSupabaseUrl } from "@/lib/env";
 import { createSkewTolerantFetch } from "@/lib/supabase/skew-fetch";
-import { createTimedFetch } from "@/lib/timing";
 import type { Database } from "@/types/database";
 
 export async function createClient() {
   const cookieStore = await cookies();
 
   return createServerClient<Database>(getSupabaseUrl(), getSupabaseAnonKey(), {
-    global: { fetch: createSkewTolerantFetch(createTimedFetch()) },
+    global: { fetch: createSkewTolerantFetch() },
     cookies: {
       getAll() {
         return cookieStore.getAll();

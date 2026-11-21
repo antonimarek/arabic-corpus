@@ -1,4 +1,3 @@
-import { timedPage } from "@/lib/timing";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 
@@ -16,7 +15,7 @@ type ExampleDetailProps = {
   params: Promise<{ id: string }>;
 };
 
-async function ExampleDetailPage({
+export default async function ExampleDetailPage({
   params,
 }: ExampleDetailProps) {
   const { id } = await params;
@@ -194,5 +193,3 @@ async function ExampleDetailPage({
     </article>
   );
 }
-
-export default timedPage("/examples/[id]", ExampleDetailPage);

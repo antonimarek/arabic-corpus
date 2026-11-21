@@ -1,11 +1,10 @@
-import { timedPage } from "@/lib/timing";
 import Link from "next/link";
 
 import { FilteredEntityList } from "@/components/filtered-entity-list";
 import { createClient } from "@/lib/supabase/server";
 import { notNull } from "@/lib/tags";
 
-async function TextsPage() {
+export default async function TextsPage() {
   const supabase = await createClient();
   const { data: texts, error } = await supabase
     .from("texts")
@@ -65,5 +64,3 @@ async function TextsPage() {
     </section>
   );
 }
-
-export default timedPage("/texts", TextsPage);

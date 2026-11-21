@@ -1,10 +1,9 @@
-import { timedPage } from "@/lib/timing";
 import Link from "next/link";
 
 import { createClient } from "@/lib/supabase/server";
 import { isMasteryState, MASTERY_LABEL } from "@/lib/patterns";
 
-async function PatternsPage() {
+export default async function PatternsPage() {
   const supabase = await createClient();
   const [
     { data: rows, error },
@@ -114,5 +113,3 @@ async function PatternsPage() {
     </section>
   );
 }
-
-export default timedPage("/patterns", PatternsPage);

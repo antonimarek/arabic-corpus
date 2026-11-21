@@ -235,7 +235,7 @@ export function DailySessionView({
                 style={{ "--g": g.color } as React.CSSProperties}
                 className={`flex min-h-14 flex-col items-center justify-center rounded-[var(--radius-md)] border text-[15px] font-semibold transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--g)] active:scale-[0.98] ${
                   g.id === "good"
-                    ? "border-transparent bg-[var(--g)] text-white shadow-[var(--shadow-soft)] hover:bg-[var(--accent-strong)]"
+                    ? "border-transparent bg-[var(--g)] text-[var(--on-accent)] shadow-[var(--shadow-soft)] hover:bg-[var(--accent-strong)]"
                     : "border-[color-mix(in_srgb,var(--g)_30%,var(--line))] bg-[color-mix(in_srgb,var(--g)_7%,var(--surface-raised))] text-[var(--g)] hover:bg-[color-mix(in_srgb,var(--g)_14%,var(--surface-raised))]"
                 }`}
               >
@@ -387,7 +387,7 @@ function StartScreen({
         type="button"
         autoFocus
         onClick={onStart}
-        className="min-h-14 w-full max-w-xs rounded-[var(--radius-md)] bg-[var(--accent)] text-lg font-semibold text-white shadow-[var(--shadow-soft)] transition-colors hover:bg-[var(--accent-strong)] active:scale-[0.99] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--accent)]"
+        className="min-h-14 w-full max-w-xs rounded-[var(--radius-md)] bg-[var(--accent)] text-lg font-semibold text-[var(--on-accent)] shadow-[var(--shadow-soft)] transition-colors hover:bg-[var(--accent-strong)] active:scale-[0.99] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--accent)]"
       >
         Start
       </button>
@@ -458,14 +458,14 @@ function EndScreen({
         </h2>
         <Link
           href="/today?mode=text"
-          className="ui-row min-h-14 flex-row items-center justify-between text-[15px] font-medium text-[var(--ink)]"
+          className="ui-row min-h-14 !flex-row items-center justify-between text-[15px] font-medium text-[var(--ink)]"
         >
           Listen and read a text
           <span aria-hidden="true" className="text-[var(--ink-muted)]">→</span>
         </Link>
         <Link
           href="/today?mode=fluency"
-          className="ui-row min-h-14 flex-row items-center justify-between text-[15px] font-medium text-[var(--ink)]"
+          className="ui-row min-h-14 !flex-row items-center justify-between text-[15px] font-medium text-[var(--ink)]"
         >
           Fluency replay
           <span aria-hidden="true" className="text-[var(--ink-muted)]">→</span>

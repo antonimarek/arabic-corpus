@@ -11,6 +11,7 @@
   --accent: #0e6b5e;
   --accent-strong: #0a5449;
   --accent-soft: color-mix(in srgb, var(--accent) 11%, transparent);
+  --on-accent: #ffffff;
   --danger: #a3402c;
   --grade-again: #b2432d;
   --grade-hard: #a86a12;
@@ -24,6 +25,34 @@
   --font-ui: var(--font-instrument-sans);
   --font-arabic: var(--font-noto-naskh);
   --link-structure: #7c4a5c;
+}
+
+:root {
+  color-scheme: light dark;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --background: #141311;
+    --surface: #1b1a17;
+    --surface-raised: #22201d;
+    --surface-hover: #2b2925;
+    --ink: #ece7df;
+    --ink-muted: #a39b8f;
+    --line: #34312c;
+    --accent: #3fb5a2;
+    --accent-strong: #5cc8b6;
+    --accent-soft: color-mix(in srgb, var(--accent) 16%, transparent);
+    --on-accent: #0c1f1c;
+    --danger: #e0806b;
+    --grade-again: #e58a73;
+    --grade-hard: #d9a54c;
+    --grade-easy: #6cc08c;
+    --link-structure: #d29ab4;
+    --shadow-soft:
+      0 1px 2px rgb(0 0 0 / 30%),
+      0 8px 24px -8px rgb(0 0 0 / 50%);
+  }
 }
 
 @theme inline {
@@ -129,7 +158,7 @@ body {
   padding: 0.625rem 1rem;
   font-size: 0.875rem;
   font-weight: 500;
-  color: white;
+  color: var(--on-accent);
   cursor: pointer;
   transition: background-color 0.15s ease, opacity 0.15s ease;
 }
@@ -154,7 +183,7 @@ body {
   padding: 0.5rem 0.875rem;
   font-size: 0.875rem;
   font-weight: 500;
-  color: white;
+  color: var(--on-accent);
 }
 
 input:not([type="checkbox"]):not([type="radio"]):not([type="file"]):not([type="range"]):not([type="hidden"]):not([type="submit"]):not([type="button"]),

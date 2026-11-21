@@ -19,7 +19,7 @@ const initial: ImportFormState = {};
 function chipClass(active: boolean): string {
   return `min-h-11 rounded-md px-3 py-2 text-sm ${
     active
-      ? "bg-[var(--accent)] text-white"
+      ? "bg-[var(--accent)] text-[var(--on-accent)]"
       : "border border-[var(--line)] text-[var(--ink)] hover:border-[var(--accent)]"
   }`;
 }

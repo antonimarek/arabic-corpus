@@ -105,7 +105,7 @@ export function LessonAiStudyPlan({
             <button
               type="button"
               disabled={pending}
-              className="min-h-11 rounded-[var(--radius-md)] bg-[var(--accent)] hover:bg-[var(--accent-strong)] transition-colors px-4 py-2 text-sm font-medium text-white disabled:opacity-60"
+              className="min-h-11 rounded-[var(--radius-md)] bg-[var(--accent)] hover:bg-[var(--accent-strong)] transition-colors px-4 py-2 text-sm font-medium text-[var(--on-accent)] disabled:opacity-60"
               onClick={onSave}
             >
               {pending ? "Saving…" : "Save plan"}

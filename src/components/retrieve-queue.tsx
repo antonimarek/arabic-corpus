@@ -63,7 +63,7 @@ export function RetrieveQueue({
         <button
           type="button"
           onClick={onDone}
-          className="self-start rounded-[var(--radius-md)] bg-[var(--accent)] hover:bg-[var(--accent-strong)] transition-colors px-4 py-2.5 text-sm font-medium text-white"
+          className="self-start rounded-[var(--radius-md)] bg-[var(--accent)] hover:bg-[var(--accent-strong)] transition-colors px-4 py-2.5 text-sm font-medium text-[var(--on-accent)]"
         >
           Continue
         </button>
@@ -111,7 +111,7 @@ export function RetrieveQueue({
           <button
             type="button"
             onClick={playCue}
-            className="self-start rounded-[var(--radius-md)] bg-[var(--accent)] hover:bg-[var(--accent-strong)] transition-colors px-4 py-2.5 text-sm font-medium text-white"
+            className="self-start rounded-[var(--radius-md)] bg-[var(--accent)] hover:bg-[var(--accent-strong)] transition-colors px-4 py-2.5 text-sm font-medium text-[var(--on-accent)]"
           >
             Play cue
           </button>

@@ -27,7 +27,7 @@ export function LessonTextTabs({ activeTab, onTabChange }: LessonTextTabsProps) 
           aria-selected={activeTab === tab.id}
           className={`min-h-11 flex-1 rounded-md px-4 py-2 text-sm font-medium transition-colors ${
             activeTab === tab.id
-              ? "bg-[var(--accent)] text-white"
+              ? "bg-[var(--accent)] text-[var(--on-accent)]"
               : "text-[var(--ink-muted)] hover:text-[var(--ink)]"
           }`}
           onClick={() => onTabChange(tab.id)}

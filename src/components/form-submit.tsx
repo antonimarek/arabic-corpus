@@ -20,7 +20,7 @@ export function FormSubmit({
           {pending ? pendingLabel : label}
         </button>
       </div>
-      <div className="pointer-events-none fixed inset-x-0 bottom-0 z-30 border-t border-[var(--line)] bg-[color-mix(in_srgb,var(--background)_92%,white)] p-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] shadow-[var(--shadow-soft)] sm:hidden">
+      <div className="pointer-events-none fixed inset-x-0 bottom-0 z-30 border-t border-[var(--line)] bg-[color-mix(in_srgb,var(--background)_92%,var(--surface-raised))] p-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] shadow-[var(--shadow-soft)] sm:hidden">
         <button
           type="submit"
           disabled={pending}

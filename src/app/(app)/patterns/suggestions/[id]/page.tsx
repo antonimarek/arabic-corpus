@@ -199,7 +199,7 @@ export default async function PatternSuggestionDetailPage({
           <form action={confirmPatternSuggestion.bind(null, suggestion.id)}>
             <button
               type="submit"
-              className="rounded-[var(--radius-md)] bg-[var(--accent)] hover:bg-[var(--accent-strong)] transition-colors px-4 py-2.5 text-sm font-medium text-white"
+              className="rounded-[var(--radius-md)] bg-[var(--accent)] hover:bg-[var(--accent-strong)] transition-colors px-4 py-2.5 text-sm font-medium text-[var(--on-accent)]"
             >
               Confirm pattern
             </button>

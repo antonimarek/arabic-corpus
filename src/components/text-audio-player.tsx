@@ -42,7 +42,7 @@ export function TextAudioPlayer({
         <div className="flex flex-wrap items-center gap-2">
           <button
             type="button"
-            className="min-h-11 rounded-[var(--radius-md)] bg-[var(--accent)] hover:bg-[var(--accent-strong)] transition-colors px-4 py-2 text-sm font-medium text-white"
+            className="min-h-11 rounded-[var(--radius-md)] bg-[var(--accent)] hover:bg-[var(--accent-strong)] transition-colors px-4 py-2 text-sm font-medium text-[var(--on-accent)]"
             onClick={() => {
               const el = audioRef.current;
               if (!el) return;
@@ -77,7 +77,7 @@ export function TextAudioPlayer({
                   aria-pressed={rate === value}
                   className={`min-h-11 rounded-md px-3 py-2 text-sm ${
                     rate === value
-                      ? "bg-[var(--accent)] text-white"
+                      ? "bg-[var(--accent)] text-[var(--on-accent)]"
                       : "border border-[var(--line)] text-[var(--ink)]"
                   }`}
                   onClick={() => setRate(value)}
@@ -117,7 +117,7 @@ export function TextAudioPlayer({
         aria-pressed={marking}
         className={`self-start min-h-11 rounded-md px-3 py-2 text-sm ${
           marking
-            ? "bg-[var(--accent)] text-white"
+            ? "bg-[var(--accent)] text-[var(--on-accent)]"
             : "border border-[var(--line)] text-[var(--ink)]"
         }`}
         onClick={() => setMarking(!marking)}

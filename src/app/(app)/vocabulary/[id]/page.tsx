@@ -1,3 +1,4 @@
+import { timedPage } from "@/lib/timing";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 
@@ -27,7 +28,7 @@ type VocabularyDetailProps = {
   params: Promise<{ id: string }>;
 };
 
-export default async function VocabularyDetailPage({
+async function VocabularyDetailPage({
   params,
 }: VocabularyDetailProps) {
   const { id } = await params;
@@ -488,3 +489,5 @@ export default async function VocabularyDetailPage({
     </article>
   );
 }
+
+export default timedPage("/vocabulary/[id]", VocabularyDetailPage);

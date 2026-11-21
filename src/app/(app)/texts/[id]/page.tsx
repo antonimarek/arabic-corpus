@@ -1,3 +1,4 @@
+import { timedPage } from "@/lib/timing";
 import { notFound } from "next/navigation";
 
 import { TextDetailClient } from "@/components/text-detail-client";
@@ -8,7 +9,7 @@ type TextPageProps = {
   params: Promise<{ id: string }>;
 };
 
-export default async function TextDetailPage({ params }: TextPageProps) {
+async function TextDetailPage({ params }: TextPageProps) {
   const { id } = await params;
   const supabase = await createClient();
 
@@ -29,3 +30,5 @@ export default async function TextDetailPage({ params }: TextPageProps) {
 
   return <TextDetailClient textId={id} shell={shell} />;
 }
+
+export default timedPage("/texts/[id]", TextDetailPage);

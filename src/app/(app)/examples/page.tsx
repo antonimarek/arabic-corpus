@@ -1,10 +1,11 @@
+import { timedPage } from "@/lib/timing";
 import Link from "next/link";
 
 import { FilteredEntityList } from "@/components/filtered-entity-list";
 import { createClient } from "@/lib/supabase/server";
 import { notNull } from "@/lib/tags";
 
-export default async function ExamplesPage() {
+async function ExamplesPage() {
   const supabase = await createClient();
   const { data: rows, error } = await supabase
     .from("examples")
@@ -53,3 +54,5 @@ export default async function ExamplesPage() {
     </section>
   );
 }
+
+export default timedPage("/examples", ExamplesPage);

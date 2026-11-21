@@ -1,3 +1,4 @@
+import { timedPage } from "@/lib/timing";
 import { Suspense } from "react";
 import Link from "next/link";
 
@@ -10,7 +11,7 @@ import {
 import { createClient } from "@/lib/supabase/server";
 import { notNull } from "@/lib/tags";
 
-export default async function VocabularyPage() {
+async function VocabularyPage() {
   const supabase = await createClient();
   const { data: rows, error } = await supabase
     .from("vocabulary")
@@ -82,3 +83,5 @@ export default async function VocabularyPage() {
     </section>
   );
 }
+
+export default timedPage("/vocabulary", VocabularyPage);

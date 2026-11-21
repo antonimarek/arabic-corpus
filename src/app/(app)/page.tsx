@@ -1,3 +1,4 @@
+import { timedPage } from "@/lib/timing";
 import Link from "next/link";
 
 import { ContinueLastText } from "@/components/continue-last-text";
@@ -12,7 +13,7 @@ type SearchHomeProps = {
   searchParams: Promise<{ q?: string }>;
 };
 
-export default async function SearchHomePage({ searchParams }: SearchHomeProps) {
+async function SearchHomePage({ searchParams }: SearchHomeProps) {
   const { q = "" } = await searchParams;
   const query = q.trim();
   const supabase = await createClient();
@@ -169,3 +170,5 @@ export default async function SearchHomePage({ searchParams }: SearchHomeProps) 
     </section>
   );
 }
+
+export default timedPage("/", SearchHomePage);

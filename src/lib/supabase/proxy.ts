@@ -2,6 +2,7 @@ import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 
 import { getSupabaseAnonKey, getSupabaseUrl } from "@/lib/env";
+import { timed } from "@/lib/timing";
 
 export async function updateSession(request: NextRequest) {
   let supabaseResponse = NextResponse.next({
@@ -30,7 +31,10 @@ export async function updateSession(request: NextRequest) {
     },
   });
 
-  const { data } = await supabase.auth.getClaims();
+  const { data } = await timed(
+    `proxy auth ${request.nextUrl.pathname}`,
+    supabase.auth.getClaims(),
+  );
   const user = data?.claims;
   const path = request.nextUrl.pathname;
   const isPublic =

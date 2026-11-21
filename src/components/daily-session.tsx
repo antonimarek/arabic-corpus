@@ -188,8 +188,9 @@ export function DailySessionView({
   }
 
   return (
-    <div className="flex flex-col gap-5 pb-36 sm:pb-0">
-      <p className="text-sm text-[var(--ink-muted)]" aria-live="polite">
+    <div className="flex flex-col gap-5 pb-28 md:pb-0">
+      <h1 className="sr-only">Today</h1>
+      <p className="text-sm font-medium text-[var(--ink)]" aria-live="polite">
         today: {left} left
       </p>
       <CardView
@@ -198,7 +199,7 @@ export function DailySessionView({
         revealed={revealed}
       />
       <FailedSaves count={failed.length} onRetry={retryFailed} />
-      <div className="fixed inset-x-0 bottom-0 z-10 border-t border-[var(--line)] bg-[var(--background)] px-4 pb-[max(1rem,env(safe-area-inset-bottom))] pt-3 sm:static sm:border-0 sm:bg-transparent sm:p-0">
+      <div className="fixed inset-x-0 bottom-[calc(3.5rem+env(safe-area-inset-bottom))] z-30 border-t border-[var(--line)] bg-[var(--background)] px-4 py-3 md:static md:border-0 md:bg-transparent md:p-0">
         {revealed ? (
           <div
             className="mx-auto grid max-w-2xl grid-cols-4 gap-2"
@@ -217,7 +218,7 @@ export function DailySessionView({
                 }`}
               >
                 {g.label}
-                <span className="hidden text-[11px] font-normal opacity-70 sm:block">
+                <span className="hidden text-[11px] font-normal opacity-70 md:block">
                   {g.key}
                 </span>
               </button>
@@ -230,7 +231,7 @@ export function DailySessionView({
             className="mx-auto block min-h-14 w-full max-w-2xl rounded-[var(--radius-sm)] bg-[var(--accent)] text-[15px] font-medium text-white focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--accent)]"
           >
             Reveal
-            <span className="ml-2 hidden text-xs font-normal opacity-75 sm:inline">
+            <span className="ml-2 hidden text-xs font-normal opacity-75 md:inline">
               space
             </span>
           </button>
@@ -272,7 +273,7 @@ function CardView({ card, revealed }: { card: QueueCard; revealed: boolean }) {
               onClick={play}
               className="min-h-11 rounded-[var(--radius-sm)] border border-[var(--line)] px-3 text-sm text-[var(--ink)] focus-visible:outline-2 focus-visible:outline-[var(--accent)]"
             >
-              ▶ Listen
+              <span aria-hidden="true">▶</span> Listen
             </button>
           </>
         ) : null}
@@ -280,7 +281,7 @@ function CardView({ card, revealed }: { card: QueueCard; revealed: boolean }) {
       <p
         lang="ar"
         dir="rtl"
-        className="font-arabic text-center text-[2rem] leading-[1.9] text-[var(--ink)] sm:text-[2.5rem]"
+        className="font-arabic text-center text-[2rem] leading-[1.9] text-balance break-words text-[var(--ink)] sm:text-[2.5rem]"
       >
         {card.arabic}
       </p>
@@ -335,7 +336,10 @@ function StartScreen({
 }) {
   return (
     <div className="flex flex-col items-center gap-6 py-10 text-center">
-      <p className="text-[15px] text-[var(--ink-muted)]">today: {left} left</p>
+      <h1 className="sr-only">Today</h1>
+      <p className="text-[15px] font-medium text-[var(--ink)]">
+        today: {left} left
+      </p>
       <button
         type="button"
         autoFocus
@@ -447,8 +451,8 @@ function FailedSaves({
 export function DailySessionSkeleton() {
   return (
     <div className="flex flex-col items-center gap-6 py-10" aria-busy="true">
-      <div className="h-4 w-28 animate-pulse rounded bg-[var(--line)]" />
-      <div className="h-14 w-full max-w-xs animate-pulse rounded-[var(--radius-sm)] bg-[var(--line)] opacity-60" />
+      <div className="h-4 w-28 motion-safe:animate-pulse rounded bg-[var(--line)]" />
+      <div className="h-14 w-full max-w-xs motion-safe:animate-pulse rounded-[var(--radius-sm)] bg-[var(--line)] opacity-60" />
     </div>
   );
 }
